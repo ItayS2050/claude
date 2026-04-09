@@ -235,7 +235,7 @@ function showToast(element, detection) {
   });
   toast.querySelector('.kld-secondary').addEventListener('click', removeToast);
 
-  document.documentElement.appendChild(toast);
+  (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
   activeTimer = setTimeout(removeToast, 8000);
 }
