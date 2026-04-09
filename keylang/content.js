@@ -310,6 +310,7 @@ function attachTo(el) {
   }, 800);
 
   el.addEventListener('input', check);
+  el.addEventListener('keyup', check);  // fallback for sites that suppress input events
   // Reset suppression key on new focus so returning to a field re-evaluates
   el.addEventListener('focus', () => { lastKey = null; });
 }
@@ -331,11 +332,22 @@ function scanDOM() {
 scanDOM();
 
 new MutationObserver(mutations => {
-  for (const { addedNodes } of mutations) {
-    for (const node of addedNodes) {
-      if (node.nodeType !== 1) continue;
-      if (node.matches?.(SELECTOR)) attachTo(node);
-      node.querySelectorAll?.(SELECTOR).forEach(attachTo);
+  for (const { type, addedNodes, target } of mutations) {
+    if (type === 'childList') {
+      // Newly added nodes (most sites)
+      for (const node of addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches?.(SELECTOR)) attachTo(node);
+        node.querySelectorAll?.(SELECTOR).forEach(attachTo);
+      }
+    } else if (type === 'attributes') {
+      // contenteditable set after element was inserted (WhatsApp, some SPAs)
+      if (target.nodeType === 1 && target.matches?.(SELECTOR)) attachTo(target);
     }
   }
-}).observe(document.documentElement, { childList: true, subtree: true });
+}).observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['contenteditable']  // only watch this attribute to avoid overhead
+});
