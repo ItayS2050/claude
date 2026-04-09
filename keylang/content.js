@@ -4,7 +4,6 @@
 // ============================================================
 
 // ── Keyboard mapping ─────────────────────────────────────────
-// Physical key → Hebrew character (standard Israeli keyboard layout)
 const EN_TO_HE = {
   'a': 'ש', 'b': 'נ', 'c': 'ב', 'd': 'ג', 'e': 'ק', 'f': 'כ',
   'g': 'ע', 'h': 'י', 'i': 'ן', 'j': 'ח', 'k': 'ל', 'l': 'ך',
@@ -13,7 +12,6 @@ const EN_TO_HE = {
   'y': 'ט', 'z': 'ז', ';': 'ף', ',': 'ת', '.': 'ץ'
 };
 
-// Hebrew character → English key (reverse)
 const HE_TO_EN = {};
 for (const [en, he] of Object.entries(EN_TO_HE)) {
   if (/[\u0590-\u05FF]/.test(he)) HE_TO_EN[he] = en;
@@ -21,7 +19,27 @@ for (const [en, he] of Object.entries(EN_TO_HE)) {
 
 const HEBREW_RE = /[\u0590-\u05FF]/;
 
-// Common English words to exclude from "looks like Hebrew" detection
+// ── English detection helpers ─────────────────────────────────
+
+// Top English bigrams — if a word contains enough of these, it's English
+const EN_BIGRAMS = new Set([
+  'th','he','in','er','an','re','on','en','at','es','or','ti','st','ea',
+  'to','it','is','hi','ha','le','ed','nd','de','al','ar','ou','ng','co',
+  'se','te','ot','ro','me','ma','ne','el','as','nt','si','li','ly','ld',
+  'ck','ff','oo','ee','wh','qu','ow','gh','ph','tr','pr','pl','cl','br'
+]);
+
+function englishBigramScore(word) {
+  const s = word.toLowerCase();
+  if (s.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    if (EN_BIGRAMS.has(s.slice(i, i + 2))) hits++;
+  }
+  return hits / (s.length - 1);
+}
+
+// Words that must never be flagged as Hebrew
 const EN_WORDS = new Set([
   'the','be','to','of','and','a','in','that','have','it','for','not','on',
   'with','he','as','you','do','at','this','but','his','by','from','they',
@@ -30,19 +48,47 @@ const EN_WORDS = new Set([
   'when','make','can','like','time','no','just','him','know','take','into',
   'your','good','some','could','them','see','other','than','then','now',
   'look','only','come','its','over','think','also','back','after','use',
-  'two','how','our','work','first','well','way','even','new','want','any',
-  'give','day','most','us','hello','ok','yes','hi','hey','lol','omg',
+  'two','how','our','work','works','first','well','way','even','new','want',
+  'any','give','day','most','us','hello','ok','yes','hi','hey','lol','omg',
   'thanks','please','sorry','help','okay','yeah','im','am','is','are','was',
   'has','had','did','got','let','put','set','run','try','ask','act','add',
   'big','bit','box','buy','car','cut','eat','end','eye','far','few','fit',
   'fix','fly','fun','gun','hit','hot','job','key','kid','law','lay','leg',
   'lie','lot','low','map','may','met','mix','mom','net','old','own','pay',
-  'per','pig','pit','pop','pot','pro','raw','red','rid','row','sad','sat',
-  'saw','sea','sit','six','sky','son','spy','sum','sun','tax','tea','ten',
-  'too','top','tv','van','via','war','win','won','age','ago','air','led',
-  'man','men','boy','girl','day','way','her','him','she','who','why',
-  'here','come','from','this','that','with','they','have','been','were',
-  'said','each','which','their','time','will','about','many','then','them'
+  'per','pop','pot','raw','red','rid','row','sad','sat','saw','sea','sit',
+  'six','sky','son','spy','sum','sun','tax','tea','ten','too','top','van',
+  'via','war','win','won','age','ago','air','led','man','men','boy','girl',
+  'here','come','from','said','each','many','been','were','them',
+  // common longer words that cause false positives
+  'seems','better','still','often','every','never','always','again',
+  'between','different','something','nothing','everything','someone',
+  'anyone','everyone','keyboard','language','english','hebrew','typing',
+  'detect','switch','suggest','suggests','appears','happens','working',
+  'getting','found','right','left','without','another','think','things',
+  'problem','program','browser','chrome','firefox','extension','install',
+  'update','version','feature','button','click','press','type','text',
+  'word','letter','convert','correct','option','setting','field','input',
+  'result','status','error','google','doesnt','dont','cant','wont','isnt',
+  'wasnt','arent','werent','shouldnt','couldnt','wouldnt','havent','hasnt',
+  'didnt','doesnt','going','doing','being','having','making','taking',
+  'coming','looking','trying','using','getting','putting','letting','seeing',
+  'knowing','saying','thinking','working','playing','running','writing',
+  'reading','keeping','giving','telling','calling','showing','moving',
+  'living','feeling','turning','asking','meaning','starting','talking',
+  'following','already','however','because','through','before','during',
+  'between','against','across','along','around','within','towards','despite',
+  'although','whether','instead','outside','inside','under','above','below',
+  'really','very','quite','rather','pretty','maybe','perhaps','probably',
+  'definitely','certainly','usually','actually','basically','literally',
+  'seriously','honestly','clearly','simply','exactly','nearly','almost',
+  'enough','might','should','shall','must','need','seem','become','remain',
+  'appear','happen','change','show','play','move','live','believe','hold',
+  'bring','speak','stand','lose','pay','meet','include','continue','learn',
+  'feel','create','offer','remember','love','consider','expect','allow',
+  'assume','require','decide','explain','provide','process','receive',
+  'support','affect','describe','perform','require','produce','address',
+  'remember','understand','identify','increase','develop','maintain',
+  'represent','indicate','establish','establish','implement','determine'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
@@ -59,26 +105,28 @@ function convertToEnglish(text) {
   return [...text].map(c => HE_TO_EN[c] || c).join('');
 }
 
-// Returns true if a word looks like it could be Hebrew
-// typed via an English keyboard layout
 function wordCouldBeHebrew(word) {
   const lower = word.toLowerCase();
-  if (lower.length < 2) return false;
+
+  // Basic filters
+  if (lower.length < 3) return false;
   if (EN_WORDS.has(lower)) return false;
 
-  // Every character must map to something (undefined = not on Hebrew keyboard)
-  const mapped = [...lower].map(c => EN_TO_HE[c]);
-  if (mapped.some(c => c === undefined)) return false;
+  // If the word has common English bigrams, it's English
+  if (englishBigramScore(lower) >= 0.20) return false;
 
-  // At least 70% of mapped chars must be Hebrew Unicode
-  const heCount = mapped.filter(c => HEBREW_RE.test(c)).length;
-  return heCount / lower.length >= 0.7;
+  // Every character must map to a Hebrew character (100% — not just 70%)
+  // Characters like 'w'→"'" or 'q'→"/" disqualify the word
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  if (mapped.some(c => c === undefined || !HEBREW_RE.test(c))) return false;
+
+  return true;
 }
 
 function analyze(text) {
   if (!text || text.trim().length < 3) return null;
 
-  // ── Case 1: Hebrew characters detected (keyboard in Hebrew, user wanted English) ──
+  // ── Case 1: Hebrew Unicode chars found (keyboard in Hebrew mode) ──
   if (hasHebrew(text)) {
     const hebrewChars = [...text].filter(c => HEBREW_RE.test(c));
     if (hebrewChars.length >= 2) {
@@ -93,29 +141,22 @@ function analyze(text) {
     }
   }
 
-  // ── Case 2: English chars typed with Hebrew layout intent ──
+  // ── Case 2: English chars that should be Hebrew ──
   const words = text.trim().split(/\s+/).filter(w => /^[a-z,;.']+$/i.test(w) && w.length >= 2);
   if (words.length === 0) return null;
 
-  // Look at the last 4 words to avoid flagging on old correct text
-  const sample = words.slice(-4);
+  const sample = words.slice(-6);  // look at last 6 words
   const hebrewLike = sample.filter(w => wordCouldBeHebrew(w));
 
-  // Require majority of recent words to look Hebrew-like
-  // (single word needs to be length >= 4 to avoid noise)
-  const threshold = sample.length === 1
-    ? (sample[0].length >= 4 ? 1 : Infinity)
-    : Math.ceil(sample.length * 0.6);
-
-  if (hebrewLike.length >= threshold) {
-    const sampleText = sample.join(' ');
+  // Need at least 3 suspicious words — prevents false positives on short phrases
+  if (hebrewLike.length >= 3) {
+    const sampleText = hebrewLike.join(' ');
     const converted = convertToHebrew(sampleText.toLowerCase());
-
     if (hasHebrew(converted)) {
       return {
         type: 'english_as_hebrew',
         message: 'Typing in the wrong layout? This might be Hebrew:',
-        original: sampleText,
+        original: hebrewLike.join(' '),
         converted,
         btnLabel: 'Convert to Hebrew'
       };
@@ -161,7 +202,6 @@ const STYLES = `
     font-size: 13px;
     color: #94a3b8;
   }
-  .kld-icon { font-size: 16px; }
   .kld-preview {
     background: #0f172a;
     border-radius: 7px;
@@ -173,10 +213,11 @@ const STYLES = `
     color: #7dd3fc;
     word-break: break-word;
   }
-  .kld-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+  .kld-actions { display: flex; gap: 8px; align-items: center; }
+  .kld-hint {
+    font-size: 10px;
+    color: #475569;
+    margin-top: -4px;
   }
   .kld-btn {
     border: none;
@@ -190,13 +231,37 @@ const STYLES = `
   }
   .kld-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
   .kld-btn:active { transform: translateY(0); }
-  .kld-primary    { background: #3b82f6; color: #fff; flex: 1; }
-  .kld-secondary  { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
+  .kld-primary   { background: #3b82f6; color: #fff; flex: 1; }
+  .kld-secondary { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
+
+  #kld-recall {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 2147483646;
+    background: #16213e;
+    border: 1px solid #2d3a5c;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, opacity 0.15s;
+    opacity: 0.75;
+  }
+  #kld-recall:hover { transform: scale(1.1); opacity: 1; }
 `;
 
 let activeToast = null;
 let activeTimer = null;
 let lastKey = null;
+let lastDetection = null;
+let lastElement = null;
+let recallBtn = null;
 
 function injectStyles() {
   if (document.getElementById('kld-styles')) return;
@@ -207,19 +272,22 @@ function injectStyles() {
 }
 
 function showToast(element, detection) {
-  // Suppress duplicate notifications for identical detections
   const key = `${detection.type}|${detection.original.slice(0, 30)}`;
-  if (key === lastKey) return;
-  lastKey = key;
+  if (key === lastKey && activeToast) return; // don't re-show identical active toast
 
-  removeToast();
+  lastKey = key;
+  lastDetection = detection;
+  lastElement = element;
+
+  hideRecallBtn();
+  removeToast(false); // remove old toast but don't clear lastDetection
   injectStyles();
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
     <div class="kld-header">
-      <span class="kld-icon">⌨️</span>
+      <span>⌨️</span>
       <span>${detection.message}</span>
     </div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
@@ -227,23 +295,51 @@ function showToast(element, detection) {
       <button class="kld-btn kld-primary">${detection.btnLabel}</button>
       <button class="kld-btn kld-secondary" title="Dismiss">✕</button>
     </div>
+    <div class="kld-hint">Recall: Alt + Shift + K</div>
   `;
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
-    removeToast();
+    removeToast(true);
   });
-  toast.querySelector('.kld-secondary').addEventListener('click', removeToast);
+  toast.querySelector('.kld-secondary').addEventListener('click', () => removeToast(true));
 
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
-  activeTimer = setTimeout(removeToast, 8000);
+  // Auto-dismiss after 15 seconds, then show recall button
+  activeTimer = setTimeout(() => removeToast(true), 15000);
 }
 
-function removeToast() {
+function removeToast(showRecall = false) {
   if (activeToast) { activeToast.remove(); activeToast = null; }
   if (activeTimer) { clearTimeout(activeTimer); activeTimer = null; }
+  if (showRecall && lastDetection) showRecallBtn();
 }
+
+function showRecallBtn() {
+  if (recallBtn || !lastDetection) return;
+  injectStyles();
+  recallBtn = document.createElement('button');
+  recallBtn.id = 'kld-recall';
+  recallBtn.title = 'Show last language detection (Alt+Shift+K)';
+  recallBtn.textContent = '⌨️';
+  recallBtn.addEventListener('click', () => {
+    if (lastDetection && lastElement) showToast(lastElement, lastDetection);
+  });
+  (document.body || document.documentElement).appendChild(recallBtn);
+}
+
+function hideRecallBtn() {
+  if (recallBtn) { recallBtn.remove(); recallBtn = null; }
+}
+
+// Alt+Shift+K to recall last toast
+document.addEventListener('keydown', e => {
+  if (e.altKey && e.shiftKey && e.code === 'KeyK') {
+    if (lastDetection && lastElement) showToast(lastElement, lastDetection);
+    e.preventDefault();
+  }
+});
 
 function escapeHtml(str) {
   return str
@@ -259,11 +355,10 @@ function applyConversion(element, detection) {
   const { original, converted } = detection;
 
   if (element.isContentEditable) {
-    const current = element.innerText || element.textContent;
+    const current = element.innerText || element.textContent || '';
     const idx = current.lastIndexOf(original);
     if (idx === -1) return;
     const newText = current.slice(0, idx) + converted + current.slice(idx + original.length);
-    // Use execCommand so the change lands in the undo stack
     element.focus();
     document.execCommand('selectAll');
     document.execCommand('insertText', false, newText);
@@ -273,22 +368,19 @@ function applyConversion(element, detection) {
     if (idx === -1) return;
     element.value = val.slice(0, idx) + converted + val.slice(idx + original.length);
     element.selectionStart = element.selectionEnd = idx + converted.length;
-    // Trigger framework reactivity (React, Vue, etc.)
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   lastKey = null;
+  lastDetection = null;
 }
 
 // ── Input monitoring ──────────────────────────────────────────
 
 function debounce(fn, ms) {
   let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
-  };
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
 }
 
 function attachTo(el) {
@@ -296,24 +388,24 @@ function attachTo(el) {
   el._kld = true;
 
   const check = debounce(() => {
+    // Don't dismiss a visible toast on new keystrokes — let user act on it
+    if (activeToast) return;
+
     const text = el.isContentEditable
       ? (el.innerText || el.textContent || '')
       : el.value;
 
     const detection = analyze(text);
-    if (detection) {
-      showToast(el, detection);
-    } else {
-      removeToast();
-      lastKey = null;
-    }
+    if (detection) showToast(el, detection);
   }, 800);
 
   el.addEventListener('input', check);
-  el.addEventListener('keyup', check);  // fallback for sites that suppress input events
-  // Reset suppression key on new focus so returning to a field re-evaluates
+  el.addEventListener('keyup', check);
+  el.addEventListener('compositionend', check); // IME / mobile keyboards
   el.addEventListener('focus', () => { lastKey = null; });
 }
+
+// ── DOM observation ───────────────────────────────────────────
 
 const SELECTOR = [
   'input[type="text"]',
@@ -324,24 +416,18 @@ const SELECTOR = [
   '[contenteditable=""]'
 ].join(', ');
 
-function scanDOM() {
-  document.querySelectorAll(SELECTOR).forEach(attachTo);
-}
-
-// Initial scan + watch for dynamically added elements (SPAs, modals, etc.)
-scanDOM();
+document.querySelectorAll(SELECTOR).forEach(attachTo);
 
 new MutationObserver(mutations => {
   for (const { type, addedNodes, target } of mutations) {
     if (type === 'childList') {
-      // Newly added nodes (most sites)
       for (const node of addedNodes) {
         if (node.nodeType !== 1) continue;
         if (node.matches?.(SELECTOR)) attachTo(node);
         node.querySelectorAll?.(SELECTOR).forEach(attachTo);
       }
     } else if (type === 'attributes') {
-      // contenteditable set after element was inserted (WhatsApp, some SPAs)
+      // WhatsApp sets contenteditable after insertion
       if (target.nodeType === 1 && target.matches?.(SELECTOR)) attachTo(target);
     }
   }
@@ -349,5 +435,5 @@ new MutationObserver(mutations => {
   childList: true,
   subtree: true,
   attributes: true,
-  attributeFilter: ['contenteditable']  // only watch this attribute to avoid overhead
+  attributeFilter: ['contenteditable']
 });
