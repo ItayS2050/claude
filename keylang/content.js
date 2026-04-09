@@ -25,7 +25,8 @@ const HEBREW_RE = /[\u0590-\u05FF]/;
 // keyboard output. Removed ambiguous ones like "at","er","as","or","is","he"
 // which also appear frequently when typing Hebrew via English keyboard.
 const EN_BIGRAMS = new Set([
-  'th','st','nd','ng','ck','ll','oo','ee','ly','ld','wh','tw','gh','qu'
+  'th','st','ll','oo','ee','ly','wh','tw','qu'
+  // removed: ck(ב+ל common Hebrew), nd(מ+ג exists), ng(מ+ע exists), gh(ע+י exists), ld
 ]);
 // Definitive English suffixes — if a word ends with these, it's English
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
@@ -139,22 +140,22 @@ function analyze(text) {
   );
   if (words.length < 3) return null;
 
-  const sample = words.slice(-7); // look at last 7 words
-  const hebrewLike = sample.filter(w => wordCouldBeHebrew(w));
+  // Check ALL words — if 40%+ look like Hebrew keyboard input, convert everything
+  const hebrewLike = words.filter(w => wordCouldBeHebrew(w));
+  const ratio = hebrewLike.length / words.length;
 
-  // Need 3+ suspicious words to fire
-  if (hebrewLike.length >= 3) {
-    // Convert the FULL sample (not just hebrewLike) so short words
-    // like "kt"(לא) and "nv"(מה) are included in the result even if
-    // they were filtered from the hebrewLike check
-    const sampleText = sample.join(' ');
-    const converted = convertToHebrew(sampleText.toLowerCase());
+  if (hebrewLike.length >= 3 && ratio >= 0.4) {
+    // Convert the entire text, not just a trailing window.
+    // This catches long sentences like "yuc tbh guav t, zv pv tck gshhi kt rutv azv gucs"
+    // where every word is Hebrew typed in English mode.
+    const fullText = words.join(' ');
+    const converted = convertToHebrew(fullText.toLowerCase());
 
     if (hasHebrew(converted)) {
       return {
         type: 'english_as_hebrew',
         message: 'Typing in the wrong layout? This might be Hebrew:',
-        original: sampleText,
+        original: fullText,
         converted,
         btnLabel: 'Convert to Hebrew'
       };
