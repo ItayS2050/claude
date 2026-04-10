@@ -1,9 +1,8 @@
 // ============================================================
-// KeyLang – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.1.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-
-console.log('[KeyLang] v1.0.5 loaded');
+console.log('[KeyLang] v1.1.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -21,32 +20,25 @@ for (const [en, he] of Object.entries(EN_TO_HE)) {
 
 const HEBREW_RE = /[\u0590-\u05FF]/;
 
-// ── English detection helpers ─────────────────────────────────
+// ── English detection ─────────────────────────────────────────
 
-// Only bigrams/patterns that are UNIQUELY English and very rare in Hebrew
-// keyboard output. Removed ambiguous ones like "at","er","as","or","is","he"
-// which also appear frequently when typing Hebrew via English keyboard.
+// Bigrams that are common in English but rare in Hebrew keyboard output
 const EN_BIGRAMS = new Set([
-  'th','st','ll','oo','ee','ly','wh','tw','qu'
-  // removed: ck(ב+ל common Hebrew), nd(מ+ג exists), ng(מ+ע exists), gh(ע+י exists), ld
+  'th','st','ng','ll','oo','ee','ly','ld','wh','tw','qu','ck','nd'
 ]);
-// Definitive English suffixes — if a word ends with these, it's English
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
 
 function englishScore(word) {
   const s = word.toLowerCase();
   if (s.length < 2) return 0;
   let hits = 0;
-  const bigrams = s.length - 1;
-  for (let i = 0; i < bigrams; i++) {
+  for (let i = 0; i < s.length - 1; i++) {
     if (EN_BIGRAMS.has(s.slice(i, i + 2))) hits++;
   }
-  // Suffix match counts as a strong English signal
   if (EN_SUFFIXES.some(sfx => s.endsWith(sfx))) hits += 2;
-  return hits / bigrams;
+  return hits / (s.length - 1);
 }
 
-// Words that must never be flagged as Hebrew keyboard input
 const EN_WORDS = new Set([
   'the','be','to','of','and','a','in','that','have','it','for','not','on',
   'with','he','as','you','do','at','this','but','his','by','from','they',
@@ -57,7 +49,7 @@ const EN_WORDS = new Set([
   'look','only','come','its','over','think','also','back','after','use',
   'two','how','our','work','works','first','well','way','even','new','want',
   'any','give','day','most','us','hello','ok','yes','hi','hey','lol','omg',
-  'thanks','please','sorry','help','okay','yeah','im','am','is','are','was',
+  'thanks','please','sorry','help','okay','yeah','am','is','are','was',
   'has','had','did','got','let','put','set','run','try','ask','act','add',
   'big','bit','box','buy','car','cut','eat','end','eye','far','few','fit',
   'fix','fly','fun','gun','hit','hot','job','key','kid','law','lay','leg',
@@ -65,7 +57,7 @@ const EN_WORDS = new Set([
   'per','pop','pot','raw','red','rid','row','sad','sat','saw','sea','sit',
   'six','sky','son','spy','sum','sun','tax','tea','ten','too','top','van',
   'via','war','win','won','age','ago','air','led','man','men','boy','girl',
-  'here','come','from','said','each','many','been','were','them',
+  'here','come','from','said','each','many','been','were','them','im',
   // common longer words
   'seems','better','still','often','every','never','always','again',
   'between','different','something','nothing','everything','someone',
@@ -81,10 +73,8 @@ const EN_WORDS = new Set([
   'looking','trying','using','putting','letting','seeing','knowing','saying',
   'really','very','quite','rather','pretty','maybe','perhaps','probably',
   'definitely','certainly','usually','actually','basically','literally',
-  'seriously','honestly','clearly','simply','exactly','nearly','almost',
-  // tech/abbreviations
-  'npm','cpu','gpu','ram','ssd','usb','api','url','sql','css','html',
-  'tbh','btw','fyi','imo','idk','ngl','smh','wtf','omg','lmao','brb'
+  // tech — but NOT tbh/btw/fyi since those are also Hebrew keyboard input!
+  'npm','cpu','gpu','ram','ssd','usb','api','url','sql','css','html','lmao'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
@@ -94,70 +84,94 @@ function hasHebrew(text) { return HEBREW_RE.test(text); }
 function convertToHebrew(text) {
   return [...text].map(c => EN_TO_HE[c] || c).join('');
 }
-
 function convertToEnglish(text) {
   return [...text].map(c => HE_TO_EN[c] || c).join('');
 }
 
-// Returns true if a word looks like Hebrew typed via an English keyboard
 function wordCouldBeHebrew(word) {
   const lower = word.toLowerCase();
-
-  // Min length 2 — Hebrew has many 2-letter words (לא=kt, מה=nv, כי=ft…)
   if (lower.length < 2) return false;
   if (EN_WORDS.has(lower)) return false;
-
-  // Strong English patterns → not Hebrew
   if (englishScore(lower) >= 0.15) return false;
-
   // Every character must map to a Hebrew Unicode character.
-  // 'w'→"'" and 'q'→"/" are NOT Hebrew — their presence disqualifies the word.
+  // 'w'→"'" and 'q'→"/" are NOT Hebrew — disqualify the word.
   return [...lower].every(c => {
     const mapped = EN_TO_HE[c];
     return mapped !== undefined && HEBREW_RE.test(mapped);
   });
 }
 
-function analyze(text) {
-  if (!text || text.trim().length < 3) return null;
+// ── Text extraction (cursor-aware) ────────────────────────────
+// Reads text BEFORE the cursor — not the full element content.
+// This is critical for Gmail/Outlook where the element also contains
+// quoted email text, signatures, etc.
+function getTextBeforeCursor(el) {
+  try {
+    if (el.isContentEditable) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
+        return range.toString();
+      }
+      return el.innerText || el.textContent || '';
+    }
+    const pos = el.selectionStart ?? el.value.length;
+    return el.value.slice(0, pos);
+  } catch {
+    return el.isContentEditable ? (el.innerText || '') : (el.value || '');
+  }
+}
 
-  // ── Case 1: Hebrew Unicode chars found (keyboard in Hebrew mode) ──
+function analyze(el) {
+  const rawText = getTextBeforeCursor(el);
+  if (!rawText || rawText.trim().length < 3) return null;
+
+  // Only look at the last 600 chars before cursor
+  const text = rawText.slice(-600);
+
+  // ── Case 1: Hebrew Unicode chars visible (keyboard in Hebrew mode) ──
   if (hasHebrew(text)) {
-    const hebrewChars = [...text].filter(c => HEBREW_RE.test(c));
-    if (hebrewChars.length >= 2) {
-      const converted = convertToEnglish(text);
+    const heCount = [...text].filter(c => HEBREW_RE.test(c)).length;
+    if (heCount >= 2) {
       return {
         type: 'hebrew_detected',
         message: 'Hebrew detected — did you mean English?',
-        original: text,
-        converted,
+        original: text.trim(),
+        converted: convertToEnglish(text.trim()),
         btnLabel: 'Switch to English'
       };
     }
   }
 
-  // ── Case 2: English chars that should be Hebrew ──
+  // ── Case 2: English chars typed with Hebrew layout intent ──
   const words = text.trim().split(/\s+/).filter(
     w => /^[a-z,;.']+$/i.test(w) && w.length >= 2
   );
-  if (words.length < 3) return null;
 
-  // Check ALL words — if 40%+ look like Hebrew keyboard input, convert everything
-  const hebrewLike = words.filter(w => wordCouldBeHebrew(w));
-  const ratio = hebrewLike.length / words.length;
+  // Find the CONSECUTIVE RUN of Hebrew-like words at the END of what's typed.
+  // As soon as a clearly-English word is hit (walking backwards), stop.
+  // This means: "Hey there azv kt gucs" → run = [azv, kt, gucs]
+  // And English text with occasional non-English-looking words won't trigger
+  // unless the LAST several words all look Hebrew.
+  const run = [];
+  for (let i = words.length - 1; i >= 0; i--) {
+    if (wordCouldBeHebrew(words[i])) {
+      run.unshift(words[i]);
+    } else {
+      break; // English word — stops the Hebrew run
+    }
+  }
 
-  if (hebrewLike.length >= 3 && ratio >= 0.4) {
-    // Convert the entire text, not just a trailing window.
-    // This catches long sentences like "yuc tbh guav t, zv pv tck gshhi kt rutv azv gucs"
-    // where every word is Hebrew typed in English mode.
-    const fullText = words.join(' ');
-    const converted = convertToHebrew(fullText.toLowerCase());
-
+  if (run.length >= 3) {
+    const runText = run.join(' ');
+    const converted = convertToHebrew(runText.toLowerCase());
     if (hasHebrew(converted)) {
       return {
         type: 'english_as_hebrew',
         message: 'Typing in the wrong layout? This might be Hebrew:',
-        original: fullText,
+        original: runText,
         converted,
         btnLabel: 'Convert to Hebrew'
       };
@@ -172,15 +186,15 @@ function analyze(text) {
 const STYLES = `
   #kld-toast {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    top: 16px;
+    right: 16px;
     z-index: 2147483647;
     background: #16213e;
     color: #e2e8f0;
-    border: 1px solid #2d3a5c;
+    border: 1px solid #3b82f6;
     border-radius: 12px;
     padding: 14px 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     font-size: 13px;
     max-width: 340px;
@@ -192,7 +206,7 @@ const STYLES = `
     pointer-events: all;
   }
   @keyframes kld-in {
-    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    from { opacity: 0; transform: translateY(-12px) scale(0.95); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
   .kld-header { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; color: #94a3b8; }
@@ -205,6 +219,7 @@ const STYLES = `
     direction: auto;
     color: #7dd3fc;
     word-break: break-word;
+    line-height: 1.5;
   }
   .kld-actions { display: flex; gap: 8px; align-items: center; }
   .kld-hint { font-size: 10px; color: #475569; }
@@ -213,32 +228,30 @@ const STYLES = `
     font-size: 12px; font-weight: 600; cursor: pointer;
     transition: opacity 0.15s, transform 0.1s; line-height: 1;
   }
-  .kld-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+  .kld-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
   .kld-btn:active { transform: translateY(0); }
-  .kld-primary    { background: #3b82f6; color: #fff; flex: 1; }
-  .kld-secondary  { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
+  .kld-primary   { background: #3b82f6; color: #fff; flex: 1; }
+  .kld-secondary { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
 
   #kld-recall {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    top: 16px;
+    right: 16px;
     z-index: 2147483646;
     background: #1e3a5f;
-    border: 1px solid #3b82f6;
-    border-radius: 20px;
-    padding: 7px 12px;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    padding: 8px 14px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     color: #93c5fd;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.3);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    transition: transform 0.15s, opacity 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    transition: transform 0.15s;
+    letter-spacing: 0.3px;
   }
-  #kld-recall:hover { transform: scale(1.05); opacity: 1; }
+  #kld-recall:hover { transform: scale(1.04); }
 `;
 
 let activeToast = null;
@@ -255,12 +268,9 @@ function injectStyles() {
 }
 
 function showToast(element, detection) {
-  // Don't re-show the exact same detection while it's already visible
   if (activeToast && lastDetection === detection) return;
-
   lastDetection = detection;
   lastElement = element;
-
   hideRecallBtn();
   if (activeToast) { activeToast.remove(); activeToast = null; }
   injectStyles();
@@ -274,9 +284,8 @@ function showToast(element, detection) {
       <button class="kld-btn kld-primary">${detection.btnLabel}</button>
       <button class="kld-btn kld-secondary" title="Dismiss">✕</button>
     </div>
-    <div class="kld-hint">Alt + Shift + K to recall later</div>
+    <div class="kld-hint">Alt + Shift + K to recall</div>
   `;
-
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
     removeToast();
@@ -285,7 +294,6 @@ function showToast(element, detection) {
 
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
-  // No auto-dismiss — stays until user acts on it
 }
 
 function removeToast() {
@@ -298,8 +306,8 @@ function showRecallBtn() {
   injectStyles();
   recallBtn = document.createElement('button');
   recallBtn.id = 'kld-recall';
-  recallBtn.innerHTML = '⌨️ Recall';
-  recallBtn.title = 'Show last language detection (Alt+Shift+K)';
+  recallBtn.textContent = '⌨️ Show last detection';
+  recallBtn.title = 'Alt + Shift + K';
   recallBtn.addEventListener('click', () => {
     if (lastDetection && lastElement) showToast(lastElement, lastDetection);
   });
@@ -310,47 +318,42 @@ function hideRecallBtn() {
   if (recallBtn) { recallBtn.remove(); recallBtn = null; }
 }
 
-// Alt+Shift+K to recall last detection anywhere
 document.addEventListener('keydown', e => {
   if (e.altKey && e.shiftKey && e.code === 'KeyK') {
     e.preventDefault();
-    if (activeToast) {
-      removeToast();     // toggle: hide if visible
-    } else if (lastDetection && lastElement) {
-      showToast(lastElement, lastDetection);
-    }
+    if (activeToast) removeToast();
+    else if (lastDetection && lastElement) showToast(lastElement, lastDetection);
   }
 });
 
 function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Text conversion ───────────────────────────────────────────
 
-function applyConversion(element, detection) {
+function applyConversion(el, detection) {
   const { original, converted } = detection;
 
-  if (element.isContentEditable) {
-    const current = element.innerText || element.textContent || '';
-    const idx = current.lastIndexOf(original);
+  if (el.isContentEditable) {
+    // Find the original text in the element and replace it
+    const full = el.innerText || el.textContent || '';
+    const idx = full.lastIndexOf(original);
     if (idx === -1) return;
-    const newText = current.slice(0, idx) + converted + current.slice(idx + original.length);
-    element.focus();
+    const newText = full.slice(0, idx) + converted + full.slice(idx + original.length);
+    el.focus();
     document.execCommand('selectAll');
     document.execCommand('insertText', false, newText);
   } else {
-    const val = element.value;
-    const idx = val.lastIndexOf(original);
+    // For regular inputs: replace only in the text before cursor
+    const pos = el.selectionStart ?? el.value.length;
+    const before = el.value.slice(0, pos);
+    const idx = before.lastIndexOf(original);
     if (idx === -1) return;
-    element.value = val.slice(0, idx) + converted + val.slice(idx + original.length);
-    element.selectionStart = element.selectionEnd = idx + converted.length;
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
+    el.value = el.value.slice(0, idx) + converted + el.value.slice(idx + original.length);
+    el.selectionStart = el.selectionEnd = idx + converted.length;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   lastDetection = null;
@@ -360,8 +363,8 @@ function applyConversion(element, detection) {
 // ── Input monitoring ──────────────────────────────────────────
 
 function debounce(fn, ms) {
-  let timer;
-  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
 function attachTo(el) {
@@ -369,23 +372,14 @@ function attachTo(el) {
   el._kld = true;
 
   const check = debounce(() => {
-    // Don't interrupt a visible toast — let the user act on it
-    if (activeToast) return;
-
-    const text = el.isContentEditable
-      ? (el.innerText || el.textContent || '')
-      : el.value;
-
-    const detection = analyze(text);
+    if (activeToast) return; // don't re-run while toast is visible
+    const detection = analyze(el);
     if (detection) showToast(el, detection);
-  }, 800);
+  }, 700);
 
   el.addEventListener('input', check);
   el.addEventListener('keyup', check);
   el.addEventListener('compositionend', check);
-  el.addEventListener('focus', () => {
-    // On refocus, allow re-detection for this element
-  });
 }
 
 // ── DOM observation ───────────────────────────────────────────
@@ -410,13 +404,10 @@ new MutationObserver(mutations => {
         node.querySelectorAll?.(SELECTOR).forEach(attachTo);
       }
     } else if (type === 'attributes') {
-      // WhatsApp sets contenteditable after element insertion
       if (target.nodeType === 1 && target.matches?.(SELECTOR)) attachTo(target);
     }
   }
 }).observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributeFilter: ['contenteditable']
+  childList: true, subtree: true,
+  attributes: true, attributeFilter: ['contenteditable']
 });
