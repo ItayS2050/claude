@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.1.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.2.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.1.0 loaded');
+console.log('[KeyLang] v1.2.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -20,9 +20,42 @@ for (const [en, he] of Object.entries(EN_TO_HE)) {
 
 const HEBREW_RE = /[\u0590-\u05FF]/;
 
-// ── English detection ─────────────────────────────────────────
+// ── Learned data (loaded from storage) ───────────────────────
+// learnedHebrew: words the user confirmed ARE Hebrew keyboard input
+// learnedEnglish: words the user confirmed are English (false positives)
+let learnedHebrew = new Set();
+let learnedEnglish = new Set();
+let stats = { detected: 0, converted: 0, rejected: 0 };
 
-// Bigrams that are common in English but rare in Hebrew keyboard output
+async function loadLearned() {
+  try {
+    const data = await chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats']);
+    learnedHebrew = new Set(data.learnedHebrew || []);
+    learnedEnglish = new Set(data.learnedEnglish || []);
+    stats = data.stats || { detected: 0, converted: 0, rejected: 0 };
+  } catch { /* storage unavailable */ }
+}
+
+async function saveFeedback(words, isHebrew) {
+  try {
+    if (isHebrew) {
+      words.forEach(w => { learnedHebrew.add(w); learnedEnglish.delete(w); });
+      stats.converted++;
+    } else {
+      words.forEach(w => { learnedEnglish.add(w); learnedHebrew.delete(w); });
+      stats.rejected++;
+    }
+    await chrome.storage.local.set({
+      learnedHebrew: [...learnedHebrew],
+      learnedEnglish: [...learnedEnglish],
+      stats
+    });
+  } catch { /* storage unavailable */ }
+}
+
+loadLearned();
+
+// ── English detection ─────────────────────────────────────────
 const EN_BIGRAMS = new Set([
   'th','st','ng','ll','oo','ee','ly','ld','wh','tw','qu','ck','nd'
 ]);
@@ -58,7 +91,6 @@ const EN_WORDS = new Set([
   'six','sky','son','spy','sum','sun','tax','tea','ten','too','top','van',
   'via','war','win','won','age','ago','air','led','man','men','boy','girl',
   'here','come','from','said','each','many','been','were','them','im',
-  // common longer words
   'seems','better','still','often','every','never','always','again',
   'between','different','something','nothing','everything','someone',
   'anyone','everyone','keyboard','language','english','hebrew','typing',
@@ -73,38 +105,41 @@ const EN_WORDS = new Set([
   'looking','trying','using','putting','letting','seeing','knowing','saying',
   'really','very','quite','rather','pretty','maybe','perhaps','probably',
   'definitely','certainly','usually','actually','basically','literally',
-  // tech — but NOT tbh/btw/fyi since those are also Hebrew keyboard input!
   'npm','cpu','gpu','ram','ssd','usb','api','url','sql','css','html','lmao'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
 
 function hasHebrew(text) { return HEBREW_RE.test(text); }
-
-function convertToHebrew(text) {
-  return [...text].map(c => EN_TO_HE[c] || c).join('');
-}
-function convertToEnglish(text) {
-  return [...text].map(c => HE_TO_EN[c] || c).join('');
-}
+function convertToHebrew(text) { return [...text].map(c => EN_TO_HE[c] || c).join(''); }
+function convertToEnglish(text) { return [...text].map(c => HE_TO_EN[c] || c).join(''); }
 
 function wordCouldBeHebrew(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
+
+  // Learned data overrides heuristics — this is where self-learning kicks in
+  if (learnedEnglish.has(lower)) return false; // user confirmed: this is English
+  if (learnedHebrew.has(lower)) return true;   // user confirmed: this is Hebrew keyboard
+
+  // Heuristic filters
   if (EN_WORDS.has(lower)) return false;
   if (englishScore(lower) >= 0.15) return false;
-  // Every character must map to a Hebrew Unicode character.
-  // 'w'→"'" and 'q'→"/" are NOT Hebrew — disqualify the word.
+
+  // Every character must map to a Hebrew Unicode character
   return [...lower].every(c => {
     const mapped = EN_TO_HE[c];
     return mapped !== undefined && HEBREW_RE.test(mapped);
   });
 }
 
-// ── Text extraction (cursor-aware) ────────────────────────────
-// Reads text BEFORE the cursor — not the full element content.
-// This is critical for Gmail/Outlook where the element also contains
-// quoted email text, signatures, etc.
+function extractWords(text) {
+  return text.trim().split(/\s+/).filter(
+    w => /^[a-z,;.']+$/i.test(w) && w.length >= 2
+  );
+}
+
+// ── Cursor-aware text extraction ──────────────────────────────
 function getTextBeforeCursor(el) {
   try {
     if (el.isContentEditable) {
@@ -128,10 +163,9 @@ function analyze(el) {
   const rawText = getTextBeforeCursor(el);
   if (!rawText || rawText.trim().length < 3) return null;
 
-  // Only look at the last 600 chars before cursor
   const text = rawText.slice(-600);
 
-  // ── Case 1: Hebrew Unicode chars visible (keyboard in Hebrew mode) ──
+  // Case 1: Hebrew Unicode chars visible
   if (hasHebrew(text)) {
     const heCount = [...text].filter(c => HEBREW_RE.test(c)).length;
     if (heCount >= 2) {
@@ -140,27 +174,20 @@ function analyze(el) {
         message: 'Hebrew detected — did you mean English?',
         original: text.trim(),
         converted: convertToEnglish(text.trim()),
-        btnLabel: 'Switch to English'
+        btnLabel: 'Switch to English',
+        words: []
       };
     }
   }
 
-  // ── Case 2: English chars typed with Hebrew layout intent ──
-  const words = text.trim().split(/\s+/).filter(
-    w => /^[a-z,;.']+$/i.test(w) && w.length >= 2
-  );
-
-  // Find the CONSECUTIVE RUN of Hebrew-like words at the END of what's typed.
-  // As soon as a clearly-English word is hit (walking backwards), stop.
-  // This means: "Hey there azv kt gucs" → run = [azv, kt, gucs]
-  // And English text with occasional non-English-looking words won't trigger
-  // unless the LAST several words all look Hebrew.
+  // Case 2: Consecutive Hebrew-like words at end of typed text
+  const words = extractWords(text);
   const run = [];
   for (let i = words.length - 1; i >= 0; i--) {
     if (wordCouldBeHebrew(words[i])) {
       run.unshift(words[i]);
     } else {
-      break; // English word — stops the Hebrew run
+      break;
     }
   }
 
@@ -173,7 +200,8 @@ function analyze(el) {
         message: 'Typing in the wrong layout? This might be Hebrew:',
         original: runText,
         converted,
-        btnLabel: 'Convert to Hebrew'
+        btnLabel: 'Convert to Hebrew',
+        words: run  // saved for feedback
       };
     }
   }
@@ -221,17 +249,19 @@ const STYLES = `
     word-break: break-word;
     line-height: 1.5;
   }
-  .kld-actions { display: flex; gap: 8px; align-items: center; }
+  .kld-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .kld-hint { font-size: 10px; color: #475569; }
+  .kld-feedback { font-size: 10px; color: #64748b; margin-top: -4px; }
   .kld-btn {
-    border: none; border-radius: 7px; padding: 7px 14px;
+    border: none; border-radius: 7px; padding: 7px 12px;
     font-size: 12px; font-weight: 600; cursor: pointer;
     transition: opacity 0.15s, transform 0.1s; line-height: 1;
   }
   .kld-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
   .kld-btn:active { transform: translateY(0); }
-  .kld-primary   { background: #3b82f6; color: #fff; flex: 1; }
-  .kld-secondary { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
+  .kld-primary  { background: #3b82f6; color: #fff; flex: 1; }
+  .kld-wrong    { background: #1e293b; color: #f87171; border: 1px solid #f8717155; }
+  .kld-dismiss  { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
 
   #kld-recall {
     position: fixed;
@@ -249,7 +279,6 @@ const STYLES = `
     box-shadow: 0 4px 16px rgba(59,130,246,0.3);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     transition: transform 0.15s;
-    letter-spacing: 0.3px;
   }
   #kld-recall:hover { transform: scale(1.04); }
 `;
@@ -275,6 +304,10 @@ function showToast(element, detection) {
   if (activeToast) { activeToast.remove(); activeToast = null; }
   injectStyles();
 
+  // Increment detected count
+  stats.detected++;
+  chrome.storage.local.set({ stats }).catch(() => {});
+
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
@@ -282,23 +315,45 @@ function showToast(element, detection) {
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${detection.btnLabel}</button>
-      <button class="kld-btn kld-secondary" title="Dismiss">✕</button>
+      <button class="kld-btn kld-wrong" title="False positive — teach KeyLang this is English">✗ Not Hebrew</button>
+      <button class="kld-btn kld-dismiss" title="Dismiss">✕</button>
     </div>
-    <div class="kld-hint">Alt + Shift + K to recall</div>
+    <div class="kld-hint">Alt+Shift+K to recall · Click the extension icon for stats</div>
   `;
+
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
-    removeToast();
+    // Positive feedback: these words ARE Hebrew keyboard input
+    saveFeedback(detection.words, true);
+    removeToast(false); // don't show recall after successful conversion
   });
-  toast.querySelector('.kld-secondary').addEventListener('click', removeToast);
+
+  toast.querySelector('.kld-wrong').addEventListener('click', () => {
+    // Negative feedback: this was a false positive
+    saveFeedback(detection.words, false);
+    showFeedbackConfirm('Got it — KeyLang will learn from this.');
+    removeToast(false);
+  });
+
+  toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(true));
 
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
 }
 
-function removeToast() {
+function showFeedbackConfirm(message) {
+  injectStyles();
+  const el = document.createElement('div');
+  el.id = 'kld-toast';
+  el.style.cssText = 'border-color: #22c55e !important;';
+  el.innerHTML = `<div class="kld-header"><span>✓</span><span style="color:#86efac">${message}</span></div>`;
+  (document.body || document.documentElement).appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+function removeToast(showRecall = true) {
   if (activeToast) { activeToast.remove(); activeToast = null; }
-  if (lastDetection) showRecallBtn();
+  if (showRecall && lastDetection) showRecallBtn();
 }
 
 function showRecallBtn() {
@@ -334,9 +389,7 @@ function escapeHtml(str) {
 
 function applyConversion(el, detection) {
   const { original, converted } = detection;
-
   if (el.isContentEditable) {
-    // Find the original text in the element and replace it
     const full = el.innerText || el.textContent || '';
     const idx = full.lastIndexOf(original);
     if (idx === -1) return;
@@ -345,7 +398,6 @@ function applyConversion(el, detection) {
     document.execCommand('selectAll');
     document.execCommand('insertText', false, newText);
   } else {
-    // For regular inputs: replace only in the text before cursor
     const pos = el.selectionStart ?? el.value.length;
     const before = el.value.slice(0, pos);
     const idx = before.lastIndexOf(original);
@@ -355,7 +407,6 @@ function applyConversion(el, detection) {
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
-
   lastDetection = null;
   hideRecallBtn();
 }
@@ -370,13 +421,11 @@ function debounce(fn, ms) {
 function attachTo(el) {
   if (el._kld) return;
   el._kld = true;
-
   const check = debounce(() => {
-    if (activeToast) return; // don't re-run while toast is visible
+    if (activeToast) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
   }, 700);
-
   el.addEventListener('input', check);
   el.addEventListener('keyup', check);
   el.addEventListener('compositionend', check);
@@ -385,12 +434,8 @@ function attachTo(el) {
 // ── DOM observation ───────────────────────────────────────────
 
 const SELECTOR = [
-  'input[type="text"]',
-  'input[type="search"]',
-  'input:not([type])',
-  'textarea',
-  '[contenteditable="true"]',
-  '[contenteditable=""]'
+  'input[type="text"]','input[type="search"]','input:not([type])',
+  'textarea','[contenteditable="true"]','[contenteditable=""]'
 ].join(', ');
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
