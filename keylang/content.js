@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.3.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.4.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.3.0 loaded');
+console.log('[KeyLang] v1.4.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -107,7 +107,39 @@ const EN_WORDS = new Set([
   'looking','trying','using','putting','letting','seeing','knowing','saying',
   'really','very','quite','rather','pretty','maybe','perhaps','probably',
   'definitely','certainly','usually','actually','basically','literally',
-  'npm','cpu','gpu','ram','ssd','usb','api','url','sql','css','html','lmao'
+  'npm','cpu','gpu','ram','ssd','usb','api','url','sql','css','html','lmao',
+  // Common words that pass all-chars-map-to-Hebrew check but are clearly English
+  // (-e endings, common verbs/nouns without q/w and without our bigrams)
+  'home','love','life','live','hope','cope','note','vote','move','more',
+  'care','dare','bare','core','bore','sore','fore','gore','lore','wore',
+  'fire','hire','tire','wire','sire','dire',
+  'fine','line','mine','pine','vine','dine','sine',
+  'side','ride','hide','tide','wide','aide',
+  'bike','hike','type','ripe','pipe','hype','dive','five','hive','jive',
+  'cake','bake','fake','lake','rake','sake',
+  'game','fame','lame','came','tame','dame','name','same',
+  'rule','role','pole','mole','hole','sole',
+  'sale','male','pale','tale','vale',
+  'date','fate','gate','hate','late','mate','rate',
+  'bite','site','cite','kite','mite',
+  'mode','code','node','rode',
+  'bone','cone','tone','zone','lone','done','gone',
+  'cure','lure','pure','sure','cute','mute','lute',
+  'tube','cube','robe','vibe',
+  'rise','size','wise',
+  'cafe','safe','page','cage','rage','sage','wage',
+  'term','germ','perm','norm','dorm','form','farm','harm',
+  'fact','film','firm','fort',
+  'camp','damp','lamp','ramp',
+  'bump','dump','hump','jump','lump','pump',
+  'bond','fond','pond',
+  'barn','yarn','earn',
+  'real','meal','deal','heal','feel','feed','seed',
+  'cool','fool','pool','tool','fuel','duel',
+  'face','race','pace','lace','mace','base','case','vase',
+  'find','kind','mind','bind',
+  'able','ago','ace','ice','eve','ore','ego','ado',
+  'ex','ox','vs','id','pc','tv','dr','mr','ms','jr','sr'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
@@ -193,7 +225,7 @@ function analyze(el) {
     }
   }
 
-  if (run.length >= 3) {
+  if (run.length >= 2) {
     const runText = run.join(' ');
     const converted = convertToHebrew(runText.toLowerCase());
     if (hasHebrew(converted)) {
@@ -396,6 +428,9 @@ document.addEventListener('keydown', e => {
 
 // Convert any selected text on demand — works even when auto-detection missed the window
 function convertSelection(text, sel) {
+  // Clone the range NOW — clicking the button later will lose the selection
+  const savedRange = (sel && sel.rangeCount) ? sel.getRangeAt(0).cloneRange() : null;
+
   let detection;
 
   if (hasHebrew(text)) {
@@ -449,12 +484,12 @@ function convertSelection(text, sel) {
   `;
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
-    // Replace the selected text in place
-    if (sel && sel.rangeCount) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(document.createTextNode(detection.converted));
-      sel.removeAllRanges();
+    // Use the range we saved at keydown time — selection is gone by now
+    if (savedRange) {
+      try {
+        savedRange.deleteContents();
+        savedRange.insertNode(document.createTextNode(detection.converted));
+      } catch { /* range may be stale */ }
     }
     saveFeedback(detection.words, detection.type === 'english_as_hebrew');
     removeToast(false);
@@ -519,10 +554,19 @@ function attachTo(el) {
 
 const SELECTOR = [
   'input[type="text"]','input[type="search"]','input:not([type])',
-  'textarea','[contenteditable="true"]','[contenteditable=""]'
+  'textarea','[contenteditable="true"]','[contenteditable=""]',
+  '[role="textbox"]'  // Gmail compose, Outlook, etc.
 ].join(', ');
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
+
+// Fallback: catch any editable element that gets keyboard events,
+// even if MutationObserver missed it (Gmail, iframes, dynamic apps)
+document.addEventListener('keyup', () => {
+  const el = document.activeElement;
+  if (!el || el._kld) return;
+  if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
+}, true);
 
 new MutationObserver(mutations => {
   for (const { type, addedNodes, target } of mutations) {
