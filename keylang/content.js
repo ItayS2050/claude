@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.4.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.5.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.4.0 loaded');
+console.log('[KeyLang] v1.5.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -152,15 +152,15 @@ function wordCouldBeHebrew(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
 
-  // Learned data overrides heuristics — this is where self-learning kicks in
-  if (learnedEnglish.has(lower)) return false; // user confirmed: this is English
-  if (learnedHebrew.has(lower)) return true;   // user confirmed: this is Hebrew keyboard
+  // Learned data overrides heuristics
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedHebrew.has(lower)) return true;
 
-  // Heuristic filters
   if (EN_WORDS.has(lower)) return false;
   if (englishScore(lower) >= 0.15) return false;
 
   // Every character must map to a Hebrew Unicode character
+  // Note: 'w'→"'" and 'q'→"/" are NOT Hebrew, so words with w/q fail here (correct)
   return [...lower].every(c => {
     const mapped = EN_TO_HE[c];
     return mapped !== undefined && HEBREW_RE.test(mapped);
@@ -172,6 +172,14 @@ function extractWords(text) {
     w => /^[a-z,;.']+$/i.test(w) && w.length >= 2
   );
 }
+
+// Short common English words that also appear in Hebrew-keyboard sentences.
+// These act as "bridges" — they don't break the consecutive run but don't
+// count toward the minimum Hebrew-word threshold either.
+const PASSTHROUGH = new Set([
+  'up','no','ok','hi','so','or','an','be','in','at','by','as','if',
+  'he','me','we','us','it','to','on','am','is','do','go','of','my'
+]);
 
 // ── Cursor-aware text extraction ──────────────────────────────
 function getTextBeforeCursor(el) {
@@ -198,34 +206,38 @@ function analyze(el) {
   if (!rawText || rawText.trim().length < 3) return null;
 
   const text = rawText.slice(-600);
+  const textHasHebrew = hasHebrew(text);
 
-  // Case 1: Hebrew Unicode chars visible
-  if (hasHebrew(text)) {
-    const heCount = [...text].filter(c => HEBREW_RE.test(c)).length;
-    if (heCount >= 2) {
-      return {
-        type: 'hebrew_detected',
-        message: 'Hebrew detected — did you mean English?',
-        original: text.trim(),
-        converted: convertToEnglish(text.trim()),
-        btnLabel: 'Switch to English',
-        words: []
-      };
-    }
-  }
-
-  // Case 2: Consecutive Hebrew-like words at end of typed text
+  // Case 2 first: English-letter words at end that look like Hebrew keyboard input.
+  // Walk backwards; allow PASSTHROUGH words as bridges between Hebrew-like words.
   const words = extractWords(text);
   const run = [];
+  let gapBuffer = []; // buffered passthrough words not yet committed to run
+
   for (let i = words.length - 1; i >= 0; i--) {
-    if (wordCouldBeHebrew(words[i])) {
-      run.unshift(words[i]);
+    const w = words[i];
+    if (wordCouldBeHebrew(w)) {
+      // Flush any buffered gap words only if they're bridging (run already has Hebrew words)
+      if (gapBuffer.length > 0 && run.length > 0) {
+        run.unshift(...gapBuffer);
+      }
+      gapBuffer = [];
+      run.unshift(w);
+    } else if (PASSTHROUGH.has(w.toLowerCase()) && gapBuffer.length < 2) {
+      gapBuffer.unshift(w); // collect as potential bridge; don't commit yet
     } else {
       break;
     }
   }
+  // Trailing gapBuffer is discarded (passthrough words at end with no Hebrew after = real English)
 
-  if (run.length >= 2) {
+  const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
+
+  // Lower threshold to 1 when text already has Hebrew chars — clear sign the user
+  // is in Hebrew-keyboard context (e.g. "האם זה kt" where kt = לא)
+  const minRun = textHasHebrew ? 1 : 2;
+
+  if (hebrewCount >= minRun) {
     const runText = run.join(' ');
     const converted = convertToHebrew(runText.toLowerCase());
     if (hasHebrew(converted)) {
@@ -235,7 +247,23 @@ function analyze(el) {
         original: runText,
         converted,
         btnLabel: 'Convert to Hebrew',
-        words: run  // saved for feedback
+        words: run.filter(w => wordCouldBeHebrew(w))
+      };
+    }
+  }
+
+  // Case 1: entire recent text is Hebrew Unicode, no English-keyboard run at the end
+  // (user accidentally in Hebrew keyboard mode when they wanted English)
+  if (textHasHebrew && run.length === 0) {
+    const heCount = [...text].filter(c => HEBREW_RE.test(c)).length;
+    if (heCount >= 4) {
+      return {
+        type: 'hebrew_detected',
+        message: 'Hebrew detected — did you mean English?',
+        original: text.trim(),
+        converted: convertToEnglish(text.trim()),
+        btnLabel: 'Switch to English',
+        words: []
       };
     }
   }
@@ -296,7 +324,12 @@ const STYLES = `
   .kld-primary  { background: #3b82f6; color: #fff; flex: 1; }
   .kld-wrong    { background: #1e293b; color: #f87171; border: 1px solid #f8717155; }
   .kld-dismiss  { background: #1e293b; color: #94a3b8; padding: 7px 10px; }
+  .kld-copy     { background: #1e293b; color: #a78bfa; border: 1px solid #a78bfa55; }
 
+  @keyframes kld-pulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(59,130,246,0.35); }
+    50%       { box-shadow: 0 4px 24px rgba(59,130,246,0.7), 0 0 0 5px rgba(59,130,246,0.15); }
+  }
   #kld-recall {
     position: fixed;
     top: 16px;
@@ -305,16 +338,24 @@ const STYLES = `
     background: #1e3a5f;
     border: 2px solid #3b82f6;
     border-radius: 8px;
-    padding: 8px 14px;
+    padding: 10px 16px;
     font-size: 13px;
     font-weight: 700;
     color: #93c5fd;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(59,130,246,0.3);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    transition: transform 0.15s;
+    animation: kld-pulse 2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 280px;
   }
-  #kld-recall:hover { transform: scale(1.04); }
+  #kld-recall:hover { opacity: 0.9; }
+  .kld-recall-preview {
+    font-size: 12px; font-weight: 400; color: #7dd3fc;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 180px; direction: rtl; unicode-bidi: plaintext;
+  }
 `;
 
 let activeToast = null;
@@ -349,10 +390,11 @@ function showToast(element, detection) {
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${detection.btnLabel}</button>
+      <button class="kld-btn kld-copy" title="Copy converted text to clipboard">Copy</button>
       <button class="kld-btn kld-wrong" title="False positive — teach KeyLang this is English">✗ Not Hebrew</button>
       <button class="kld-btn kld-dismiss" title="Dismiss">✕</button>
     </div>
-    <div class="kld-hint">Alt+Shift+K to recall · Click the extension icon for stats</div>
+    <div class="kld-hint">Select text + Alt+Shift+K to force-convert any selection</div>
   `;
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
@@ -362,6 +404,11 @@ function showToast(element, detection) {
       showFeedbackConfirm(`✓ Converted & learned ${detection.words.length} word${detection.words.length > 1 ? 's' : ''} as Hebrew`);
     }
     removeToast(false);
+  });
+
+  toast.querySelector('.kld-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(detection.converted).catch(() => {});
+    showFeedbackConfirm('✓ Copied to clipboard!');
   });
 
   toast.querySelector('.kld-wrong').addEventListener('click', () => {
@@ -397,8 +444,11 @@ function showRecallBtn() {
   injectStyles();
   recallBtn = document.createElement('button');
   recallBtn.id = 'kld-recall';
-  recallBtn.textContent = '⌨️ Show last detection';
-  recallBtn.title = 'Alt + Shift + K';
+  const preview = lastDetection
+    ? lastDetection.converted.slice(0, 20) + (lastDetection.converted.length > 20 ? '…' : '')
+    : '';
+  recallBtn.innerHTML = `<span>⌨️</span><span class="kld-recall-preview">${escapeHtml(preview)}</span>`;
+  recallBtn.title = 'Click to re-show · Alt+Shift+K';
   recallBtn.addEventListener('click', () => {
     if (lastDetection && lastElement) showToast(lastElement, lastDetection);
   });
