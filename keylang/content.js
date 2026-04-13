@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.2.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.3.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.2.0 loaded');
+console.log('[KeyLang] v1.3.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -57,7 +57,9 @@ loadLearned();
 
 // ── English detection ─────────────────────────────────────────
 const EN_BIGRAMS = new Set([
-  'th','st','ng','ll','oo','ee','ly','ld','wh','tw','qu','ck','nd'
+  // 'th' removed — t=א h=י gives "אי" which starts many Hebrew words (איפה,איך,אין)
+  // All common English "th" words (the,that,this,there…) are already in EN_WORDS
+  'st','ng','ll','oo','ee','ly','ld','wh','tw','qu','ck','nd'
 ]);
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
 
@@ -323,15 +325,17 @@ function showToast(element, detection) {
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
-    // Positive feedback: these words ARE Hebrew keyboard input
-    saveFeedback(detection.words, true);
-    removeToast(false); // don't show recall after successful conversion
+    if (detection.words.length > 0) {
+      saveFeedback(detection.words, true);
+      showFeedbackConfirm(`✓ Converted & learned ${detection.words.length} word${detection.words.length > 1 ? 's' : ''} as Hebrew`);
+    }
+    removeToast(false);
   });
 
   toast.querySelector('.kld-wrong').addEventListener('click', () => {
-    // Negative feedback: this was a false positive
     saveFeedback(detection.words, false);
-    showFeedbackConfirm('Got it — KeyLang will learn from this.');
+    const sample = detection.words.slice(0, 3).join(', ');
+    showFeedbackConfirm(`✓ Noted — "${sample}${detection.words.length > 3 ? '…' : ''}" marked as English`);
     removeToast(false);
   });
 
@@ -374,12 +378,92 @@ function hideRecallBtn() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.altKey && e.shiftKey && e.code === 'KeyK') {
-    e.preventDefault();
-    if (activeToast) removeToast();
-    else if (lastDetection && lastElement) showToast(lastElement, lastDetection);
+  if (!e.altKey || !e.shiftKey || e.code !== 'KeyK') return;
+  e.preventDefault();
+
+  // Priority 1: if text is selected, convert the selection directly
+  const sel = window.getSelection();
+  const selectedText = sel && sel.toString().trim();
+  if (selectedText && selectedText.length >= 2) {
+    convertSelection(selectedText, sel);
+    return;
   }
+
+  // Priority 2: toggle last auto-detection toast
+  if (activeToast) removeToast();
+  else if (lastDetection && lastElement) showToast(lastElement, lastDetection);
 });
+
+// Convert any selected text on demand — works even when auto-detection missed the window
+function convertSelection(text, sel) {
+  let detection;
+
+  if (hasHebrew(text)) {
+    // Selected text is Hebrew → offer English conversion
+    detection = {
+      type: 'hebrew_detected',
+      message: 'Convert selected Hebrew to English?',
+      original: text,
+      converted: convertToEnglish(text),
+      btnLabel: 'Convert to English',
+      words: []
+    };
+  } else {
+    // Try interpreting as Hebrew keyboard input
+    const words = extractWords(text);
+    const converted = convertToHebrew(text.toLowerCase());
+    if (hasHebrew(converted)) {
+      detection = {
+        type: 'english_as_hebrew',
+        message: 'Convert selected text to Hebrew?',
+        original: text,
+        converted,
+        btnLabel: 'Convert to Hebrew',
+        words
+      };
+    }
+  }
+
+  if (!detection) {
+    showFeedbackConfirm('Could not detect a language mismatch in selection.');
+    return;
+  }
+
+  // Show toast and wire Convert to replace the actual selection
+  lastDetection = detection;
+  lastElement = document.activeElement;
+  hideRecallBtn();
+  if (activeToast) { activeToast.remove(); activeToast = null; }
+  injectStyles();
+
+  const toast = document.createElement('div');
+  toast.id = 'kld-toast';
+  toast.innerHTML = `
+    <div class="kld-header"><span>⌨️</span><span>${detection.message}</span></div>
+    <div class="kld-preview">${escapeHtml(detection.converted)}</div>
+    <div class="kld-actions">
+      <button class="kld-btn kld-primary">${detection.btnLabel}</button>
+      <button class="kld-btn kld-dismiss">✕</button>
+    </div>
+    <div class="kld-hint">Converting selection</div>
+  `;
+
+  toast.querySelector('.kld-primary').addEventListener('click', () => {
+    // Replace the selected text in place
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(detection.converted));
+      sel.removeAllRanges();
+    }
+    saveFeedback(detection.words, detection.type === 'english_as_hebrew');
+    removeToast(false);
+  });
+  toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(true));
+
+  (document.body || document.documentElement).appendChild(toast);
+  activeToast = toast;
+}
 
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

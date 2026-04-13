@@ -69,11 +69,23 @@
     }
     .reset-btn:hover { background: #334155; color: #e2e8f0; }
     .shortcut { color: #475569; font-size: 11px; margin-top: 10px; text-align: center; }
+    .add-row { display: flex; gap: 6px; margin-top: 8px; }
+    .add-row input {
+      flex: 1; background: #1e293b; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 12px;
+    }
+    .add-row input:focus { outline: none; border-color: #3b82f6; }
+    .add-row button {
+      background: #3b82f6; color: #fff; border: none;
+      border-radius: 6px; padding: 5px 10px; font-size: 12px;
+      font-weight: 600; cursor: pointer;
+    }
+    .add-row button:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
   <h1>⌨️ KeyLang</h1>
-  <div class="version">v1.2.0 · Hebrew ↔ English detector</div>
+  <div class="version">v1.3.0 · Hebrew ↔ English detector</div>
 
   <div class="stats">
     <div class="stat">
@@ -92,13 +104,21 @@
 
   <h2>Learned — Hebrew keyboard words</h2>
   <div class="word-list" id="hebrew-words"></div>
+  <div class="add-row">
+    <input id="add-hebrew-input" type="text" placeholder="Add word manually…" />
+    <button id="add-hebrew-btn">Add</button>
+  </div>
 
   <h2>Learned — Excluded (English) words</h2>
   <div class="word-list" id="english-words"></div>
+  <div class="add-row">
+    <input id="add-english-input" type="text" placeholder="Add word to exclude…" />
+    <button id="add-english-btn">Add</button>
+  </div>
 
   <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
-  <div class="shortcut">Alt + Shift + K · Recall last detection on any page</div>
+  <div class="shortcut">Alt + Shift + K · Select text to convert instantly on any page</div>
 
   <script src="popup.js"></script>
 </body>

@@ -39,6 +39,34 @@ function removeWord(word, type) {
   });
 }
 
+function addWord(word, type) {
+  if (!word.trim()) return;
+  const key = type === 'hebrew' ? 'learnedHebrew' : 'learnedEnglish';
+  chrome.storage.local.get([key], (data) => {
+    const list = [...new Set([...(data[key] || []), word.trim().toLowerCase()])];
+    chrome.storage.local.set({ [key]: list }, () => {
+      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats'], render);
+    });
+  });
+}
+
+document.getElementById('add-hebrew-btn').addEventListener('click', () => {
+  const input = document.getElementById('add-hebrew-input');
+  addWord(input.value, 'hebrew');
+  input.value = '';
+});
+document.getElementById('add-hebrew-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('add-hebrew-btn').click();
+});
+document.getElementById('add-english-btn').addEventListener('click', () => {
+  const input = document.getElementById('add-english-input');
+  addWord(input.value, 'english');
+  input.value = '';
+});
+document.getElementById('add-english-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('add-english-btn').click();
+});
+
 document.getElementById('reset-btn').addEventListener('click', () => {
   if (!confirm('Reset all learned data? Stats and word lists will be cleared.')) return;
   chrome.storage.local.set({
