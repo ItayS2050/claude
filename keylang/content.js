@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.5.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.6.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.5.0 loaded');
+console.log('[KeyLang] v1.6.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -77,7 +77,7 @@ function englishScore(word) {
 const EN_WORDS = new Set([
   'the','be','to','of','and','a','in','that','have','it','for','not','on',
   'with','he','as','you','do','at','this','but','his','by','from','they',
-  'we','say','her','she','or','an','will','my','one','all','would','there',
+  'we','say','she','or','an','will','my','one','all','would','there',
   'their','what','so','up','out','if','about','who','get','which','go','me',
   'when','make','can','like','time','no','just','him','know','take','into',
   'your','good','some','could','them','see','other','than','then','now',
@@ -86,7 +86,8 @@ const EN_WORDS = new Set([
   'any','give','day','most','us','hello','ok','yes','hi','hey','lol','omg',
   'thanks','please','sorry','help','okay','yeah','am','is','are','was',
   'has','had','did','got','let','put','set','run','try','ask','act','add',
-  'big','bit','box','buy','car','cut','eat','end','eye','far','few','fit',
+  // NOTE: 'cut'→בוא, 'far'→כשר, 'her'→יקר are REMOVED — they are critical Hebrew words
+  'big','bit','box','buy','car','eat','end','eye','few','fit',
   'fix','fly','fun','gun','hit','hot','job','key','kid','law','lay','leg',
   'lie','lot','low','map','may','met','mix','mom','net','old','own','pay',
   'per','pop','pot','raw','red','rid','row','sad','sat','saw','sea','sit',
@@ -139,7 +140,39 @@ const EN_WORDS = new Set([
   'face','race','pace','lace','mace','base','case','vase',
   'find','kind','mind','bind',
   'able','ago','ace','ice','eve','ore','ego','ado',
-  'ex','ox','vs','id','pc','tv','dr','mr','ms','jr','sr'
+  'ex','ox','vs','id','pc','tv','dr','mr','ms','jr','sr',
+  // Words freed when cut/far/her removed — add English words that could pair with them
+  // Common -ain, -air, -ear, -ain words
+  'hair','fair','pair','main','rain','pain','gain','vain','train','brain','plain','grain','chain',
+  'dear','fear','hear','near','year','bear','tear','gear','rear','pear',
+  'mean','lean','bean','dean','clean',
+  // Common past tenses / adjectives not caught by bigrams
+  'made','gave','kept','sent','felt','great','short','close','price','paper','money',
+  'span','plan','scan','clan','sort','born','corn','horn','torn','dark','park','bark','mark',
+  'star','scar','sharp','smart','start','spark',
+  'nice','fresh','crisp','clear','clean','chief',
+  'city','pity','body','baby','lady','navy',
+  'open','even','seven','often','given','taken','risen','fallen',
+  'reason','season','person','lesson','prison','garden',
+  'cover','river','liver','never','fever','peter',
+  'given','risen','driven','riven',
+  'brain','drain','grain','sprain','strain',
+  'paper','taper','vapor','caper',
+  'sport','fort','sort','port','mort',
+  'third','bird','nerd','herd',
+  'belt','melt','pelt','felt','dealt',
+  'spent','meant','lent','bent','rent','cent','dent','gent','tent',
+  'brand','grand','grant','plant','slant','chant',
+  'break','speak','sneak','freak','creak',
+  'block','clock','flock','stock','knock','shock',
+  'drink','think','blink','brink','clink','stink','shrink',
+  'grass','class','glass','brass','crass','mass','pass',
+  'press','dress','stress','bless','chess',
+  'spoke','broke','choke','smoke','stroke',
+  'froze','those','chose','prose','close',
+  'grain','sprain','strain','train','brain','drain',
+  'storm','dorm','norm','form','farm','charm','alarm',
+  'floor','door','poor','moor','lore','gore','bore','core','fore','more','sore','tore','wore'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
@@ -229,7 +262,11 @@ function analyze(el) {
       break;
     }
   }
-  // Trailing gapBuffer is discarded (passthrough words at end with no Hebrew after = real English)
+  // Flush any leading PASSTHROUGH words that precede the Hebrew run
+  // e.g. "to tbh rumv" — "to" was buffered before "tbh" was found
+  if (gapBuffer.length > 0 && run.length > 0) {
+    run.unshift(...gapBuffer);
+  }
 
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
 
