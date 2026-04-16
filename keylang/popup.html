@@ -81,11 +81,30 @@
       font-weight: 600; cursor: pointer;
     }
     .add-row button:hover { opacity: 0.85; }
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1e293b; border-radius: 8px; padding: 10px 12px; margin: 14px 0 0;
+    }
+    .toggle-label { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .toggle-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #334155; border-radius: 22px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .slider:before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform 0.2s;
+    }
+    input:checked + .slider { background: #3b82f6; }
+    input:checked + .slider:before { transform: translateX(18px); }
   </style>
 </head>
 <body>
   <h1>⌨️ KeyLang</h1>
-  <div class="version">v1.6.0 · Hebrew ↔ English detector</div>
+  <div class="version">v1.7.0 · Hebrew ↔ English detector</div>
 
   <div class="stats">
     <div class="stat">
@@ -117,8 +136,21 @@
   </div>
 
   <hr class="divider">
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Auto-detection</div>
+      <div class="toggle-sub">Show popup when wrong layout detected</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="detection-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
-  <div class="shortcut">Alt + Shift + K · Select text to convert instantly on any page</div>
+  <div class="shortcut">Alt + Shift + K · Select text to convert on any page</div>
 
   <script src="popup.js"></script>
 </body>

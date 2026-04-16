@@ -9,6 +9,10 @@ function render(data) {
   document.getElementById('s-converted').textContent = stats.converted;
   document.getElementById('s-rejected').textContent = stats.rejected;
 
+  // Detection toggle
+  const toggle = document.getElementById('detection-toggle');
+  toggle.checked = data.detectionEnabled !== false;
+
   renderWordList('hebrew-words', hebrewWords, 'hebrew', (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
 }
@@ -34,7 +38,7 @@ function removeWord(word, type) {
     const key = type === 'hebrew' ? 'learnedHebrew' : 'learnedEnglish';
     const list = (data[key] || []).filter(w => w !== word);
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats'], render);
+      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
     });
   });
 }
@@ -45,10 +49,15 @@ function addWord(word, type) {
   chrome.storage.local.get([key], (data) => {
     const list = [...new Set([...(data[key] || []), word.trim().toLowerCase()])];
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats'], render);
+      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
     });
   });
 }
+
+// Detection on/off toggle
+document.getElementById('detection-toggle').addEventListener('change', (e) => {
+  chrome.storage.local.set({ detectionEnabled: e.target.checked });
+});
 
 document.getElementById('add-hebrew-btn').addEventListener('click', () => {
   const input = document.getElementById('add-hebrew-input');
@@ -74,9 +83,9 @@ document.getElementById('reset-btn').addEventListener('click', () => {
     learnedEnglish: [],
     stats: { detected: 0, converted: 0, rejected: 0 }
   }, () => {
-    chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats'], render);
+    chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
   });
 });
 
 // Load on open
-chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats'], render);
+chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);

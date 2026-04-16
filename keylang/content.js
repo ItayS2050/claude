@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.6.0 – Keyboard Language Detector (Hebrew ↔ English)
+// KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.6.0 loaded');
+console.log('[KeyLang] v1.7.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -21,20 +21,35 @@ for (const [en, he] of Object.entries(EN_TO_HE)) {
 const HEBREW_RE = /[\u0590-\u05FF]/;
 
 // ── Learned data (loaded from storage) ───────────────────────
-// learnedHebrew: words the user confirmed ARE Hebrew keyboard input
-// learnedEnglish: words the user confirmed are English (false positives)
 let learnedHebrew = new Set();
 let learnedEnglish = new Set();
 let stats = { detected: 0, converted: 0, rejected: 0 };
+let detectionEnabled = true;   // on/off switch
+let toastPos = null;           // { top, left } saved drag position
 
 async function loadLearned() {
   try {
-    const data = await chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats']);
+    const data = await chrome.storage.local.get([
+      'learnedHebrew','learnedEnglish','stats','detectionEnabled','toastPos'
+    ]);
     learnedHebrew = new Set(data.learnedHebrew || []);
     learnedEnglish = new Set(data.learnedEnglish || []);
     stats = data.stats || { detected: 0, converted: 0, rejected: 0 };
+    detectionEnabled = data.detectionEnabled !== false; // default on
+    toastPos = data.toastPos || null;
   } catch { /* storage unavailable */ }
 }
+
+// React to on/off changes made from the popup
+try {
+  chrome.storage.onChanged.addListener((changes) => {
+    if ('detectionEnabled' in changes) {
+      detectionEnabled = changes.detectionEnabled.newValue !== false;
+      if (!detectionEnabled) { removeToast(false); hideRecallBtn(); }
+    }
+    if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
+  });
+} catch { /* storage unavailable */ }
 
 async function saveFeedback(words, isHebrew) {
   try {
@@ -313,8 +328,7 @@ function analyze(el) {
 const STYLES = `
   #kld-toast {
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: 16px; right: 16px;
     z-index: 2147483647;
     background: #16213e;
     color: #e2e8f0;
@@ -324,33 +338,31 @@ const STYLES = `
     box-shadow: 0 12px 40px rgba(0,0,0,0.55);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     font-size: 13px;
-    max-width: 340px;
-    min-width: 260px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    max-width: 340px; min-width: 260px;
+    display: flex; flex-direction: column; gap: 10px;
     animation: kld-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     pointer-events: all;
+    cursor: grab;
+    user-select: none;
   }
+  #kld-toast.kld-dragging { cursor: grabbing; }
   @keyframes kld-in {
     from { opacity: 0; transform: translateY(-12px) scale(0.95); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
-  .kld-header { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; color: #94a3b8; }
+  .kld-dragbar {
+    font-size: 10px; color: #334155; text-align: center;
+    letter-spacing: 2px; margin-bottom: -4px; cursor: grab;
+  }
+  .kld-header { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; color: #94a3b8; cursor: grab; }
   .kld-preview {
-    background: #0f172a;
-    border-radius: 7px;
-    padding: 8px 12px;
-    font-size: 16px;
-    unicode-bidi: plaintext;
-    direction: auto;
-    color: #7dd3fc;
-    word-break: break-word;
-    line-height: 1.5;
+    background: #0f172a; border-radius: 7px; padding: 8px 12px;
+    font-size: 16px; unicode-bidi: plaintext; direction: auto;
+    color: #7dd3fc; word-break: break-word; line-height: 1.5;
+    cursor: text; user-select: text;
   }
   .kld-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .kld-hint { font-size: 10px; color: #475569; }
-  .kld-feedback { font-size: 10px; color: #64748b; margin-top: -4px; }
   .kld-btn {
     border: none; border-radius: 7px; padding: 7px 12px;
     font-size: 12px; font-weight: 600; cursor: pointer;
@@ -369,36 +381,82 @@ const STYLES = `
   }
   #kld-recall {
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: 16px; right: 16px;
     z-index: 2147483646;
     background: #1e3a5f;
     border: 2px solid #3b82f6;
     border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #93c5fd;
-    cursor: pointer;
+    padding: 8px 12px;
+    font-size: 13px; font-weight: 700; color: #93c5fd;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     animation: kld-pulse 2s ease-in-out infinite;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 280px;
+    display: flex; align-items: center; gap: 6px;
+    max-width: 260px;
+    cursor: grab; user-select: none;
   }
+  #kld-recall.kld-dragging { cursor: grabbing; }
   #kld-recall:hover { opacity: 0.9; }
   .kld-recall-preview {
     font-size: 12px; font-weight: 400; color: #7dd3fc;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    max-width: 180px; direction: rtl; unicode-bidi: plaintext;
+    max-width: 150px; direction: rtl; unicode-bidi: plaintext;
+    cursor: pointer;
   }
+  .kld-recall-off {
+    background: none; border: none; font-size: 13px; cursor: pointer;
+    color: #475569; padding: 0 2px; line-height: 1; flex-shrink: 0;
+  }
+  .kld-recall-off:hover { color: #f87171; }
 `;
 
 let activeToast = null;
 let lastDetection = null;
 let lastElement = null;
 let recallBtn = null;
+let dismissedSignature = null; // signature of last user-dismissed detection
+
+// ── Drag & position ───────────────────────────────────────────
+
+function getDefaultPos() {
+  return { top: 16, left: window.innerWidth - 360 };
+}
+
+function applyPos(el) {
+  const pos = toastPos || getDefaultPos();
+  el.style.top   = Math.max(0, Math.min(pos.top,  window.innerHeight - 60)) + 'px';
+  el.style.left  = Math.max(0, Math.min(pos.left, window.innerWidth  - 60)) + 'px';
+  el.style.right = 'auto';
+}
+
+function makeDraggable(el) {
+  let startX, startY, startLeft, startTop;
+
+  el.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    startX = e.clientX; startY = e.clientY;
+    startLeft = rect.left; startTop = rect.top;
+    el.style.right = 'auto';
+    el.classList.add('kld-dragging');
+
+    const onMove = e => {
+      const left = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  startLeft + e.clientX - startX));
+      const top  = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, startTop  + e.clientY - startY));
+      el.style.left = left + 'px';
+      el.style.top  = top  + 'px';
+    };
+    const onUp = () => {
+      el.classList.remove('kld-dragging');
+      document.removeEventListener('mousemove', onMove);
+      const rect = el.getBoundingClientRect();
+      toastPos = { top: rect.top, left: rect.left };
+      chrome.storage.local.set({ toastPos }).catch(() => {});
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp, { once: true });
+  });
+}
 
 function injectStyles() {
   if (document.getElementById('kld-styles')) return;
@@ -408,38 +466,61 @@ function injectStyles() {
   (document.head || document.documentElement).appendChild(s);
 }
 
+// Show toast, OR silently update recall button if the run is long (≥5 Hebrew words).
+// Long detections just pulse the recall button — they don't interrupt typing.
 function showToast(element, detection) {
+  if (!detectionEnabled) return;
+
+  // Don't re-show a toast the user just dismissed (same detected words)
+  const sig = detection.words.join('|');
+  if (sig && sig === dismissedSignature) {
+    // Silently keep recall button updated
+    lastDetection = detection;
+    lastElement = element;
+    if (!recallBtn) showRecallBtn();
+    return;
+  }
+
+  // Long run → silent: just pulse the recall button, don't interrupt typing
+  const isLong = detection.words.length >= 5;
+  if (isLong) {
+    lastDetection = detection;
+    lastElement = element;
+    hideRecallBtn(); // rebuild with fresh preview
+    showRecallBtn();
+    return;
+  }
+
   if (activeToast && lastDetection === detection) return;
   lastDetection = detection;
   lastElement = element;
+  dismissedSignature = null;
   hideRecallBtn();
   if (activeToast) { activeToast.remove(); activeToast = null; }
   injectStyles();
 
-  // Increment detected count
   stats.detected++;
   chrome.storage.local.set({ stats }).catch(() => {});
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
+    <div class="kld-dragbar">⠿ drag to move</div>
     <div class="kld-header"><span>⌨️</span><span>${detection.message}</span></div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${detection.btnLabel}</button>
-      <button class="kld-btn kld-copy" title="Copy converted text to clipboard">Copy</button>
-      <button class="kld-btn kld-wrong" title="False positive — teach KeyLang this is English">✗ Not Hebrew</button>
+      <button class="kld-btn kld-copy" title="Copy to clipboard">Copy</button>
+      <button class="kld-btn kld-wrong" title="Not Hebrew — teach KeyLang">✗ Not Hebrew</button>
       <button class="kld-btn kld-dismiss" title="Dismiss">✕</button>
     </div>
-    <div class="kld-hint">Select text + Alt+Shift+K to force-convert any selection</div>
+    <div class="kld-hint">Drag to move · Select text + Alt+Shift+K to convert manually</div>
   `;
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
-    if (detection.words.length > 0) {
-      saveFeedback(detection.words, true);
-      showFeedbackConfirm(`✓ Converted & learned ${detection.words.length} word${detection.words.length > 1 ? 's' : ''} as Hebrew`);
-    }
+    if (detection.words.length > 0) saveFeedback(detection.words, true);
+    showFeedbackConfirm(`✓ Converted & learned ${detection.words.length} word${detection.words.length !== 1 ? 's' : ''} as Hebrew`);
     removeToast(false);
   });
 
@@ -455,8 +536,13 @@ function showToast(element, detection) {
     removeToast(false);
   });
 
-  toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(true));
+  toast.querySelector('.kld-dismiss').addEventListener('click', () => {
+    dismissedSignature = sig; // remember — don't re-show for same words
+    removeToast(true);
+  });
 
+  applyPos(toast);
+  makeDraggable(toast);
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
 }
@@ -465,8 +551,9 @@ function showFeedbackConfirm(message) {
   injectStyles();
   const el = document.createElement('div');
   el.id = 'kld-toast';
-  el.style.cssText = 'border-color: #22c55e !important;';
+  el.style.cssText = 'border-color:#22c55e!important;cursor:default';
   el.innerHTML = `<div class="kld-header"><span>✓</span><span style="color:#86efac">${message}</span></div>`;
+  applyPos(el);
   (document.body || document.documentElement).appendChild(el);
   setTimeout(() => el.remove(), 2500);
 }
@@ -477,18 +564,33 @@ function removeToast(showRecall = true) {
 }
 
 function showRecallBtn() {
-  if (recallBtn) return;
+  if (recallBtn) { recallBtn.remove(); recallBtn = null; } // always rebuild for fresh preview
   injectStyles();
-  recallBtn = document.createElement('button');
+  recallBtn = document.createElement('div');
   recallBtn.id = 'kld-recall';
   const preview = lastDetection
-    ? lastDetection.converted.slice(0, 20) + (lastDetection.converted.length > 20 ? '…' : '')
+    ? lastDetection.converted.slice(0, 18) + (lastDetection.converted.length > 18 ? '…' : '')
     : '';
-  recallBtn.innerHTML = `<span>⌨️</span><span class="kld-recall-preview">${escapeHtml(preview)}</span>`;
-  recallBtn.title = 'Click to re-show · Alt+Shift+K';
-  recallBtn.addEventListener('click', () => {
-    if (lastDetection && lastElement) showToast(lastElement, lastDetection);
+  recallBtn.innerHTML = `
+    <span>⌨️</span>
+    <span class="kld-recall-preview" title="Click to show full detection">${escapeHtml(preview)}</span>
+    <button class="kld-recall-off" title="Turn off auto-detection">✕</button>
+  `;
+  recallBtn.querySelector('.kld-recall-preview').addEventListener('click', () => {
+    if (lastDetection && lastElement) {
+      dismissedSignature = null; // allow re-show
+      showToast(lastElement, lastDetection);
+    }
   });
+  recallBtn.querySelector('.kld-recall-off').addEventListener('click', e => {
+    e.stopPropagation();
+    detectionEnabled = false;
+    chrome.storage.local.set({ detectionEnabled: false }).catch(() => {});
+    hideRecallBtn();
+    showFeedbackConfirm('Detection paused — re-enable in the extension popup');
+  });
+  applyPos(recallBtn);
+  makeDraggable(recallBtn);
   (document.body || document.documentElement).appendChild(recallBtn);
 }
 
@@ -628,7 +730,7 @@ function attachTo(el) {
   if (el._kld) return;
   el._kld = true;
   const check = debounce(() => {
-    if (activeToast) return;
+    if (!detectionEnabled || activeToast) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
   }, 700);
