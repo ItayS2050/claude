@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.7.0 loaded');
+console.log('[KeyLang] v1.8.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -100,13 +100,15 @@ const EN_WORDS = new Set([
   'two','how','our','work','works','first','well','way','even','new','want',
   'any','give','day','most','us','hello','ok','yes','hi','hey','lol','omg',
   'thanks','please','sorry','help','okay','yeah','am','is','are','was',
-  'has','had','did','got','let','put','set','run','try','ask','act','add',
-  // NOTE: 'cut'→בוא, 'far'→כשר, 'her'→יקר are REMOVED — they are critical Hebrew words
-  'big','bit','box','buy','car','eat','end','eye','few','fit',
+  'has','had','did','got','let','put','set','try','ask','act','add',
+  // NOTE: removed from EN_WORDS because they map to common Hebrew words:
+  // 'cut'→בוא, 'far'→כשר, 'her'→יקר, 'run'→רום, 'car'→בשר, 'pay'→פשט, 'sat'→דשא, 'sun'→דום
+  'big','bit','box','buy','eat','end','eye','few','fit',
   'fix','fly','fun','gun','hit','hot','job','key','kid','law','lay','leg',
-  'lie','lot','low','map','may','met','mix','mom','net','old','own','pay',
-  'per','pop','pot','raw','red','rid','row','sad','sat','saw','sea','sit',
-  'six','sky','son','spy','sum','sun','tax','tea','ten','too','top','van',
+  'lie','lot','low','map','may','met','mix','mom','net','old','own',
+  'per','pop','pot','raw','red','rid','row','sad','saw','sea','sit',
+  'six','sky','son','spy','sum','tax','tea','ten','too','top','van',
+  'off','sunny',
   'via','war','win','won','age','ago','air','led','man','men','boy','girl',
   'here','come','from','said','each','many','been','were','them','im',
   'seems','better','still','often','every','never','always','again',

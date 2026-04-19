@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KeyLang – Keyboard Language Detector",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Alerts you when typing Hebrew in English mode (or vice versa). Learns from your feedback.",
   "permissions": ["storage"],
   "action": {
