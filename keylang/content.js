@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.8.0 loaded');
+console.log('[KeyLang] v1.9.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -91,9 +91,9 @@ function englishScore(word) {
 
 const EN_WORDS = new Set([
   'the','be','to','of','and','a','in','that','have','it','for','not','on',
-  'with','he','as','you','do','at','this','but','his','by','from','they',
+  'with','he','as','you','at','this','but','his','by','from','they',
   'we','say','she','or','an','will','my','one','all','would','there',
-  'their','what','so','up','out','if','about','who','get','which','go','me',
+  'their','what','so','up','out','if','about','who','get','which','me',
   'when','make','can','like','time','no','just','him','know','take','into',
   'your','good','some','could','them','see','other','than','then','now',
   'look','only','come','its','over','think','also','back','after','use',
@@ -102,7 +102,8 @@ const EN_WORDS = new Set([
   'thanks','please','sorry','help','okay','yeah','am','is','are','was',
   'has','had','did','got','let','put','set','try','ask','act','add',
   // NOTE: removed from EN_WORDS because they map to common Hebrew words:
-  // 'cut'→בוא, 'far'→כשר, 'her'→יקר, 'run'→רום, 'car'→בשר, 'pay'→פשט, 'sat'→דשא, 'sun'→דום
+  // 'cut'→בוא 'far'→כשר 'her'→יקר 'run'→רום 'car'→בשר 'pay'→פשט
+  // 'sat'→דשא 'sun'→דום 'do'→גם 'go'→עם
   'big','bit','box','buy','eat','end','eye','few','fit',
   'fix','fly','fun','gun','hit','hot','job','key','kid','law','lay','leg',
   'lie','lot','low','map','may','met','mix','mom','net','old','own',
@@ -189,7 +190,22 @@ const EN_WORDS = new Set([
   'froze','those','chose','prose','close',
   'grain','sprain','strain','train','brain','drain',
   'storm','dorm','norm','form','farm','charm','alarm',
-  'floor','door','poor','moor','lore','gore','bore','core','fore','more','sore','tore','wore'
+  'floor','door','poor','moor','lore','gore','bore','core','fore','more','sore','tore','wore',
+  // Compensate for removing 'do'→גם and 'go'→עם
+  'does','goes',
+  // Common words that pass all-chars-Hebrew check and have no bigram match
+  // (bigrams st/nd/ld/ll/oo/ee/ng/ck already cover huge categories)
+  'next','before','until','head','nose','read','lead','dead','skin','blue',
+  'pink','gray','four','nine','pore','task','mask','glory','team','item',
+  'data','beta','meta','info','menu','user','idea','human','super','crazy',
+  'topic','extra','photo','video','media','email','login','admin',
+  // Double-consonant words — not caught by bigrams (nn/mm/rr/ss/zz/tt)
+  'miss','boss','toss','moss','fuss','buzz','jazz','fuzz','fizz',
+  'carry','merry','berry','ferry','hurry',
+  'funny','bunny','penny',
+  'runner','dinner','inner','summer','hammer',
+  'common','cannot','banner','manner','mirror',
+  'letter','bitter','butter','matter','button','bottom'
 ]);
 
 // ── Core detection ────────────────────────────────────────────
