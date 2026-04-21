@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v2.0.0 loaded');
+console.log('[KeyLang] v2.1.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -199,6 +199,10 @@ const EN_WORDS = new Set([
   'pink','gray','four','nine','pore','task','mask','glory','team','item',
   'data','beta','meta','info','menu','user','idea','human','super','crazy',
   'topic','extra','photo','video','media','email','login','admin',
+  // Short English words that pass final-form check but map to no real Hebrew word
+  // (ran/tan/bat/rag/reg intentionally kept out — they ARE real Hebrew and should be detectable)
+  'bug','rug','dug','beg','peg','pro','duo','nap','gap','cap','rap',
+  'tab','nab','grab','crab','scab','snag','drag','brag',
   // Double-consonant words — not caught by bigrams (nn/mm/rr/ss/zz/tt)
   'miss','boss','toss','moss','fuss','buzz','jazz','fuzz','fizz',
   'carry','merry','berry','ferry','hurry',
@@ -315,9 +319,11 @@ function analyze(el) {
 
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
 
-  // Lower threshold to 1 when text already has Hebrew chars — clear sign the user
-  // is in Hebrew-keyboard context (e.g. "האם זה kt" where kt = לא)
-  const minRun = textHasHebrew ? 1 : 2;
+  // Require 3 consecutive Hebrew-like words in pure-English context to avoid
+  // false positives from short English words (ran, tan, bat, rag…) that happen
+  // to pass the Hebrew check. Drop to 1 when text already has Hebrew chars —
+  // clear sign the user is in Hebrew-keyboard context (e.g. "האם זה kt").
+  const minRun = textHasHebrew ? 1 : 3;
 
   if (hebrewCount >= minRun) {
     const runText = run.join(' ');
