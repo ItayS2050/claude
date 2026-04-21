@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v1.9.0 loaded');
+console.log('[KeyLang] v2.0.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -214,6 +214,12 @@ function hasHebrew(text) { return HEBREW_RE.test(text); }
 function convertToHebrew(text) { return [...text].map(c => EN_TO_HE[c] || c).join(''); }
 function convertToEnglish(text) { return [...text].map(c => HE_TO_EN[c] || c).join(''); }
 
+// Hebrew final-form letters: ך ם ן ף ץ
+// In valid Hebrew orthography these can ONLY appear at the LAST position of a word.
+// English words like 'bit'→נ[ן]א, 'lot'→[ך][ם]א, 'hot'→י[ם]א fail this check —
+// eliminating the vast majority of false positives from short English words.
+const FINAL_FORMS = new Set(['ך','ם','ן','ף','ץ']);
+
 function wordCouldBeHebrew(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
@@ -227,10 +233,16 @@ function wordCouldBeHebrew(word) {
 
   // Every character must map to a Hebrew Unicode character
   // Note: 'w'→"'" and 'q'→"/" are NOT Hebrew, so words with w/q fail here (correct)
-  return [...lower].every(c => {
-    const mapped = EN_TO_HE[c];
-    return mapped !== undefined && HEBREW_RE.test(mapped);
-  });
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
+
+  // Final-form letters may only appear at the last position of a word.
+  // Any match in a non-final position means this can't be valid Hebrew.
+  for (let i = 0; i < mapped.length - 1; i++) {
+    if (FINAL_FORMS.has(mapped[i])) return false;
+  }
+
+  return true;
 }
 
 function extractWords(text) {
@@ -420,6 +432,10 @@ const STYLES = `
     max-width: 150px; direction: rtl; unicode-bidi: plaintext;
     cursor: pointer;
   }
+  .kld-recall-count {
+    font-size: 10px; font-weight: 700; color: #3b82f6;
+    background: #1e3a5f; border-radius: 4px; padding: 1px 5px; flex-shrink: 0;
+  }
   .kld-recall-off {
     background: none; border: none; font-size: 13px; cursor: pointer;
     color: #475569; padding: 0 2px; line-height: 1; flex-shrink: 0;
@@ -502,10 +518,12 @@ function showToast(element, detection) {
   // Long run → silent: just pulse the recall button, don't interrupt typing
   const isLong = detection.words.length >= 5;
   if (isLong) {
+    const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
     lastElement = element;
-    hideRecallBtn(); // rebuild with fresh preview
-    showRecallBtn();
+    // Only rebuild recall button if the detected text actually changed
+    if (sig !== prevSig) { hideRecallBtn(); showRecallBtn(); }
+    else if (!recallBtn) showRecallBtn();
     return;
   }
 
@@ -589,8 +607,11 @@ function showRecallBtn() {
   const preview = lastDetection
     ? lastDetection.converted.slice(0, 18) + (lastDetection.converted.length > 18 ? '…' : '')
     : '';
+  const wordCount = lastDetection ? lastDetection.words.length : 0;
+  const countBadge = wordCount > 0 ? `<span class="kld-recall-count">${wordCount}w</span>` : '';
   recallBtn.innerHTML = `
     <span>⌨️</span>
+    ${countBadge}
     <span class="kld-recall-preview" title="Click to show full detection">${escapeHtml(preview)}</span>
     <button class="kld-recall-off" title="Turn off auto-detection">✕</button>
   `;
@@ -760,15 +781,19 @@ function attachTo(el) {
 // ── DOM observation ───────────────────────────────────────────
 
 const SELECTOR = [
-  'input[type="text"]','input[type="search"]','input:not([type])',
-  'textarea','[contenteditable="true"]','[contenteditable=""]',
-  '[role="textbox"]'  // Gmail compose, Outlook, etc.
+  'input[type="text"]','input[type="search"]','input[type="email"]',
+  'input[type="url"]','input:not([type])',
+  'textarea',
+  '[contenteditable="true"]','[contenteditable=""]',
+  '[role="textbox"]',    // Gmail, Outlook, Slack compose
+  '[role="combobox"]',   // search boxes in many apps
+  '[role="searchbox"]',  // WhatsApp search, etc.
 ].join(', ');
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
 
-// Fallback: catch any editable element that gets keyboard events,
-// even if MutationObserver missed it (Gmail, iframes, dynamic apps)
+// Fallback: attach to ANY element that receives keyboard input,
+// even if MutationObserver missed it (Gmail iframes, dynamic SPAs, WhatsApp)
 document.addEventListener('keyup', () => {
   const el = document.activeElement;
   if (!el || el._kld) return;
