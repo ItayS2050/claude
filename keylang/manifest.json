@@ -1,12 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "KeyLang – Keyboard Language Detector",
+  "name": "KeyLang – Hebrew ↔ English Layout Detector",
   "version": "2.1.0",
-  "description": "Alerts you when typing Hebrew in English mode (or vice versa). Learns from your feedback.",
+  "description": "Detects when you accidentally type Hebrew in English mode (or vice versa) and offers instant correction. Learns from your feedback.",
+  "author": "KeyLang",
+  "homepage_url": "https://keylang.app",
   "permissions": ["storage"],
+  "icons": {
+    "16":  "icon16.png",
+    "48":  "icon48.png",
+    "128": "icon128.png"
+  },
   "action": {
     "popup": "popup.html",
-    "default_title": "KeyLang – Stats & Settings"
+    "default_title": "KeyLang – Stats & Settings",
+    "default_icon": {
+      "16":  "icon16.png",
+      "48":  "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "content_scripts": [
     {

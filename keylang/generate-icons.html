@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head><title>KeyLang Icon Generator</title></head>
+<body>
+<p>Generating icons… check your Downloads folder.</p>
+<canvas id="c"></canvas>
+<script>
+function drawIcon(size) {
+  const c = document.getElementById('c');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  const r = size * 0.12;
+
+  // Background
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, r);
+  ctx.fill();
+
+  // Keyboard body
+  const pad = size * 0.14;
+  const kw = size - pad * 2;
+  const kh = size * 0.52;
+  const ky = size * 0.22;
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath();
+  ctx.roundRect(pad, ky, kw, kh, size * 0.07);
+  ctx.fill();
+
+  // Key rows — draw small key dots
+  ctx.fillStyle = '#7dd3fc';
+  const rows = [
+    { count: 5, y: 0.32 },
+    { count: 4, y: 0.46 },
+    { count: 3, y: 0.60 }
+  ];
+  rows.forEach(({ count, y }) => {
+    const keyW = kw / (count + 1) * 0.62;
+    const keyH = size * 0.10;
+    const spacing = kw / (count + 1);
+    for (let i = 0; i < count; i++) {
+      const kx = pad + spacing * (i + 0.7);
+      ctx.beginPath();
+      ctx.roundRect(kx, size * y, keyW, keyH, size * 0.025);
+      ctx.fill();
+    }
+  });
+
+  // Hebrew "א" alef on center key
+  const fontSize = size * 0.28;
+  ctx.font = `bold ${fontSize}px serif`;
+  ctx.fillStyle = '#38bdf8';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('א', size * 0.5, size * 0.73);
+
+  return c.toDataURL('image/png');
+}
+
+function download(dataURL, filename) {
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = filename;
+  a.click();
+}
+
+[16, 48, 128].forEach((size, i) => {
+  setTimeout(() => {
+    const data = drawIcon(size);
+    download(data, `icon${size}.png`);
+  }, i * 300);
+});
+</script>
+</body>
+</html>
