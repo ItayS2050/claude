@@ -708,13 +708,21 @@ function convertSelection(text, sel) {
   `;
 
   toast.querySelector('.kld-primary').addEventListener('click', () => {
-    // Use the range we saved at keydown time — selection is gone by now
     if (savedRange) {
       try {
         savedRange.deleteContents();
         savedRange.insertNode(document.createTextNode(detection.converted));
-      } catch { /* range may be stale */ }
+        saveFeedback(detection.words, detection.type === 'english_as_hebrew');
+        removeToast(false);
+        return;
+      } catch { /* range stale — fall through to clipboard */ }
     }
+    // No range (e.g. LinkedIn right-click) — copy to clipboard and ask user to paste
+    navigator.clipboard.writeText(detection.converted).then(() => {
+      showFeedbackConfirm('✓ Copied! Now delete your text and press Ctrl+V to paste');
+    }).catch(() => {
+      showFeedbackConfirm('Select your text and press Ctrl+V — converted text is ready');
+    });
     saveFeedback(detection.words, detection.type === 'english_as_hebrew');
     removeToast(false);
   });
