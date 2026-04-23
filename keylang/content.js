@@ -480,7 +480,7 @@ function makeDraggable(el) {
       document.removeEventListener('mousemove', onMove);
       const rect = el.getBoundingClientRect();
       toastPos = { top: rect.top, left: rect.left };
-      chrome.storage.local.set({ toastPos }).catch(() => {});
+      try { chrome.storage.local.set({ toastPos }).catch(() => {}); } catch {}
     };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp, { once: true });
@@ -531,7 +531,7 @@ function showToast(element, detection) {
   injectStyles();
 
   stats.detected++;
-  chrome.storage.local.set({ stats }).catch(() => {});
+  try { chrome.storage.local.set({ stats }).catch(() => {}); } catch {}
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
@@ -620,7 +620,7 @@ function showRecallBtn() {
   recallBtn.querySelector('.kld-recall-off').addEventListener('click', e => {
     e.stopPropagation();
     detectionEnabled = false;
-    chrome.storage.local.set({ detectionEnabled: false }).catch(() => {});
+    try { chrome.storage.local.set({ detectionEnabled: false }).catch(() => {}); } catch {}
     hideRecallBtn();
     showFeedbackConfirm('Kiko paused — re-enable in the extension popup');
   });
