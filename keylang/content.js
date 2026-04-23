@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.2 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.3 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.2 loaded');
+console.log('[Kiko] v2.2.3 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -522,6 +522,9 @@ function showToast(element, detection) {
     return;
   }
 
+  if (activeToast && lastDetection) {
+    if (detection.words.length < lastDetection.words.length) return;
+  }
   if (activeToast && lastDetection === detection) return;
   lastDetection = detection;
   lastElement = element;
