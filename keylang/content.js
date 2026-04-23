@@ -825,6 +825,8 @@ new MutationObserver(mutations => {
 // Right-click context menu: "Fix with Kiko"
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'kiko-fix-selection' || !msg.text) return;
+  // Use current selection if it still matches, otherwise pass null (popup shows but won't auto-replace)
   const sel = window.getSelection();
-  convertSelection(msg.text, sel);
+  const selText = sel && sel.toString().trim();
+  convertSelection(msg.text, selText === msg.text.trim() ? sel : null);
 });
