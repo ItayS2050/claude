@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v2.2.0 loaded');
+console.log('[KeyLang] v2.2.1 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -546,7 +546,8 @@ function showToast(element, detection) {
   toast.querySelector('.kld-primary').addEventListener('click', () => {
     applyConversion(element, detection);
     if (detection.words.length > 0) saveFeedback(detection.words, true);
-    showFeedbackConfirm(`✓ Converted & learned ${detection.words.length} word${detection.words.length !== 1 ? 's' : ''} as Hebrew`);
+    const kbShortcut = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
+    showFeedbackConfirm(`✓ Text fixed! Now press ${kbShortcut} to switch your keyboard back to English`);
     removeToast(false);
   });
 
