@@ -327,12 +327,17 @@ function analyze(el) {
 
   if (hebrewCount >= minRun) {
     const runText = run.join(' ');
-    const converted = convertToHebrew(runText.toLowerCase());
+    // Preserve trailing punctuation (?, !) from the last word in the original text
+    const lastWord = run[run.length - 1];
+    const escaped = lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const trailingPunct = (text.match(new RegExp(escaped + '([?!]+)', 'i')) || [])[1] || '';
+    const original = runText + trailingPunct;
+    const converted = convertToHebrew(runText.toLowerCase()) + trailingPunct;
     if (hasHebrew(converted)) {
       return {
         type: 'english_as_hebrew',
         message: 'Typing in the wrong layout? This might be Hebrew:',
-        original: runText,
+        original,
         converted,
         btnLabel: 'Convert to Hebrew',
         words: run.filter(w => wordCouldBeHebrew(w))
