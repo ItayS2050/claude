@@ -784,12 +784,21 @@ const SELECTOR = [
   '[role="textbox"]',    // Gmail, Outlook, Slack compose
   '[role="combobox"]',   // search boxes in many apps
   '[role="searchbox"]',  // WhatsApp search, etc.
+  '[role="article"] [contenteditable]', // LinkedIn post composer
+  '.ql-editor',          // Quill rich text editor (LinkedIn, Notion)
 ].join(', ');
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
 
-// Fallback: attach to ANY element that receives keyboard input,
-// even if MutationObserver missed it (Gmail iframes, dynamic SPAs, WhatsApp)
+// Attach on focus — catches LinkedIn, Twitter, and other SPAs that build
+// their compose boxes dynamically after the user clicks into them.
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!el || el._kld) return;
+  if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
+}, true);
+
+// Fallback keyup — catches anything focusin missed
 document.addEventListener('keyup', () => {
   const el = document.activeElement;
   if (!el || el._kld) return;
