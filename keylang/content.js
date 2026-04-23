@@ -821,3 +821,10 @@ new MutationObserver(mutations => {
   childList: true, subtree: true,
   attributes: true, attributeFilter: ['contenteditable']
 });
+
+// Right-click context menu: "Fix with Kiko"
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type !== 'kiko-fix-selection' || !msg.text) return;
+  const sel = window.getSelection();
+  convertSelection(msg.text, sel);
+});

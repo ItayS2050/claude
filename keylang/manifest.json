@@ -5,7 +5,10 @@
   "description": "Kiko watches your typing and instantly catches when you're in the wrong keyboard layout — Hebrew or English. One click fixes it.",
   "author": "Kiko",
   "homepage_url": "https://kiko.app",
-  "permissions": ["storage"],
+  "permissions": ["storage", "contextMenus"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16":  "icon16.png",
     "48":  "icon48.png",
