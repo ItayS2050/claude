@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KeyLang – Hebrew ↔ English Layout Detector",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Detects when you accidentally type Hebrew in English mode (or vice versa) and offers instant correction. Learns from your feedback.",
   "author": "KeyLang",
   "homepage_url": "https://keylang.app",

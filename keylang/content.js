@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v2.2.1 loaded');
+console.log('[KeyLang] v2.2.2 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -250,9 +250,9 @@ function wordCouldBeHebrew(word) {
 }
 
 function extractWords(text) {
-  return text.trim().split(/\s+/).filter(
-    w => /^[a-z,;.']+$/i.test(w) && w.length >= 2
-  );
+  return text.trim().split(/\s+/)
+    .map(w => w.replace(/^[?!()\[\]{}]+|[?!()\[\]{}]+$/g, ''))
+    .filter(w => /^[a-z,;.']+$/i.test(w) && w.length >= 2);
 }
 
 // Short common English words that also appear in Hebrew-keyboard sentences.
@@ -506,7 +506,7 @@ function showToast(element, detection) {
   }
 
   // Long run → silent: just pulse the recall button, don't interrupt typing
-  const isLong = detection.words.length >= 5;
+  const isLong = detection.words.length >= 10;
   if (isLong) {
     const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
