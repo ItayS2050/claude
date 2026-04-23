@@ -7,90 +7,87 @@
 <script>
 function drawIcon(size) {
   const c = document.getElementById('c');
-  c.width = size;
-  c.height = size;
+  c.width = size; c.height = size;
   const ctx = c.getContext('2d');
+  const s = size / 128; // scale factor
 
-  // Background — deep navy rounded square
+  // Background
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
   ctx.roundRect(0, 0, size, size, size * 0.18);
   ctx.fill();
 
-  const cx = size * 0.5;
-  const cy = size * 0.52;
-  const r  = size * 0.30;
-
-  // ── Body (round, bright green) ──
-  ctx.fillStyle = '#22c55e';
+  // ── Wing (behind body) ──
+  ctx.fillStyle = '#15803d';
   ctx.beginPath();
-  ctx.ellipse(cx, cy + r * 0.25, r * 0.72, r * 0.82, 0, 0, Math.PI * 2);
+  ctx.ellipse(78*s, 82*s, 22*s, 36*s, 0.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // ── Body ──
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath();
+  ctx.ellipse(56*s, 90*s, 30*s, 34*s, 0, 0, Math.PI*2);
   ctx.fill();
 
   // ── Head ──
-  ctx.fillStyle = '#16a34a';
+  ctx.fillStyle = '#22c55e';
   ctx.beginPath();
-  ctx.arc(cx, cy - r * 0.28, r * 0.52, 0, Math.PI * 2);
+  ctx.arc(54*s, 52*s, 30*s, 0, Math.PI*2);
   ctx.fill();
 
-  // ── Wing (right side, darker green) ──
-  ctx.fillStyle = '#15803d';
+  // ── Crest feathers ──
+  ctx.fillStyle = '#4ade80';
   ctx.beginPath();
-  ctx.ellipse(cx + r * 0.58, cy + r * 0.18, r * 0.28, r * 0.55, 0.4, 0, Math.PI * 2);
+  ctx.ellipse(46*s, 22*s, 7*s, 16*s, -0.3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(58*s, 19*s, 6*s, 14*s, 0.1, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(69*s, 24*s, 5*s, 12*s, 0.5, 0, Math.PI*2);
   ctx.fill();
 
-  // ── Chest highlight ──
-  ctx.fillStyle = '#86efac';
+  // ── Upper beak (hooked) ──
+  ctx.fillStyle = '#f97316';
   ctx.beginPath();
-  ctx.ellipse(cx - r * 0.08, cy + r * 0.18, r * 0.32, r * 0.42, 0, 0, Math.PI * 2);
+  ctx.moveTo(72*s, 48*s);
+  ctx.quadraticCurveTo(100*s, 46*s, 98*s, 62*s);
+  ctx.quadraticCurveTo(96*s, 72*s, 80*s, 70*s);
+  ctx.quadraticCurveTo(72*s, 68*s, 72*s, 58*s);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Lower beak ──
+  ctx.fillStyle = '#ea580c';
+  ctx.beginPath();
+  ctx.moveTo(72*s, 60*s);
+  ctx.quadraticCurveTo(84*s, 62*s, 82*s, 70*s);
+  ctx.quadraticCurveTo(74*s, 70*s, 72*s, 66*s);
+  ctx.closePath();
   ctx.fill();
 
   // ── Eye white ──
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(cx + r * 0.18, cy - r * 0.38, r * 0.16, 0, Math.PI * 2);
+  ctx.arc(62*s, 44*s, 10*s, 0, Math.PI*2);
   ctx.fill();
 
   // ── Pupil ──
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
-  ctx.arc(cx + r * 0.21, cy - r * 0.37, r * 0.09, 0, Math.PI * 2);
+  ctx.arc(64*s, 45*s, 6*s, 0, Math.PI*2);
   ctx.fill();
 
   // ── Eye shine ──
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(cx + r * 0.25, cy - r * 0.41, r * 0.04, 0, Math.PI * 2);
+  ctx.arc(67*s, 42*s, 2.5*s, 0, Math.PI*2);
   ctx.fill();
 
-  // ── Beak ──
-  ctx.fillStyle = '#f97316';
+  // ── Belly highlight ──
+  ctx.fillStyle = '#86efac';
   ctx.beginPath();
-  ctx.moveTo(cx + r * 0.38, cy - r * 0.28);
-  ctx.lineTo(cx + r * 0.72, cy - r * 0.18);
-  ctx.lineTo(cx + r * 0.38, cy - r * 0.10);
-  ctx.closePath();
-  ctx.fill();
-
-  // ── Beak lower ──
-  ctx.fillStyle = '#ea580c';
-  ctx.beginPath();
-  ctx.moveTo(cx + r * 0.38, cy - r * 0.18);
-  ctx.lineTo(cx + r * 0.68, cy - r * 0.12);
-  ctx.lineTo(cx + r * 0.38, cy - r * 0.06);
-  ctx.closePath();
-  ctx.fill();
-
-  // ── Head feather crest ──
-  ctx.fillStyle = '#4ade80';
-  ctx.beginPath();
-  ctx.ellipse(cx - r * 0.05, cy - r * 0.72, r * 0.10, r * 0.22, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + r * 0.14, cy - r * 0.78, r * 0.08, r * 0.18, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx - r * 0.22, cy - r * 0.68, r * 0.07, r * 0.16, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(46*s, 88*s, 14*s, 20*s, 0, 0, Math.PI*2);
   ctx.fill();
 
   return c.toDataURL('image/png');
@@ -98,16 +95,11 @@ function drawIcon(size) {
 
 function download(dataURL, filename) {
   const a = document.createElement('a');
-  a.href = dataURL;
-  a.download = filename;
-  a.click();
+  a.href = dataURL; a.download = filename; a.click();
 }
 
 [16, 48, 128].forEach((size, i) => {
-  setTimeout(() => {
-    const data = drawIcon(size);
-    download(data, `icon${size}.png`);
-  }, i * 300);
+  setTimeout(() => download(drawIcon(size), `icon${size}.png`), i * 300);
 });
 </script>
 </body>
