@@ -765,7 +765,7 @@ function attachTo(el) {
   if (el._kld) return;
   el._kld = true;
   const check = debounce(() => {
-    if (!detectionEnabled || activeToast) return;
+    if (!detectionEnabled) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
   }, 700);
