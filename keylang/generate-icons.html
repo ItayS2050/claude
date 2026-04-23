@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head><title>KeyLang Icon Generator</title></head>
+<head><title>Kiko Icon Generator</title></head>
 <body>
-<p>Generating icons… check your Downloads folder.</p>
+<p>Generating Kiko icons… check your Downloads folder.</p>
 <canvas id="c"></canvas>
 <script>
 function drawIcon(size) {
@@ -10,50 +10,88 @@ function drawIcon(size) {
   c.width = size;
   c.height = size;
   const ctx = c.getContext('2d');
-  const r = size * 0.12;
 
-  // Background
+  // Background — deep navy rounded square
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
-  ctx.roundRect(0, 0, size, size, r);
+  ctx.roundRect(0, 0, size, size, size * 0.18);
   ctx.fill();
 
-  // Keyboard body
-  const pad = size * 0.14;
-  const kw = size - pad * 2;
-  const kh = size * 0.52;
-  const ky = size * 0.22;
-  ctx.fillStyle = '#1e3a5f';
+  const cx = size * 0.5;
+  const cy = size * 0.52;
+  const r  = size * 0.30;
+
+  // ── Body (round, bright green) ──
+  ctx.fillStyle = '#22c55e';
   ctx.beginPath();
-  ctx.roundRect(pad, ky, kw, kh, size * 0.07);
+  ctx.ellipse(cx, cy + r * 0.25, r * 0.72, r * 0.82, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Key rows — draw small key dots
-  ctx.fillStyle = '#7dd3fc';
-  const rows = [
-    { count: 5, y: 0.32 },
-    { count: 4, y: 0.46 },
-    { count: 3, y: 0.60 }
-  ];
-  rows.forEach(({ count, y }) => {
-    const keyW = kw / (count + 1) * 0.62;
-    const keyH = size * 0.10;
-    const spacing = kw / (count + 1);
-    for (let i = 0; i < count; i++) {
-      const kx = pad + spacing * (i + 0.7);
-      ctx.beginPath();
-      ctx.roundRect(kx, size * y, keyW, keyH, size * 0.025);
-      ctx.fill();
-    }
-  });
+  // ── Head ──
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 0.28, r * 0.52, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Hebrew "א" alef on center key
-  const fontSize = size * 0.28;
-  ctx.font = `bold ${fontSize}px serif`;
-  ctx.fillStyle = '#38bdf8';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('א', size * 0.5, size * 0.73);
+  // ── Wing (right side, darker green) ──
+  ctx.fillStyle = '#15803d';
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.58, cy + r * 0.18, r * 0.28, r * 0.55, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Chest highlight ──
+  ctx.fillStyle = '#86efac';
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.08, cy + r * 0.18, r * 0.32, r * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Eye white ──
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx + r * 0.18, cy - r * 0.38, r * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Pupil ──
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.arc(cx + r * 0.21, cy - r * 0.37, r * 0.09, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Eye shine ──
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx + r * 0.25, cy - r * 0.41, r * 0.04, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Beak ──
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.moveTo(cx + r * 0.38, cy - r * 0.28);
+  ctx.lineTo(cx + r * 0.72, cy - r * 0.18);
+  ctx.lineTo(cx + r * 0.38, cy - r * 0.10);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Beak lower ──
+  ctx.fillStyle = '#ea580c';
+  ctx.beginPath();
+  ctx.moveTo(cx + r * 0.38, cy - r * 0.18);
+  ctx.lineTo(cx + r * 0.68, cy - r * 0.12);
+  ctx.lineTo(cx + r * 0.38, cy - r * 0.06);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Head feather crest ──
+  ctx.fillStyle = '#4ade80';
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.05, cy - r * 0.72, r * 0.10, r * 0.22, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.14, cy - r * 0.78, r * 0.08, r * 0.18, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.22, cy - r * 0.68, r * 0.07, r * 0.16, -0.5, 0, Math.PI * 2);
+  ctx.fill();
 
   return c.toDataURL('image/png');
 }
