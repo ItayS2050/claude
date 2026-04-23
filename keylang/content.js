@@ -1,8 +1,8 @@
 // ============================================================
-// KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
+// Kiko v2.2.2 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[KeyLang] v2.2.2 loaded');
+console.log('[Kiko] v2.2.2 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -617,7 +617,7 @@ function showRecallBtn() {
     detectionEnabled = false;
     chrome.storage.local.set({ detectionEnabled: false }).catch(() => {});
     hideRecallBtn();
-    showFeedbackConfirm('Detection paused — re-enable in the extension popup');
+    showFeedbackConfirm('Kiko paused — re-enable in the extension popup');
   });
   applyPos(recallBtn);
   makeDraggable(recallBtn);
