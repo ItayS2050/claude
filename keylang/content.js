@@ -2,7 +2,7 @@
 // KeyLang v1.7.0 – Keyboard Language Detector (Hebrew ↔ English)
 // content.js
 // ============================================================
-console.log('[KeyLang] v2.1.0 loaded');
+console.log('[KeyLang] v2.2.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -336,22 +336,6 @@ function analyze(el) {
         converted,
         btnLabel: 'Convert to Hebrew',
         words: run.filter(w => wordCouldBeHebrew(w))
-      };
-    }
-  }
-
-  // Case 1: entire recent text is Hebrew Unicode, no English-keyboard run at the end
-  // (user accidentally in Hebrew keyboard mode when they wanted English)
-  if (textHasHebrew && run.length === 0) {
-    const heCount = [...text].filter(c => HEBREW_RE.test(c)).length;
-    if (heCount >= 4) {
-      return {
-        type: 'hebrew_detected',
-        message: 'Hebrew detected — did you mean English?',
-        original: text.trim(),
-        converted: convertToEnglish(text.trim()),
-        btnLabel: 'Switch to English',
-        words: []
       };
     }
   }
