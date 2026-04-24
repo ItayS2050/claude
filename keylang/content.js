@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.3 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.4 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.3 loaded');
+console.log('[Kiko] v2.2.4 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -748,9 +748,10 @@ function applyConversion(el, detection) {
     const idx = full.lastIndexOf(original);
     if (idx === -1) return;
     const newText = full.slice(0, idx) + converted + full.slice(idx + original.length);
+    const doc = el.ownerDocument || document;
     el.focus();
-    document.execCommand('selectAll');
-    document.execCommand('insertText', false, newText);
+    doc.execCommand('selectAll');
+    doc.execCommand('insertText', false, newText);
   } else {
     const pos = el.selectionStart ?? el.value.length;
     const before = el.value.slice(0, pos);
