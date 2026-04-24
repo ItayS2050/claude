@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.8 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.9 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.8 loaded');
+console.log('[Kiko] v2.2.9 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -728,48 +728,53 @@ function convertSelection(text, sel) {
     btn.addEventListener('mousedown', e => e.preventDefault());
   });
 
-  toast.querySelector('.kld-primary').addEventListener('click', () => {
-    let replaced = false;
-    if (savedRange) {
-      try {
-        const doc = savedRange.startContainer.ownerDocument || document;
-
-        // Walk up to find the contenteditable element and focus it
-        let editorEl = savedRange.startContainer;
-        if (editorEl.nodeType !== 1) editorEl = editorEl.parentElement;
-        while (editorEl && !editorEl.isContentEditable) editorEl = editorEl.parentElement;
-        if (editorEl) editorEl.focus();
-
-        // Restore selection
-        const sel = doc.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(savedRange.cloneRange());
-
-        // Try execCommand (works when editor is focused)
-        replaced = !!doc.execCommand('insertText', false, detection.converted);
-
-        if (!replaced) {
-          // Try fake paste for Lexical/ProseMirror
-          const dt = new DataTransfer();
-          dt.setData('text/plain', detection.converted);
-          const target = editorEl || doc.activeElement;
-          if (target) {
-            target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-            replaced = true;
-          }
-        }
-      } catch { /* range stale */ }
-    }
+  toast.querySelector('.kld-primary').addEventListener('click', async () => {
     saveFeedback(detection.words, detection.type === 'english_as_hebrew');
-    if (!replaced) {
-      navigator.clipboard.writeText(detection.converted).then(() => {
-        showFeedbackConfirm('✓ Copied! Now delete your text and press Ctrl+V to paste');
-      }).catch(() => {
-        showFeedbackConfirm('Select your text and press Ctrl+V — converted text is ready');
-      });
-    } else {
-      removeToast(false);
+
+    // Always write to clipboard first so fallback is always ready
+    await navigator.clipboard.writeText(detection.converted).catch(() => {});
+
+    if (!savedRange) {
+      showFeedbackConfirm('✓ Copied! Select your text and press Ctrl+V to paste');
+      return;
     }
+
+    try {
+      const doc = savedRange.startContainer.ownerDocument || document;
+
+      // Find and focus the contenteditable
+      let editorEl = savedRange.startContainer;
+      if (editorEl.nodeType !== 1) editorEl = editorEl.parentElement;
+      while (editorEl && !editorEl.isContentEditable) editorEl = editorEl.parentElement;
+      if (editorEl) editorEl.focus();
+
+      // Restore selection
+      const sel = doc.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange.cloneRange());
+
+      const before = editorEl ? (editorEl.innerText || editorEl.textContent || '') : '';
+
+      // Try 1: native paste from real clipboard (best for Lexical/React editors)
+      doc.execCommand('paste');
+      if ((editorEl?.innerText || '') !== before) { removeToast(false); return; }
+
+      // Try 2: insertText
+      doc.execCommand('insertText', false, detection.converted);
+      if ((editorEl?.innerText || '') !== before) { removeToast(false); return; }
+
+      // Try 3: fake ClipboardEvent paste
+      const dt = new DataTransfer();
+      dt.setData('text/plain', detection.converted);
+      (editorEl || doc.activeElement)?.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })
+      );
+      if ((editorEl?.innerText || '') !== before) { removeToast(false); return; }
+
+    } catch { /* stale range or permission error */ }
+
+    // All methods failed — clipboard already has the text
+    showFeedbackConfirm('✓ Copied! Select all (Ctrl+A) then paste (Ctrl+V)');
   });
   toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(true));
 
