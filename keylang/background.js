@@ -11,6 +11,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.tabs.sendMessage(tab.id, {
       type: 'kiko-fix-selection',
       text: info.selectionText
-    }, { frameId: info.frameId || 0 });
+    }, { frameId: info.frameId || 0 }, () => void chrome.runtime.lastError);
   }
 });
