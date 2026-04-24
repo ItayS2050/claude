@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.4 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.5 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.4 loaded');
+console.log('[Kiko] v2.2.5 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -741,17 +741,49 @@ function escapeHtml(str) {
 
 // ── Text conversion ───────────────────────────────────────────
 
+function selectTextRange(el, idx, length) {
+  const doc = el.ownerDocument || document;
+  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let offset = 0, startNode, startOff, endNode, endOff;
+  let node;
+  while ((node = walker.nextNode())) {
+    const len = node.textContent.length;
+    if (!startNode && offset + len > idx) {
+      startNode = node; startOff = idx - offset;
+    }
+    if (startNode && offset + len >= idx + length) {
+      endNode = node; endOff = idx + length - offset;
+      break;
+    }
+    offset += len;
+  }
+  if (!startNode || !endNode) return false;
+  const range = doc.createRange();
+  range.setStart(startNode, startOff);
+  range.setEnd(endNode, endOff);
+  const sel = doc.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return true;
+}
+
 function applyConversion(el, detection) {
   const { original, converted } = detection;
   if (el.isContentEditable) {
+    const doc = el.ownerDocument || document;
     const full = el.innerText || el.textContent || '';
     const idx = full.lastIndexOf(original);
     if (idx === -1) return;
-    const newText = full.slice(0, idx) + converted + full.slice(idx + original.length);
-    const doc = el.ownerDocument || document;
     el.focus();
-    doc.execCommand('selectAll');
-    doc.execCommand('insertText', false, newText);
+    // Select only the matched text, then replace — works in React/ProseMirror editors
+    if (selectTextRange(el, idx, original.length)) {
+      doc.execCommand('insertText', false, converted);
+    } else {
+      // Fallback: select all and replace
+      const newText = full.slice(0, idx) + converted + full.slice(idx + original.length);
+      doc.execCommand('selectAll');
+      doc.execCommand('insertText', false, newText);
+    }
   } else {
     const pos = el.selectionStart ?? el.value.length;
     const before = el.value.slice(0, pos);
