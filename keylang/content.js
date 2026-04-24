@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.7 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.8 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.7 loaded');
+console.log('[Kiko] v2.2.8 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -733,15 +733,26 @@ function convertSelection(text, sel) {
     if (savedRange) {
       try {
         const doc = savedRange.startContainer.ownerDocument || document;
+
+        // Walk up to find the contenteditable element and focus it
+        let editorEl = savedRange.startContainer;
+        if (editorEl.nodeType !== 1) editorEl = editorEl.parentElement;
+        while (editorEl && !editorEl.isContentEditable) editorEl = editorEl.parentElement;
+        if (editorEl) editorEl.focus();
+
+        // Restore selection
         const sel = doc.getSelection();
         sel.removeAllRanges();
-        sel.addRange(savedRange);
-        replaced = doc.execCommand('insertText', false, detection.converted);
+        sel.addRange(savedRange.cloneRange());
+
+        // Try execCommand (works when editor is focused)
+        replaced = !!doc.execCommand('insertText', false, detection.converted);
+
         if (!replaced) {
-          // Fake paste for ProseMirror/Lexical (LinkedIn post composer)
+          // Try fake paste for Lexical/ProseMirror
           const dt = new DataTransfer();
           dt.setData('text/plain', detection.converted);
-          const target = savedRange.startContainer.parentElement || doc.activeElement;
+          const target = editorEl || doc.activeElement;
           if (target) {
             target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
             replaced = true;
