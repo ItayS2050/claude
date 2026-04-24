@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.5 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.6 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.5 loaded');
+console.log('[Kiko] v2.2.6 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -551,11 +551,24 @@ function showToast(element, detection) {
     <div class="kld-hint">Drag to move · Select text + Alt+Shift+K to convert manually</div>
   `;
 
+  // Prevent all buttons from stealing focus away from the editor
+  toast.querySelectorAll('.kld-btn').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault());
+  });
+
   toast.querySelector('.kld-primary').addEventListener('click', () => {
-    applyConversion(element, detection);
+    const ok = applyConversion(element, detection);
     if (detection.words.length > 0) saveFeedback(detection.words, true);
-    const kbShortcut = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
-    showFeedbackConfirm(`✓ Text fixed! Now press ${kbShortcut} to switch your keyboard back to English`);
+    if (ok) {
+      const kbShortcut = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
+      showFeedbackConfirm(`✓ Text fixed! Now press ${kbShortcut} to switch your keyboard back to English`);
+    } else {
+      navigator.clipboard.writeText(detection.converted).then(() => {
+        showFeedbackConfirm('✓ Copied! Delete your text and press Ctrl+V to paste');
+      }).catch(() => {
+        showFeedbackConfirm('Conversion: ' + detection.converted);
+      });
+    }
     removeToast(false);
   });
 
@@ -773,29 +786,39 @@ function applyConversion(el, detection) {
     const doc = el.ownerDocument || document;
     const full = el.innerText || el.textContent || '';
     const idx = full.lastIndexOf(original);
-    if (idx === -1) return;
-    el.focus();
-    // Select only the matched text, then replace — works in React/ProseMirror editors
+    if (idx === -1) return false;
+    // Editor keeps focus (mousedown.preventDefault on button), so just select + replace
     if (selectTextRange(el, idx, original.length)) {
       doc.execCommand('insertText', false, converted);
-    } else {
-      // Fallback: select all and replace
-      const newText = full.slice(0, idx) + converted + full.slice(idx + original.length);
-      doc.execCommand('selectAll');
-      doc.execCommand('insertText', false, newText);
+      // Verify replacement worked
+      if ((el.innerText || el.textContent || '') !== full) return true;
     }
+    // execCommand didn't change the text — try fake paste (ProseMirror/Lexical editors)
+    try {
+      if (selectTextRange(el, idx, original.length)) {
+        const dt = new DataTransfer();
+        dt.setData('text/plain', converted);
+        el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+        if ((el.innerText || el.textContent || '') !== full) return true;
+      }
+    } catch {}
+    return false; // caller will copy to clipboard
   } else {
     const pos = el.selectionStart ?? el.value.length;
     const before = el.value.slice(0, pos);
     const idx = before.lastIndexOf(original);
-    if (idx === -1) return;
+    if (idx === -1) return false;
     el.value = el.value.slice(0, idx) + converted + el.value.slice(idx + original.length);
     el.selectionStart = el.selectionEnd = idx + converted.length;
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
+    lastDetection = null;
+    hideRecallBtn();
+    return true;
   }
   lastDetection = null;
   hideRecallBtn();
+  return false;
 }
 
 // ── Input monitoring ──────────────────────────────────────────
