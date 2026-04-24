@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.6 – Hebrew ↔ English Layout Fixer
+// Kiko v2.2.7 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.6 loaded');
+console.log('[Kiko] v2.2.7 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -723,24 +723,42 @@ function convertSelection(text, sel) {
     <div class="kld-hint">Converting selection</div>
   `;
 
+  // Prevent buttons from stealing focus so the selection stays intact
+  toast.querySelectorAll('.kld-btn').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault());
+  });
+
   toast.querySelector('.kld-primary').addEventListener('click', () => {
+    let replaced = false;
     if (savedRange) {
       try {
-        savedRange.deleteContents();
-        savedRange.insertNode(document.createTextNode(detection.converted));
-        saveFeedback(detection.words, detection.type === 'english_as_hebrew');
-        removeToast(false);
-        return;
-      } catch { /* range stale — fall through to clipboard */ }
+        const doc = savedRange.startContainer.ownerDocument || document;
+        const sel = doc.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+        replaced = doc.execCommand('insertText', false, detection.converted);
+        if (!replaced) {
+          // Fake paste for ProseMirror/Lexical (LinkedIn post composer)
+          const dt = new DataTransfer();
+          dt.setData('text/plain', detection.converted);
+          const target = savedRange.startContainer.parentElement || doc.activeElement;
+          if (target) {
+            target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+            replaced = true;
+          }
+        }
+      } catch { /* range stale */ }
     }
-    // No range (e.g. LinkedIn right-click) — copy to clipboard and ask user to paste
-    navigator.clipboard.writeText(detection.converted).then(() => {
-      showFeedbackConfirm('✓ Copied! Now delete your text and press Ctrl+V to paste');
-    }).catch(() => {
-      showFeedbackConfirm('Select your text and press Ctrl+V — converted text is ready');
-    });
     saveFeedback(detection.words, detection.type === 'english_as_hebrew');
-    removeToast(false);
+    if (!replaced) {
+      navigator.clipboard.writeText(detection.converted).then(() => {
+        showFeedbackConfirm('✓ Copied! Now delete your text and press Ctrl+V to paste');
+      }).catch(() => {
+        showFeedbackConfirm('Select your text and press Ctrl+V — converted text is ready');
+      });
+    } else {
+      removeToast(false);
+    }
   });
   toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(true));
 
