@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.2.9 – Hebrew ↔ English Layout Fixer
+// Kiko v2.3.0 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.2.9 loaded');
+console.log('[Kiko] v2.3.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -267,12 +267,17 @@ const PASSTHROUGH = new Set([
 function getTextBeforeCursor(el) {
   try {
     if (el.isContentEditable) {
-      const sel = window.getSelection();
+      const doc = el.ownerDocument || document;
+      const sel = doc.getSelection();
       if (sel && sel.rangeCount) {
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.setEnd(sel.getRangeAt(0).startContainer, sel.getRangeAt(0).startOffset);
-        return range.toString();
+        const anchor = sel.getRangeAt(0).startContainer;
+        // Only use cursor position if it's inside el
+        if (el.contains(anchor)) {
+          const range = doc.createRange();
+          range.selectNodeContents(el);
+          range.setEnd(anchor, sel.getRangeAt(0).startOffset);
+          return range.toString();
+        }
       }
       return el.innerText || el.textContent || '';
     }
@@ -323,7 +328,7 @@ function analyze(el) {
   // false positives from short English words (ran, tan, bat, rag…) that happen
   // to pass the Hebrew check. Drop to 1 when text already has Hebrew chars —
   // clear sign the user is in Hebrew-keyboard context (e.g. "האם זה kt").
-  const minRun = textHasHebrew ? 1 : 3;
+  const minRun = textHasHebrew ? 1 : 2;
 
   if (hebrewCount >= minRun) {
     const runText = run.join(' ');
@@ -522,10 +527,11 @@ function showToast(element, detection) {
     return;
   }
 
-  if (activeToast && lastDetection) {
+  // Only apply word-count guard for the SAME element to avoid blocking cross-field detections
+  if (activeToast && lastDetection && lastElement === element) {
     if (detection.words.length < lastDetection.words.length) return;
+    if (lastDetection === detection) return;
   }
-  if (activeToast && lastDetection === detection) return;
   lastDetection = detection;
   lastElement = element;
   dismissedSignature = null;
@@ -824,8 +830,9 @@ function applyConversion(el, detection) {
     // Editor keeps focus (mousedown.preventDefault on button), so just select + replace
     if (selectTextRange(el, idx, original.length)) {
       doc.execCommand('insertText', false, converted);
-      // Verify replacement worked
-      if ((el.innerText || el.textContent || '') !== full) return true;
+      if ((el.innerText || el.textContent || '') !== full) {
+        lastDetection = null; hideRecallBtn(); return true;
+      }
     }
     // execCommand didn't change the text — try fake paste (ProseMirror/Lexical editors)
     try {
@@ -833,10 +840,12 @@ function applyConversion(el, detection) {
         const dt = new DataTransfer();
         dt.setData('text/plain', converted);
         el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-        if ((el.innerText || el.textContent || '') !== full) return true;
+        if ((el.innerText || el.textContent || '') !== full) {
+          lastDetection = null; hideRecallBtn(); return true;
+        }
       }
     } catch {}
-    return false; // caller will copy to clipboard
+    return false;
   } else {
     const pos = el.selectionStart ?? el.value.length;
     const before = el.value.slice(0, pos);
@@ -846,13 +855,9 @@ function applyConversion(el, detection) {
     el.selectionStart = el.selectionEnd = idx + converted.length;
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    lastDetection = null;
-    hideRecallBtn();
+    lastDetection = null; hideRecallBtn();
     return true;
   }
-  lastDetection = null;
-  hideRecallBtn();
-  return false;
 }
 
 // ── Input monitoring ──────────────────────────────────────────
