@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.3.0 – Hebrew ↔ English Layout Fixer
+// Kiko v2.3.1 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.3.0 loaded');
+console.log('[Kiko] v2.3.1 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -17,6 +17,7 @@ const HE_TO_EN = {};
 for (const [en, he] of Object.entries(EN_TO_HE)) {
   if (/[\u0590-\u05FF]/.test(he)) HE_TO_EN[he] = en;
 }
+HE_TO_EN["'"] = 'w'; // w-key on Hebrew keyboard produces apostrophe
 
 const HEBREW_RE = /[\u0590-\u05FF]/;
 
@@ -295,7 +296,48 @@ function analyze(el) {
   const text = rawText.slice(-600);
   const textHasHebrew = hasHebrew(text);
 
-  // Case 2 first: English-letter words at end that look like Hebrew keyboard input.
+  // Case 1: Hebrew characters with final-form letters in non-final positions.
+  // Real Hebrew NEVER starts a word with ך ם ן ף ץ — those only appear at word-end.
+  // On the Hebrew keyboard, pressing l/i/o/;/. produces exactly those letters, so
+  // finding them at position 0 of a word is an unambiguous wrong-keyboard signal.
+  if (textHasHebrew) {
+    const allWords = text.trim().split(/\s+/);
+    const run1 = [];
+    for (let i = allWords.length - 1; i >= 0; i--) {
+      const w = allWords[i];
+      if (HEBREW_RE.test(w) || w === "'") {
+        run1.unshift(w);
+      } else if (run1.length > 0 && w.length <= 2) {
+        run1.unshift(w); // short English bridge between Hebrew words
+      } else if (run1.length === 0) {
+        continue; // skip trailing non-Hebrew
+      } else {
+        break;
+      }
+    }
+
+    const badCount = run1.filter(w => {
+      const heChars = [...w].filter(c => HEBREW_RE.test(c));
+      return heChars.length >= 2 && heChars.slice(0, -1).some(c => FINAL_FORMS.has(c));
+    }).length;
+
+    if (badCount >= 2 && run1.length >= 2) {
+      const original = run1.join(' ');
+      const converted = convertToEnglish(original);
+      if (converted.trim().length >= 3 && !hasHebrew(converted)) {
+        return {
+          type: 'hebrew_as_english',
+          message: 'Typing in the wrong layout? This might be English:',
+          original,
+          converted,
+          btnLabel: 'Convert to English',
+          words: run1.filter(w => HEBREW_RE.test(w))
+        };
+      }
+    }
+  }
+
+  // Case 2: English-letter words at end that look like Hebrew keyboard input.
   // Walk backwards; allow PASSTHROUGH words as bridges between Hebrew-like words.
   const words = extractWords(text);
   const run = [];
