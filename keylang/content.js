@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v2.3.1 – Hebrew ↔ English Layout Fixer
+// Kiko v2.3.2 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v2.3.1 loaded');
+console.log('[Kiko] v2.3.2 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -673,7 +673,7 @@ function showRecallBtn() {
     <span>⌨️</span>
     ${countBadge}
     <span class="kld-recall-preview" title="Click to show full detection">${escapeHtml(preview)}</span>
-    <button class="kld-recall-off" title="Turn off auto-detection">✕</button>
+    <button class="kld-recall-off" title="Dismiss">✕</button>
   `;
   recallBtn.querySelector('.kld-recall-preview').addEventListener('click', () => {
     if (lastDetection && lastElement) {
@@ -683,10 +683,7 @@ function showRecallBtn() {
   });
   recallBtn.querySelector('.kld-recall-off').addEventListener('click', e => {
     e.stopPropagation();
-    detectionEnabled = false;
-    try { chrome.storage.local.set({ detectionEnabled: false }).catch(() => {}); } catch {}
     hideRecallBtn();
-    showFeedbackConfirm('Kiko paused — re-enable in the extension popup');
   });
   applyPos(recallBtn);
   makeDraggable(recallBtn);
