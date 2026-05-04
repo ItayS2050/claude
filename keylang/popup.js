@@ -11,7 +11,9 @@ function render(data) {
 
   // Detection toggle
   const toggle = document.getElementById('detection-toggle');
-  toggle.checked = data.detectionEnabled !== false;
+  const enabled = data.detectionEnabled !== false;
+  toggle.checked = enabled;
+  document.getElementById('paused-banner').style.display = enabled ? 'none' : 'block';
 
   renderWordList('hebrew-words', hebrewWords, 'hebrew', (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
@@ -57,6 +59,14 @@ function addWord(word, type) {
 // Detection on/off toggle
 document.getElementById('detection-toggle').addEventListener('change', (e) => {
   chrome.storage.local.set({ detectionEnabled: e.target.checked });
+  document.getElementById('paused-banner').style.display = e.target.checked ? 'none' : 'block';
+});
+
+// Re-enable button in the paused banner
+document.getElementById('reenable-btn').addEventListener('click', () => {
+  chrome.storage.local.set({ detectionEnabled: true });
+  document.getElementById('detection-toggle').checked = true;
+  document.getElementById('paused-banner').style.display = 'none';
 });
 
 document.getElementById('add-hebrew-btn').addEventListener('click', () => {
