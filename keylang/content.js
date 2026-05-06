@@ -289,7 +289,7 @@ function analyze(el) {
       return hc.length >= 2 && hc.slice(0, -1).some(c => FINAL_FORMS.has(c));
     }).length;
 
-    if (badCount >= 2 && run1.length >= 2) {
+    if (badCount >= 1 && run1.length >= 1) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
@@ -325,7 +325,7 @@ function analyze(el) {
   if (gapBuf.length > 0 && run.length > 0) run.unshift(...gapBuf);
 
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
-  const minRun      = textHasHebrew ? 1 : 2;
+  const minRun      = 1;
 
   if (hebrewCount >= minRun) {
     const runText  = run.join(' ');
@@ -573,16 +573,6 @@ function showToast(element, detection) {
     lastDetection = detection;
     lastElement   = element;
     if (!hintEl) showHint();
-    return;
-  }
-
-  // Long runs (≥10 words) just pulse the hint bubble — don't interrupt typing
-  if (detection.words.length >= 10) {
-    const prevSig = lastDetection ? lastDetection.words.join('|') : '';
-    lastDetection = detection;
-    lastElement   = element;
-    if (sig !== prevSig) { hideHint(); showHint(); }
-    else if (!hintEl)    showHint();
     return;
   }
 
@@ -849,11 +839,18 @@ function debounce(fn, ms) {
 function attachTo(el) {
   if (el._kld) return;
   el._kld = true;
+  let lastCheckedText = '';
   const check = debounce(() => {
     if (!detectionEnabled) return;
+    const currentText = getTextBeforeCursor(el);
+    // Clear dismissed state when user has typed enough new content
+    if (dismissedSignature && currentText.length > lastCheckedText.length + 3) {
+      dismissedSignature = null;
+    }
+    lastCheckedText = currentText;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
-  }, 700);
+  }, 500);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          check);
   el.addEventListener('compositionend', check);
