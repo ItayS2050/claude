@@ -854,6 +854,18 @@ function attachTo(el) {
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          check);
   el.addEventListener('compositionend', check);
+
+  // Intercept Enter — catch wrong layout before the message is submitted
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    if (!detectionEnabled) return;
+    const detection = analyze(el);
+    if (detection) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast(el, detection);
+    }
+  }, true);
 }
 
 // ── DOM observation ───────────────────────────────────────────
