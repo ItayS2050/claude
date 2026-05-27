@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SellTech — Client Prep Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & BASE ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#0C0D1F;color:#F2F2FC;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ─── VARIABLES ─── */
+:root{
+  --orange:#F5A623;
+  --navy:#2D3270;
+  --navy-dark:#1E2155;
+  --bg:#0C0D1F;
+  --surface:#131527;
+  --border:#222540;
+  --text:#F2F2FC;
+  --muted:#8890C4;
+  --radius:10px;
+  --header-h:64px;
+  --progress-h:6px;
+  --nav-h:68px;
+}
+
+/* ─── KEYFRAMES ─── */
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes barGrow{from{width:0}to{width:var(--bar-w)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ═══════════════════════════════════════════
+   DISCOVERY MODE (dark)
+═══════════════════════════════════════════ */
+#discovery-mode{display:flex;flex-direction:column;min-height:100vh}
+
+/* HEADER */
+.disc-header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:var(--header-h);background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+}
+.logo-wrap{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-text{display:flex;flex-direction:column;line-height:1}
+.logo-name{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:.5px}
+.logo-tag{font-size:9px;font-weight:700;color:var(--orange);letter-spacing:1.5px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:12px}
+.header-title{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+.client-badge{
+  display:none;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);
+  color:var(--orange);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;
+}
+.client-badge.visible{display:inline-block}
+
+/* PROGRESS BAR */
+.progress-bar{
+  position:fixed;top:var(--header-h);left:0;right:0;z-index:99;
+  height:var(--progress-h);background:var(--border);
+  display:flex;gap:2px;padding:0 2px;
+}
+.progress-seg{
+  flex:1;height:100%;background:var(--border);border-radius:3px;
+  transition:background .35s ease;
+}
+.progress-seg.done{background:var(--orange)}
+
+/* SCROLL AREA */
+.disc-body{
+  margin-top:calc(var(--header-h) + var(--progress-h));
+  padding-bottom:calc(var(--nav-h) + 40px);
+  padding-top:40px;
+}
+.step-wrap{
+  max-width:720px;margin:0 auto;padding:0 24px;
+  animation:fadeSlideIn .35s ease both;
+  display:none;
+}
+.step-wrap.active{display:block}
+
+.step-eyebrow{font-size:11px;font-weight:700;color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.step-title{font-size:26px;font-weight:800;color:var(--text);margin-bottom:6px}
+.step-desc{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.6}
+
+/* FIELD GROUPS */
+.field-group{margin-bottom:24px}
+.field-label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px;display:block}
+.field-hint{font-size:12px;color:var(--muted);margin-top:4px;font-style:italic}
+
+/* INPUTS */
+.disc-input,.disc-textarea,.disc-select{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);font-family:'Inter',sans-serif;font-size:14px;
+  border-radius:var(--radius);padding:12px 14px;outline:none;
+  transition:border-color .2s;resize:vertical;
+}
+.disc-input:focus,.disc-textarea:focus,.disc-select:focus{border-color:var(--orange)}
+.disc-textarea{min-height:90px;line-height:1.6}
+.disc-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='%238890C4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;cursor:pointer}
+.disc-select option{background:var(--surface);color:var(--text)}
+
+/* GRID HELPERS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:560px){.two-col,.three-col{grid-template-columns:1fr}}
+
+/* CHIPS */
+.chips-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;
+  border:1.5px solid var(--border);background:transparent;color:var(--muted);
+  transition:all .2s ease;user-select:none;
+}
+.chip:hover{border-color:rgba(245,166,35,.4);color:var(--text)}
+.chip.selected{
+  border-color:var(--orange);background:rgba(245,166,35,.1);
+  color:var(--orange);
+}
+.chip.selected::before{content:'✓ ';font-size:11px}
+.chip-add-wrap{display:flex;align-items:center;gap:8px;margin-top:8px}
+.chip-add-input{
+  background:var(--surface);border:1px dashed var(--border);
+  color:var(--text);font-family:'Inter',sans-serif;font-size:13px;
+  border-radius:20px;padding:6px 14px;outline:none;width:200px;
+  transition:border-color .2s;
+}
+.chip-add-input:focus{border-color:var(--orange)}
+.chip-add-input::placeholder{color:var(--muted)}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;gap:14px;padding:14px 0}
+.toggle-label-text{font-size:14px;font-weight:500;color:var(--text)}
+.toggle-switch{
+  position:relative;width:44px;height:24px;cursor:pointer;flex-shrink:0;
+}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{
+  position:absolute;inset:0;background:var(--border);border-radius:12px;
+  transition:background .25s;
+}
+.toggle-switch input:checked ~ .toggle-track{background:var(--orange)}
+.toggle-thumb{
+  position:absolute;top:3px;left:3px;width:18px;height:18px;
+  background:#fff;border-radius:50%;transition:transform .25s;box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+.toggle-switch input:checked ~ .toggle-track ~ .toggle-thumb,
+.toggle-switch input:checked + .toggle-track + .toggle-thumb{transform:translateX(20px)}
+/* fix thumb position */
+.toggle-switch .toggle-thumb{pointer-events:none}
+
+.conditional-field{
+  overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .35s ease,opacity .3s ease,margin .3s ease;
+  margin-top:0;
+}
+.conditional-field.open{max-height:600px;opacity:1;margin-top:12px}
+
+/* SECTION DIVIDER */
+.section-label{
+  font-size:10px;font-weight:700;letter-spacing:2px;color:var(--orange);
+  text-transform:uppercase;border-top:1px solid var(--border);
+  padding-top:20px;margin-top:8px;margin-bottom:16px;
+}
+
+/* BOTTOM NAV */
+.disc-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px;
+}
+.step-name{font-size:12px;font-weight:600;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.8px}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 24px;border-radius:8px;font-family:'Inter',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;white-space:nowrap;
+}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--muted);color:var(--text)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-generate{background:linear-gradient(135deg,#F5A623,#e8830a);color:#fff;box-shadow:0 4px 20px rgba(245,166,35,.35)}
+.btn-generate:hover{filter:brightness(1.06);box-shadow:0 6px 28px rgba(245,166,35,.5)}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* ═══════════════════════════════════════════
+   PLAN MODE (light)
+═══════════════════════════════════════════ */
+#plan-mode{display:none;background:#f5f6fa;min-height:100vh}
+
+/* PLAN TOOLBAR */
+.plan-toolbar{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:56px;background:var(--navy-dark);
+  display:flex;align-items:center;padding:0 24px;gap:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+}
+.plan-toolbar .logo-name{color:#fff}
+.toolbar-spacer{flex:1}
+.btn-toolbar{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 16px;border-radius:7px;font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;
+}
+.btn-back{background:rgba(255,255,255,.12);color:#fff}
+.btn-back:hover{background:rgba(255,255,255,.2)}
+.btn-edit{background:rgba(245,166,35,.2);color:var(--orange);border:1px solid rgba(245,166,35,.4)}
+.btn-edit.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+.btn-pdf{background:var(--orange);color:#fff}
+.btn-pdf:hover{filter:brightness(1.08)}
+.edit-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(245,166,35,.2);color:var(--orange)}
+
+/* PLAN BODY */
+.plan-body{
+  max-width:860px;margin:0 auto;padding:76px 32px 60px;
+}
+
+/* PLAN SECTIONS */
+.plan-section{
+  background:#fff;border-radius:14px;margin-bottom:24px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;
+  page-break-inside:avoid;
+}
+.plan-section-header{
+  background:linear-gradient(135deg,var(--navy-dark),var(--navy));
+  padding:20px 28px;display:flex;align-items:center;gap:14px;
+}
+.section-num{
+  width:32px;height:32px;border-radius:8px;background:rgba(245,166,35,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:var(--orange);letter-spacing:.5px;flex-shrink:0;
+}
+.section-heading{font-size:16px;font-weight:700;color:#fff}
+.plan-section-body{padding:24px 28px}
+
+/* COVER SECTION */
+.cover-section{
+  background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 60%,#3a4090 100%);
+  border-radius:14px;margin-bottom:24px;padding:52px 48px;
+  box-shadow:0 4px 24px rgba(0,0,0,.15);
+}
+.cover-logo-row{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.cover-logo-name{font-size:22px;font-weight:800;color:#fff}
+.cover-logo-tag{font-size:10px;font-weight:700;color:var(--orange);letter-spacing:2px;margin-top:3px}
+.cover-proposal-label{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--orange);text-transform:uppercase;margin-bottom:16px}
+.cover-title{font-size:36px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:10px}
+.cover-subtitle{font-size:16px;color:rgba(255,255,255,.65);margin-bottom:36px}
+.cover-meta{
+  display:flex;flex-wrap:wrap;gap:24px;border-top:1px solid rgba(255,255,255,.15);
+  padding-top:24px;
+}
+.cover-meta-item{font-size:12px;color:rgba(255,255,255,.6)}
+.cover-meta-item strong{display:block;color:#fff;font-size:14px;font-weight:600;margin-top:2px}
+
+/* PLAN TEXT */
+.plan-p{font-size:14px;line-height:1.75;color:#374151;margin-bottom:0}
+.plan-p + .plan-p{margin-top:12px}
+.plan-highlight{color:var(--navy);font-weight:600}
+
+/* ICP GRID */
+.icp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:600px){.icp-grid{grid-template-columns:1fr}}
+.icp-card{
+  background:#f8f9ff;border:1px solid #e8eaf5;border-radius:10px;padding:16px;
+}
+.icp-card-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.icp-card-value{font-size:13px;color:#1a1f4e;font-weight:500;line-height:1.6}
+.icp-tag{
+  display:inline-block;background:rgba(45,50,112,.08);color:var(--navy);
+  font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;margin:2px;
+}
+
+/* CHANNEL BARS */
+.channel-list{margin-top:12px}
+.channel-item{margin-bottom:16px}
+.channel-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.channel-name-wrap{display:flex;align-items:center;gap:8px}
+.channel-name{font-size:13px;font-weight:600;color:#1a1f4e}
+.channel-badge{
+  font-size:10px;font-weight:700;letter-spacing:.8px;padding:2px 8px;border-radius:10px;
+  text-transform:uppercase;
+}
+.badge-primary{background:rgba(245,166,35,.15);color:#c47d00}
+.badge-support{background:rgba(45,50,112,.1);color:var(--navy)}
+.channel-pct{font-size:13px;font-weight:700;color:var(--muted)}
+.channel-bar-bg{height:8px;background:#e8eaf5;border-radius:4px;overflow:hidden}
+.channel-bar{height:100%;border-radius:4px;background:var(--navy);transition:width 1s ease}
+.channel-bar.primary-bar{background:linear-gradient(90deg,var(--orange),#e8830a)}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.stat-box{
+  text-align:center;padding:20px 16px;background:#f8f9ff;
+  border:1px solid #e8eaf5;border-radius:10px;
+}
+.stat-num{font-size:28px;font-weight:800;color:var(--navy)}
+.stat-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
+
+/* SEQUENCE FLOW */
+.sequence-flow{display:flex;align-items:flex-start;gap:0;margin:20px 0;overflow-x:auto;padding-bottom:4px}
+.seq-step{
+  flex:1;min-width:110px;text-align:center;position:relative;
+}
+.seq-step::after{
+  content:'';position:absolute;top:18px;left:50%;width:100%;height:2px;
+  background:linear-gradient(90deg,var(--navy),rgba(45,50,112,.2));z-index:0;
+}
+.seq-step:last-child::after{display:none}
+.seq-dot{
+  width:36px;height:36px;border-radius:50%;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 8px;
+  font-size:12px;font-weight:800;color:#fff;position:relative;z-index:1;
+}
+.seq-dot.orange{background:var(--orange)}
+.seq-day{font-size:10px;font-weight:700;color:var(--orange);letter-spacing:.8px;margin-bottom:4px}
+.seq-title{font-size:11px;font-weight:700;color:#1a1f4e;margin-bottom:3px}
+.seq-desc{font-size:10px;color:var(--muted);line-height:1.5}
+
+/* ROADMAP */
+.roadmap{position:relative;padding:24px 0 8px}
+.roadmap-line{
+  position:absolute;top:42px;left:40px;right:40px;height:3px;
+  background:linear-gradient(90deg,var(--orange),var(--navy));border-radius:2px;
+  z-index:0;
+}
+.roadmap-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative;z-index:1}
+@media(max-width:600px){.roadmap-phases{grid-template-columns:1fr 1fr}}
+.phase-card{text-align:center}
+.phase-dot-wrap{display:flex;justify-content:center;margin-bottom:14px}
+.phase-dot{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#fff;border:3px solid #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.phase-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.phase-title{font-size:13px;font-weight:700;color:#1a1f4e;margin-bottom:8px}
+.phase-weeks{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:10px}
+.phase-tasks{list-style:none;text-align:left;padding:0}
+.phase-tasks li{font-size:11px;color:#374151;padding:2px 0;line-height:1.5}
+.phase-tasks li::before{content:'→ ';color:var(--orange);font-weight:700}
+.phase-bg{background:#f8f9ff;border:1px solid #e8eaf5;border-radius:10px;padding:14px 12px}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:12px}
+@media(max-width:600px){.kpi-grid{grid-template-columns:1fr 1fr}}
+.kpi-card{
+  text-align:center;padding:18px 14px;background:#f8f9ff;
+  border:1px solid #e8eaf5;border-radius:10px;
+}
+.kpi-card.highlight{background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.25)}
+.kpi-val{font-size:22px;font-weight:800;color:var(--navy)}
+.kpi-card.highlight .kpi-val{color:var(--orange)}
+.kpi-desc{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-top:4px}
+
+/* INVESTMENT ROWS */
+.invest-table{width:100%;border-collapse:collapse;margin-top:8px}
+.invest-table tr{border-bottom:1px solid #e8eaf5}
+.invest-table tr:last-child{border:none}
+.invest-table td{padding:12px 16px;font-size:14px}
+.invest-table td:first-child{font-weight:600;color:var(--muted);width:220px;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.invest-table td:last-child{color:#1a1f4e;font-weight:500}
+.invest-table tr.highlight-row td:last-child{color:var(--orange);font-weight:700;font-size:16px}
+
+/* PLAN FOOTER */
+.plan-footer{
+  max-width:860px;margin:0 auto;padding:0 32px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-top:2px solid #e8eaf5;padding-top:20px;margin-top:4px;
+}
+.footer-left{display:flex;align-items:center;gap:10px}
+.footer-right{text-align:right}
+.footer-url{font-size:13px;font-weight:600;color:var(--navy)}
+.footer-conf{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+/* EDIT MODE */
+[contenteditable="true"]{
+  outline:none;border-bottom:2px dashed var(--orange) !important;
+  border-radius:2px;min-width:30px;display:inline-block;
+  transition:background .2s;cursor:text;
+}
+[contenteditable="true"]:focus{background:rgba(245,166,35,.08)}
+
+/* NOTES FIELD */
+.plan-note{
+  background:#fffbf0;border:1px solid rgba(245,166,35,.2);border-radius:8px;
+  padding:12px 16px;font-size:13px;color:#5c4a00;margin-top:14px;line-height:1.6;
+}
+
+/* ─── PRINT ─── */
+@media print{
+  #discovery-mode{display:none!important}
+  .plan-toolbar{display:none!important}
+  #plan-mode{display:block!important;background:#fff}
+  .plan-body{padding-top:24px}
+  .plan-section{box-shadow:none;border:1px solid #e0e0e0}
+  .cover-section{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .plan-section-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .channel-bar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .phase-dot{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  [contenteditable]{border:none!important;outline:none!important}
+  .plan-section{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     DISCOVERY MODE
+══════════════════════════════════════ -->
+<div id="discovery-mode">
+
+  <!-- HEADER -->
+  <header class="disc-header">
+    <div class="logo-wrap">
+      <svg width="36" height="36" viewBox="0 0 80 56" fill="#F5A623"><rect x="0" y="6" width="7" height="18" rx="2"/><rect x="8" y="14" width="6" height="22" rx="2"/><rect x="15" y="10" width="20" height="14" rx="2"/><rect x="36" y="6" width="14" height="20" rx="2"/><rect x="50" y="10" width="18" height="12" rx="2"/><rect x="66" y="14" width="14" height="8" rx="2"/><rect x="10" y="30" width="7" height="18" rx="2"/><rect x="22" y="30" width="7" height="18" rx="2"/><rect x="38" y="28" width="7" height="20" rx="2"/><rect x="50" y="28" width="7" height="20" rx="2"/></svg>
+      <div class="logo-text">
+        <span class="logo-name">SellTech</span>
+        <span class="logo-tag">GROWTH STRATEGY EXPERTS</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-title">Client Prep Tool</span>
+      <span class="client-badge" id="client-badge"></span>
+    </div>
+  </header>
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-bar" id="progress-bar">
+    <div class="progress-seg" data-seg="1"></div>
+    <div class="progress-seg" data-seg="2"></div>
+    <div class="progress-seg" data-seg="3"></div>
+    <div class="progress-seg" data-seg="4"></div>
+    <div class="progress-seg" data-seg="5"></div>
+    <div class="progress-seg" data-seg="6"></div>
+    <div class="progress-seg" data-seg="7"></div>
+    <div class="progress-seg" data-seg="8"></div>
+    <div class="progress-seg" data-seg="9"></div>
+  </div>
+
+  <!-- DISC BODY -->
+  <div class="disc-body">
+
+    <!-- STEP 1: Company Snapshot -->
+    <div class="step-wrap active" id="step-1">
+      <div class="step-eyebrow">Step 1 of 9</div>
+      <h2 class="step-title">Company Snapshot</h2>
+      <p class="step-desc">Let's start with the basics — who are we building this strategy for?</p>
+
+      <div class="field-group">
+        <label class="field-label">Client / Company Name</label>
+        <input class="disc-input" type="text" placeholder="e.g. Acme Corp" oninput="updateField('companyName',this.value);updateClientBadge()"/>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Website</label>
+          <input class="disc-input" type="url" placeholder="https://example.com" oninput="updateField('website',this.value)"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Contact Name</label>
+          <input class="disc-input" type="text" placeholder="Jane Smith" oninput="updateField('contactName',this.value)"/>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Industry</label>
+        <div class="chips-wrap" id="chips-industry"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Company Size</label>
+        <div class="chips-wrap" id="chips-companySize"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Stage</label>
+        <div class="chips-wrap" id="chips-stage"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2: The Offer -->
+    <div class="step-wrap" id="step-2">
+      <div class="step-eyebrow">Step 2 of 9</div>
+      <h2 class="step-title">The Offer</h2>
+      <p class="step-desc">Deep-dive into what they sell and who they serve — clarity here drives better messaging.</p>
+
+      <div class="field-group">
+        <label class="field-label">What do they sell?</label>
+        <textarea class="disc-textarea" placeholder="Describe as if to a prospect who's never heard of you..." oninput="updateField('whatTheySell',this.value)"></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Problem solved + life after buying?</label>
+        <textarea class="disc-textarea" placeholder="What pain goes away? What does success look like for the buyer?" oninput="updateField('problemSolved',this.value)"></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">ACV / Deal Size</label>
+        <div class="chips-wrap" id="chips-acv"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Top proof points / case studies</label>
+        <textarea class="disc-textarea" placeholder="e.g. 3x pipeline in 60 days for SaaS company, reduced churn by 40%..." oninput="updateField('proofPoints',this.value)"></textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('hasLowFrictionCTA',this.checked);toggleConditional('cond-lowfriction',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Low-friction CTA available?</span>
+        </div>
+        <div class="conditional-field" id="cond-lowfriction">
+          <input class="disc-input" type="text" placeholder="e.g. Free 30-min audit, no-obligation demo, ROI calculator..." oninput="updateField('lowFrictionCTA',this.value)"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: ICP Targeting -->
+    <div class="step-wrap" id="step-3">
+      <div class="step-eyebrow">Step 3 of 9</div>
+      <h2 class="step-title">ICP Targeting</h2>
+      <p class="step-desc">The more precisely we define the ideal customer, the sharper the outreach.</p>
+
+      <div class="field-group">
+        <label class="field-label">Target Job Titles</label>
+        <div class="chips-wrap" id="chips-targetTitles"></div>
+        <div class="chip-add-wrap">
+          <input class="chip-add-input" type="text" placeholder="Add custom title → Enter" id="custom-title-input" onkeydown="addCustomChip(event,'targetTitles','chips-targetTitles',this)"/>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Target Departments</label>
+        <div class="chips-wrap" id="chips-targetDepts"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Company Sizes</label>
+          <div class="chips-wrap" id="chips-icpCompanySize"></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Min Revenue</label>
+          <select class="disc-select" onchange="updateField('minRevenue',this.value)">
+            <option value="">No minimum</option>
+            <option value="$1M+">$1M+</option>
+            <option value="$5M+">$5M+</option>
+            <option value="$10M+">$10M+</option>
+            <option value="$50M+">$50M+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Target Industries</label>
+        <div class="chips-wrap" id="chips-targetIndustries"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Geographies</label>
+        <div class="chips-wrap" id="chips-geos"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Buying Triggers</label>
+        <textarea class="disc-textarea" placeholder="Just raised Series B, hired new VP Sales, expanding to new markets, post-acquisition, new product launch..." oninput="updateField('buyingTriggers',this.value)"></textarea>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Best current customers</label>
+          <textarea class="disc-textarea" placeholder="Who are your favourite clients? What do they have in common?" oninput="updateField('bestCustomers',this.value)"></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Who is NOT a fit</label>
+          <textarea class="disc-textarea" placeholder="Ideal client profile exclusions, who wastes your sales team's time?" oninput="updateField('notAFit',this.value)"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: LinkedIn Assets -->
+    <div class="step-wrap" id="step-4">
+      <div class="step-eyebrow">Step 4 of 9</div>
+      <h2 class="step-title">LinkedIn Assets</h2>
+      <p class="step-desc">Understanding what LinkedIn profiles and tools are available shapes the entire campaign structure.</p>
+
+      <div class="field-group">
+        <label class="field-label">Profiles available for outreach</label>
+        <div class="chips-wrap" id="chips-profileCount"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Who owns the profiles?</label>
+        <div class="chips-wrap" id="chips-profileOwners"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Profile optimization level</label>
+        <div class="chips-wrap" id="chips-profileOptimization"></div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('hasSalesNav',this.checked);toggleConditional('cond-salesnav',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Sales Navigator available?</span>
+        </div>
+        <div class="conditional-field" id="cond-salesnav">
+          <div class="chips-wrap" id="chips-salesNavTier"></div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">1st-degree connections (primary profile)</label>
+        <div class="chips-wrap" id="chips-connections"></div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('hasRestrictions',this.checked);toggleConditional('cond-restrictions',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Any profile restrictions/bans in last 12 months?</span>
+        </div>
+        <div class="conditional-field" id="cond-restrictions">
+          <textarea class="disc-textarea" placeholder="Describe what happened and which profiles were affected..." oninput="updateField('restrictionDetails',this.value)"></textarea>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Company LinkedIn Page</label>
+        <div class="chips-wrap" id="chips-companyPage"></div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Current GTM -->
+    <div class="step-wrap" id="step-5">
+      <div class="step-eyebrow">Step 5 of 9</div>
+      <h2 class="step-title">Current GTM</h2>
+      <p class="step-desc">What's working (and not working) today informs how we complement their existing motion.</p>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('hasSDRTeam',this.checked);toggleConditional('cond-sdrteam',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">In-house SDR/BDR team?</span>
+        </div>
+        <div class="conditional-field" id="cond-sdrteam">
+          <label class="field-label">Team size</label>
+          <div class="chips-wrap" id="chips-sdrTeamSize"></div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Primary lead sources</label>
+        <div class="chips-wrap" id="chips-leadSources"></div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('runsPaidAds',this.checked);toggleConditional('cond-paidads',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Running paid ads?</span>
+        </div>
+        <div class="conditional-field" id="cond-paidads">
+          <label class="field-label">Platforms</label>
+          <div class="chips-wrap" id="chips-adPlatforms"></div>
+          <label class="field-label" style="margin-top:12px">Monthly ad budget</label>
+          <div class="chips-wrap" id="chips-adBudget"></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">CRM</label>
+          <select class="disc-select" onchange="updateField('crm',this.value)">
+            <option value="">Select CRM...</option>
+            <option>HubSpot</option>
+            <option>Salesforce</option>
+            <option>Pipedrive</option>
+            <option>Zoho</option>
+            <option>Monday.com</option>
+            <option>Close</option>
+            <option>Notion/Sheets</option>
+            <option>None</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Current leads/month</label>
+          <select class="disc-select" onchange="updateField('currentLeads',this.value)">
+            <option value="">Select range...</option>
+            <option>0</option>
+            <option>1–5</option>
+            <option>6–15</option>
+            <option>16–30</option>
+            <option>30+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Current ARR</label>
+        <div class="chips-wrap" id="chips-currentARR"></div>
+      </div>
+    </div>
+
+    <!-- STEP 6: LinkedIn Presence & Content -->
+    <div class="step-wrap" id="step-6">
+      <div class="step-eyebrow">Step 6 of 9</div>
+      <h2 class="step-title">LinkedIn Presence &amp; Content</h2>
+      <p class="step-desc">Content on LinkedIn dramatically improves outbound acceptance rates — let's understand the baseline.</p>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('execsPost',this.checked);toggleConditional('cond-whoposts',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Execs/founders post on LinkedIn?</span>
+        </div>
+        <div class="conditional-field" id="cond-whoposts">
+          <label class="field-label">Who posts?</label>
+          <div class="chips-wrap" id="chips-whoPosts"></div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Posting frequency</label>
+        <div class="chips-wrap" id="chips-postingFreq"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Content types</label>
+        <div class="chips-wrap" id="chips-contentTypes"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Do prospects engage with content?</label>
+        <div class="chips-wrap" id="chips-engagement"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Other active channels</label>
+        <input class="disc-input" type="text" placeholder="e.g. YouTube, podcast, newsletter, community..." oninput="updateField('otherChannels',this.value)"/>
+      </div>
+    </div>
+
+    <!-- STEP 7: Sales Process -->
+    <div class="step-wrap" id="step-7">
+      <div class="step-eyebrow">Step 7 of 9</div>
+      <h2 class="step-title">Sales Process</h2>
+      <p class="step-desc">The outreach strategy must align tightly with how you close — let's map the full sales motion.</p>
+
+      <div class="field-group">
+        <label class="field-label">Sales cycle length</label>
+        <div class="chips-wrap" id="chips-salesCycle"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Who closes deals?</label>
+        <div class="chips-wrap" id="chips-whoCloses"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">What defines a qualified meeting?</label>
+        <textarea class="disc-textarea" placeholder="Be specific — this goes directly into your campaign contract and qualification criteria..." oninput="updateField('qualifiedMeeting',this.value)"></textarea>
+        <span class="field-hint">⚠ This must be documented precisely — it defines what counts as a delivered meeting.</span>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">First meeting type</label>
+          <div class="chips-wrap" id="chips-meetingType"></div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Close rate</label>
+          <div class="chips-wrap" id="chips-closeRate"></div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('hasFollowUp',this.checked);toggleConditional('cond-followup',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Follow-up process for non-converters?</span>
+        </div>
+        <div class="conditional-field" id="cond-followup">
+          <input class="disc-input" type="text" placeholder="e.g. Re-engage at 30 days, send case study, nurture via newsletter..." oninput="updateField('followUpProcess',this.value)"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Goals & Timeline -->
+    <div class="step-wrap" id="step-8">
+      <div class="step-eyebrow">Step 8 of 9</div>
+      <h2 class="step-title">Goals &amp; Timeline</h2>
+      <p class="step-desc">Align on success metrics and the commercial terms of engagement.</p>
+
+      <div class="field-group">
+        <label class="field-label">Meetings/month target</label>
+        <div class="chips-wrap" id="chips-meetingTarget"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Pipeline target (revenue)</label>
+          <input class="disc-input" type="text" placeholder="e.g. $500K ARR, $1M pipeline in 90 days..." oninput="updateField('pipelineTarget',this.value)"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Budget for engagement</label>
+          <div class="chips-wrap" id="chips-budget"></div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Urgency driver</label>
+        <input class="disc-input" type="text" placeholder="e.g. new product launch Q3, board review in 60 days, end of fiscal year..." oninput="updateField('urgencyDriver',this.value)"/>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Ideal start date</label>
+        <div class="chips-wrap" id="chips-startDate"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Main contact name &amp; title</label>
+          <input class="disc-input" type="text" placeholder="Jane Smith, VP of Sales" oninput="updateField('mainContact',this.value)"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Contact email</label>
+          <input class="disc-input" type="email" placeholder="jane@company.com" oninput="updateField('contactEmail',this.value)"/>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('multipleStakeholders',this.checked);toggleConditional('cond-stakeholders',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Multiple stakeholders / approval needed?</span>
+        </div>
+        <div class="conditional-field" id="cond-stakeholders">
+          <input class="disc-input" type="text" placeholder="Who else is involved in the decision? e.g. CFO, Legal, CTO..." oninput="updateField('stakeholders',this.value)"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9: Past Experience & Positioning -->
+    <div class="step-wrap" id="step-9">
+      <div class="step-eyebrow">Step 9 of 9</div>
+      <h2 class="step-title">Past Experience &amp; Positioning</h2>
+      <p class="step-desc">Learning from the past and understanding your competitive edge sharpens every message we write.</p>
+
+      <div class="section-label">Past Outbound Experience</div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('ranLIOutbound',this.checked);toggleConditional('cond-lioutbound',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Run LinkedIn outbound before?</span>
+        </div>
+        <div class="conditional-field" id="cond-lioutbound">
+          <label class="field-label">Tools used</label>
+          <div class="chips-wrap" id="chips-liTools"></div>
+          <label class="field-label" style="margin-top:12px">Results</label>
+          <textarea class="disc-textarea" placeholder="What metrics did you hit? Acceptance rate, reply rate, meetings booked?" oninput="updateField('liResults',this.value)"></textarea>
+          <label class="field-label" style="margin-top:12px">What didn't work?</label>
+          <textarea class="disc-textarea" placeholder="What messaging fell flat? What got you restricted? What would you avoid?" oninput="updateField('liFailures',this.value)"></textarea>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" onchange="updateToggle('ranColdEmail',this.checked);toggleConditional('cond-coldemail',this.checked)"/>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label-text">Run cold email outbound before?</span>
+        </div>
+        <div class="conditional-field" id="cond-coldemail">
+          <input class="disc-input" type="text" placeholder="Results: open rate, reply rate, meetings booked, tools used..." oninput="updateField('coldEmailResults',this.value)"/>
+        </div>
+      </div>
+
+      <div class="section-label">Competitive Positioning</div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="field-label">Competitor 1</label>
+          <input class="disc-input" type="text" placeholder="e.g. CompetitorA" oninput="updateField('competitor1',this.value)"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Competitor 2</label>
+          <input class="disc-input" type="text" placeholder="e.g. CompetitorB" oninput="updateField('competitor2',this.value)"/>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Competitor 3</label>
+        <input class="disc-input" type="text" placeholder="e.g. CompetitorC" oninput="updateField('competitor3',this.value)"/>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">What do they do better than competitors?</label>
+        <textarea class="disc-textarea" placeholder="Be specific — avoid 'better service', 'more experience'. What's genuinely different? Price, speed, specialization, outcomes?" oninput="updateField('differentiators',this.value)"></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Most common objections received</label>
+        <div class="chips-wrap" id="chips-objections"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Why do deals get lost?</label>
+        <div class="chips-wrap" id="chips-lostReasons"></div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Best thing a converted customer said</label>
+        <textarea class="disc-textarea" placeholder="Verbatim buyer language — what did they say when they decided to buy or after success?" oninput="updateField('bestQuote',this.value)"></textarea>
+        <span class="field-hint">💬 Use real quotes — we'll build messaging angles from these exact words.</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Notes / anything else</label>
+        <textarea class="disc-textarea" style="min-height:120px" placeholder="Red flags, opportunities, gut feel on fit, anything the team should know going into campaign setup..." oninput="updateField('notes',this.value)"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /disc-body -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="disc-nav">
+    <button class="btn btn-ghost" id="btn-back" onclick="prevStep()" disabled>← Back</button>
+    <span class="step-name" id="step-name-label">Company Snapshot</span>
+    <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
+  </nav>
+
+</div><!-- /discovery-mode -->
+
+
+<!-- ══════════════════════════════════════
+     PLAN MODE
+══════════════════════════════════════ -->
+<div id="plan-mode">
+
+  <!-- TOOLBAR -->
+  <div class="plan-toolbar">
+    <svg width="28" height="28" viewBox="0 0 80 56" fill="#F5A623"><rect x="0" y="6" width="7" height="18" rx="2"/><rect x="8" y="14" width="6" height="22" rx="2"/><rect x="15" y="10" width="20" height="14" rx="2"/><rect x="36" y="6" width="14" height="20" rx="2"/><rect x="50" y="10" width="18" height="12" rx="2"/><rect x="66" y="14" width="14" height="8" rx="2"/><rect x="10" y="30" width="7" height="18" rx="2"/><rect x="22" y="30" width="7" height="18" rx="2"/><rect x="38" y="28" width="7" height="20" rx="2"/><rect x="50" y="28" width="7" height="20" rx="2"/></svg>
+    <div class="logo-text" style="margin-left:8px">
+      <span class="logo-name" style="color:#fff;font-size:16px">SellTech</span>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <button class="btn-toolbar btn-back" onclick="backToForm()">← Back to Form</button>
+    <button class="btn-toolbar btn-edit" id="btn-edit-toggle" onclick="toggleEditMode()">✏ Edit Plan <span class="edit-badge" id="edit-badge">Edit Off</span></button>
+    <button class="btn-toolbar btn-pdf" onclick="exportPDF()">↓ Export PDF</button>
+  </div>
+
+  <!-- PLAN BODY -->
+  <div class="plan-body">
+
+    <!-- COVER -->
+    <div class="cover-section">
+      <div class="cover-logo-row">
+        <svg width="40" height="32" viewBox="0 0 80 56" fill="#F5A623"><rect x="0" y="6" width="7" height="18" rx="2"/><rect x="8" y="14" width="6" height="22" rx="2"/><rect x="15" y="10" width="20" height="14" rx="2"/><rect x="36" y="6" width="14" height="20" rx="2"/><rect x="50" y="10" width="18" height="12" rx="2"/><rect x="66" y="14" width="14" height="8" rx="2"/><rect x="10" y="30" width="7" height="18" rx="2"/><rect x="22" y="30" width="7" height="18" rx="2"/><rect x="38" y="28" width="7" height="20" rx="2"/><rect x="50" y="28" width="7" height="20" rx="2"/></svg>
+        <div>
+          <div class="cover-logo-name">SellTech</div>
+          <div style="font-size:9px;font-weight:700;color:var(--orange);letter-spacing:2px">GROWTH STRATEGY EXPERTS</div>
+        </div>
+      </div>
+      <div class="cover-proposal-label">GTM Strategy Proposal</div>
+      <div class="cover-title" id="cover-title">Company Name — GTM Strategy</div>
+      <div class="cover-subtitle">LinkedIn Outbound &amp; Growth Strategy · <span id="cover-year"></span></div>
+      <div class="cover-meta">
+        <div class="cover-meta-item">Prepared for<strong id="cover-prepared-for">—</strong></div>
+        <div class="cover-meta-item">Prepared by<strong>SellTech</strong></div>
+        <div class="cover-meta-item">Date<strong id="cover-date"></strong></div>
+        <div class="cover-meta-item">Proposed Start<strong id="cover-start"></strong></div>
+      </div>
+    </div>
+
+    <!-- 01 EXEC SUMMARY -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">01</div>
+        <div class="section-heading">Executive Summary</div>
+      </div>
+      <div class="plan-section-body">
+        <p class="plan-p" id="exec-summary-text"></p>
+      </div>
+    </div>
+
+    <!-- 02 ICP -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">02</div>
+        <div class="section-heading">Ideal Customer Profile</div>
+      </div>
+      <div class="plan-section-body">
+        <p class="plan-p" id="icp-intro"></p>
+        <div class="icp-grid" id="icp-grid"></div>
+      </div>
+    </div>
+
+    <!-- 03 CHANNEL MIX -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">03</div>
+        <div class="section-heading">Recommended Channel Mix</div>
+      </div>
+      <div class="plan-section-body">
+        <p class="plan-p" id="channel-intro"></p>
+        <div class="channel-list" id="channel-list"></div>
+      </div>
+    </div>
+
+    <!-- 04 LI OUTBOUND STRATEGY -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">04</div>
+        <div class="section-heading">LinkedIn Outbound Strategy</div>
+      </div>
+      <div class="plan-section-body">
+        <div class="stats-row" id="li-stats"></div>
+        <p class="plan-p" id="li-strategy-text"></p>
+        <div style="margin-top:20px;margin-bottom:8px"><span style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">5-Touch Outreach Sequence</span></div>
+        <div class="sequence-flow" id="sequence-flow"></div>
+        <div style="margin-top:20px;margin-bottom:8px"><span style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Messaging Angle</span></div>
+        <p class="plan-p" id="messaging-angle-text"></p>
+      </div>
+    </div>
+
+    <!-- 05 ROADMAP -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">05</div>
+        <div class="section-heading">90-Day Roadmap</div>
+      </div>
+      <div class="plan-section-body">
+        <div class="roadmap">
+          <div class="roadmap-line"></div>
+          <div class="roadmap-phases" id="roadmap-phases"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 KPIs -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">06</div>
+        <div class="section-heading">KPIs &amp; Success Metrics</div>
+      </div>
+      <div class="plan-section-body">
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div class="plan-note" id="kpi-note"></div>
+      </div>
+    </div>
+
+    <!-- 07 INVESTMENT -->
+    <div class="plan-section">
+      <div class="plan-section-header">
+        <div class="section-num">07</div>
+        <div class="section-heading">Investment &amp; Next Steps</div>
+      </div>
+      <div class="plan-section-body">
+        <table class="invest-table" id="invest-table"></table>
+        <div class="plan-note" id="invest-note"></div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="plan-footer">
+      <div class="footer-left">
+        <svg width="24" height="18" viewBox="0 0 80 56" fill="#2D3270"><rect x="0" y="6" width="7" height="18" rx="2"/><rect x="8" y="14" width="6" height="22" rx="2"/><rect x="15" y="10" width="20" height="14" rx="2"/><rect x="36" y="6" width="14" height="20" rx="2"/><rect x="50" y="10" width="18" height="12" rx="2"/><rect x="66" y="14" width="14" height="8" rx="2"/><rect x="10" y="30" width="7" height="18" rx="2"/><rect x="22" y="30" width="7" height="18" rx="2"/><rect x="38" y="28" width="7" height="20" rx="2"/><rect x="50" y="28" width="7" height="20" rx="2"/></svg>
+        <span style="font-size:13px;font-weight:700;color:var(--navy)">SellTech — Growth Strategy Experts</span>
+      </div>
+      <div class="footer-right">
+        <div class="footer-url">selltech.io</div>
+        <div class="footer-conf">Confidential</div>
+      </div>
+    </div>
+
+  </div><!-- /plan-body -->
+</div><!-- /plan-mode -->
+
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+var formData = {};
+var currentStep = 1;
+var totalSteps = 9;
+var editModeOn = false;
+
+// ═══════════════════════════════════════════════════════
+// CHIP DEFINITIONS
+// ═══════════════════════════════════════════════════════
+var CHIPS = {
+  industry: ['SaaS/Tech','FinTech','Healthcare','E-Commerce','Professional Services','Manufacturing','Real Estate','Legal','EdTech','HR Tech','Other'],
+  companySize: ['1–10','11–50','51–200','201–500','500+'],
+  stage: ['Pre-revenue','Seed','Series A','Series B+','Bootstrapped/Profitable','Enterprise'],
+  acv: ['<$5K','$5K–$15K','$15K–$50K','$50K–$100K','$100K+'],
+  targetTitles: ['CEO/Founder','CRO','VP Sales','VP Marketing','Head of Growth','Director of Sales','Director of Marketing','CMO','RevOps Director','Head of BD','IT Manager','HR Director'],
+  targetDepts: ['Sales','Marketing','Revenue/RevOps','IT/Tech','HR','Finance','C-Suite','Operations','Product'],
+  icpCompanySize: ['1–10','11–50','51–200','201–500','501–1K','1K–5K','5K+'],
+  targetIndustries: ['SaaS/Tech','FinTech','Healthcare','E-Commerce','Professional Services','Manufacturing','Real Estate','Legal','Agencies','Other'],
+  geos: ['USA','UK','Canada','Israel','DACH','France','Nordics','EMEA','APAC','ANZ','LatAm','Global'],
+  profileCount: ['1','2–3','4–5','6–10','10+'],
+  profileOwners: ['Founder/CEO','Co-Founder','Sales Rep/SDR','Executive/VP','Dedicated persona'],
+  profileOptimization: ['Fully optimized','Partially optimized','Needs work','Not sure'],
+  salesNavTier: ['Core','Advanced','Advanced Plus'],
+  connections: ['<500','500–1K','1K–2.5K','2.5K–5K','5K+'],
+  companyPage: ['Yes — active','Yes — dormant','No page','Not sure'],
+  sdrTeamSize: ['1','2–5','6–10','10+'],
+  leadSources: ['Referrals/WOM','Inbound/SEO','Paid Ads','LinkedIn Outbound','Cold Email','Events','Partnerships','Cold Calling','None yet'],
+  adPlatforms: ['LinkedIn Ads','Google Ads','Meta','Twitter/X','Other'],
+  adBudget: ['<$5K/mo','$5K–$20K','$20K–$50K','$50K+'],
+  currentARR: ['Pre-revenue','<$100K','$100K–$500K','$500K–$2M','$2M–$10M','$10M+'],
+  whoPosts: ['Founder/CEO','Co-founder','Head of Sales','Marketing team','Multiple people'],
+  postingFreq: ['Never','<1x/month','1–2x/month','Weekly','Multiple/week','Daily'],
+  contentTypes: ['Thought leadership','Industry insights','Personal stories','Case studies','Company news','Product updates','Reposts only'],
+  engagement: ['Yes — regularly','Sometimes','Rarely/Never','Not sure'],
+  salesCycle: ['<1 week','1–4 weeks','1–3 months','3–6 months','6+ months'],
+  whoCloses: ['Founder closes','Dedicated AE','Same as outreach','External partner','TBD'],
+  meetingType: ['Discovery','Demo','Paid consult','Free audit','Proposal'],
+  closeRate: ['<5%','5–15%','15–30%','30–50%','50%+'],
+  meetingTarget: ['5','10','15','20','25','30+'],
+  budget: ['<$2K/mo','$2K–$5K/mo','$5K–$10K/mo','$10K+/mo'],
+  startDate: ['ASAP','Within 2 weeks','Within 30 days','1–3 months','No firm timeline'],
+  liTools: ['Manual','Expandi','Dux-Soup','Waalaxy','Phantombuster','Apollo','Lemlist','Other'],
+  objections: ['Too expensive','Already have vendor','No budget/timing','Going in-house','Not enough trust','Need more proof','No decision','Other'],
+  lostReasons: ['Too expensive','Already have vendor','No budget/timing','Going in-house','Not enough trust','Need more proof','No decision','Other']
+};
+
+// single-select groups
+var SINGLE_SELECT = new Set(['profileOptimization','postingFreq','engagement','salesCycle','meetingType','closeRate','meetingTarget','budget','startDate','profileCount','connections','acv']);
+
+// ═══════════════════════════════════════════════════════
+// RENDER CHIPS
+// ═══════════════════════════════════════════════════════
+function renderChips(group, options, containerId) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  options.forEach(function(opt) {
+    var chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = opt;
+    chip.addEventListener('click', function() { toggleChip(group, opt, chip); });
+    container.appendChild(chip);
+  });
+}
+
+function toggleChip(group, value, el) {
+  if (SINGLE_SELECT.has(group)) {
+    // single select: deselect all siblings first
+    var parent = el.parentElement;
+    parent.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+    formData[group] = value;
+  } else {
+    el.classList.toggle('selected');
+    if (!Array.isArray(formData[group])) formData[group] = [];
+    var idx = formData[group].indexOf(value);
+    if (idx === -1) formData[group].push(value);
+    else formData[group].splice(idx, 1);
+  }
+}
+
+function addCustomChip(event, group, containerId, inputEl) {
+  if (event.key !== 'Enter') return;
+  var val = inputEl.value.trim();
+  if (!val) return;
+  inputEl.value = '';
+  if (!Array.isArray(CHIPS[group])) CHIPS[group] = [];
+  if (CHIPS[group].indexOf(val) === -1) CHIPS[group].push(val);
+  // re-render and auto-select
+  renderChips(group, CHIPS[group], containerId);
+  // select the new chip
+  var container = document.getElementById(containerId);
+  var chips = container.querySelectorAll('.chip');
+  chips.forEach(function(c) {
+    if (c.textContent.replace(/^✓ /,'') === val) {
+      toggleChip(group, val, c);
+    }
+    // restore previous selections
+    var arr = formData[group] || [];
+    arr.forEach(function(v) {
+      if (c.textContent.replace(/^✓ /,'') === v) c.classList.add('selected');
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// FIELD UPDATES
+// ═══════════════════════════════════════════════════════
+function updateField(key, value) { formData[key] = value; }
+
+function updateToggle(key, value) { formData[key] = value; }
+
+function toggleConditional(id, show) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (show) el.classList.add('open');
+  else el.classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+var STEP_NAMES = [
+  'Company Snapshot','The Offer','ICP Targeting','LinkedIn Assets',
+  'Current GTM','Presence & Content','Sales Process','Goals & Timeline',
+  'Past Experience & Positioning'
+];
+
+function showStep(n) {
+  document.querySelectorAll('.step-wrap').forEach(function(s) { s.classList.remove('active'); });
+  var el = document.getElementById('step-' + n);
+  if (el) {
+    el.classList.remove('active');
+    // force reflow for animation
+    void el.offsetWidth;
+    el.classList.add('active');
+  }
+  // progress bar
+  document.querySelectorAll('.progress-seg').forEach(function(seg) {
+    var seg_n = parseInt(seg.getAttribute('data-seg'));
+    if (seg_n <= n) seg.classList.add('done');
+    else seg.classList.remove('done');
+  });
+  // nav buttons
+  document.getElementById('btn-back').disabled = (n === 1);
+  var btnNext = document.getElementById('btn-next');
+  if (n === totalSteps) {
+    btnNext.textContent = 'Generate GTM Plan →';
+    btnNext.classList.remove('btn-primary');
+    btnNext.classList.add('btn-generate');
+  } else {
+    btnNext.textContent = 'Next →';
+    btnNext.classList.remove('btn-generate');
+    btnNext.classList.add('btn-primary');
+  }
+  document.getElementById('step-name-label').textContent = STEP_NAMES[n-1];
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextStep() {
+  if (currentStep < totalSteps) {
+    currentStep++;
+    showStep(currentStep);
+  } else {
+    generateAndShowPlan();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    showStep(currentStep);
+  }
+}
+
+function updateClientBadge() {
+  var badge = document.getElementById('client-badge');
+  var name = formData.companyName || '';
+  if (name.trim()) {
+    badge.textContent = name.trim();
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function arr(val) { return Array.isArray(val) ? val : (val ? [val] : []); }
+function join(val, sep) {
+  sep = sep || ', ';
+  var a = arr(val);
+  return a.length ? a.join(sep) : '—';
+}
+function or(val, fallback) { return (val && String(val).trim()) ? val : fallback; }
+function profileNum(str) {
+  if (!str) return 1;
+  var s = String(str);
+  if (s.includes('+')) return parseInt(s) + 2;
+  if (s.includes('–')) return parseInt(s.split('–')[1]);
+  return parseInt(s) || 1;
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function buildExecSummary(d) {
+  var co = or(d.companyName, 'your company');
+  var titles = join(d.targetTitles);
+  var industries = join(d.targetIndustries);
+  var geos = join(d.geos);
+  var profiles = or(d.profileCount, '1–2');
+  var pNum = profileNum(d.profileCount);
+  var reach = pNum * 150 * 4;
+  var target = or(d.meetingTarget, '10');
+  var start = or(d.startDate, 'ASAP');
+  var hasContent = d.execsPost === true;
+  var acv = or(d.acv, 'mid-market');
+  var stage = or(d.stage, '');
+  var stageStr = stage ? ' (' + stage + ')' : '';
+
+  return 'This GTM Strategy Proposal outlines SellTech\'s recommended approach to accelerating ' + co + '\'s' + stageStr + ' growth through targeted LinkedIn outbound. Based on our discovery session, we have identified a clear ICP — ' +
+    titles + ' at ' + (industries !== '—' ? industries : 'target') + ' companies across ' + (geos !== '—' ? geos : 'key markets') + ' — and a compelling offer with a deal size of ' + acv + ' that is well-suited to a direct outreach motion.\n\n' +
+    'Using ' + profiles + ' LinkedIn profile' + (pNum > 1 ? 's' : '') + ', we project a total monthly reach of approximately ' + reach.toLocaleString() + ' targeted prospects, with a goal of securing ' + target + ' qualified meetings per month within the first 90 days. ' +
+    (hasContent ? 'The team\'s existing content presence on LinkedIn will meaningfully boost acceptance rates and warm prospects before they receive outreach. ' : 'We recommend establishing a light content cadence alongside outreach to improve credibility and acceptance rates. ') +
+    'Our phased approach begins with ' + start.toLowerCase() + ': two weeks of foundation-building, followed by campaign launch, rapid iteration, and full-scale optimization. The result is a repeatable, measurable pipeline engine — purpose-built for ' + co + '\'s growth goals.';
+}
+
+function buildICPGrid(d) {
+  var cards = [
+    { label: 'Job Titles', value: join(d.targetTitles) },
+    { label: 'Departments', value: join(d.targetDepts) },
+    { label: 'Company Size', value: join(d.icpCompanySize) },
+    { label: 'Industries', value: join(d.targetIndustries) },
+    { label: 'Geographies', value: join(d.geos) },
+    { label: 'Min Revenue', value: or(d.minRevenue, 'No minimum') },
+    { label: 'Buying Triggers', value: or(d.buyingTriggers, 'To be defined in campaign setup') },
+    { label: 'Deal Size (ACV)', value: or(d.acv, '—') }
+  ];
+
+  return cards.map(function(c) {
+    var valHtml;
+    if (c.label === 'Buying Triggers' || c.label === 'Deal Size (ACV)' || c.label === 'Min Revenue') {
+      valHtml = '<div class="icp-card-value">' + escHtml(c.value) + '</div>';
+    } else {
+      var tags = c.value !== '—' ? c.value.split(', ').map(function(t) { return '<span class="icp-tag">' + escHtml(t) + '</span>'; }).join('') : '<span class="icp-card-value">—</span>';
+      valHtml = '<div>' + tags + '</div>';
+    }
+    return '<div class="icp-card"><div class="icp-card-label">' + escHtml(c.label) + '</div>' + valHtml + '</div>';
+  }).join('');
+}
+
+function buildChannelList(d) {
+  var hasContent = d.execsPost === true;
+  var hasColdEmail = d.ranColdEmail === true;
+  var hasPaidAds = d.runsPaidAds === true;
+
+  var channels = [
+    { name: 'LinkedIn Outbound', pct: 70, badge: 'PRIMARY', primary: true },
+    { name: 'LinkedIn Content', pct: hasContent ? 60 : 25, badge: 'SUPPORT', primary: false },
+    { name: 'Cold Email', pct: hasColdEmail ? 50 : 35, badge: 'SUPPORT', primary: false },
+    { name: 'LinkedIn Ads', pct: hasPaidAds ? 45 : 20, badge: 'SUPPORT', primary: false },
+    { name: 'Referral / Introductions', pct: 30, badge: 'SUPPORT', primary: false }
+  ];
+
+  return channels.map(function(ch) {
+    var barClass = ch.primary ? 'channel-bar primary-bar' : 'channel-bar';
+    var badgeClass = ch.primary ? 'channel-badge badge-primary' : 'channel-badge badge-support';
+    return '<div class="channel-item">' +
+      '<div class="channel-item-header">' +
+        '<div class="channel-name-wrap">' +
+          '<span class="channel-name">' + escHtml(ch.name) + '</span>' +
+          '<span class="' + badgeClass + '">' + ch.badge + '</span>' +
+        '</div>' +
+        '<span class="channel-pct">' + ch.pct + '%</span>' +
+      '</div>' +
+      '<div class="channel-bar-bg"><div class="' + barClass + '" style="width:0%" data-target="' + ch.pct + '%"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function buildLiStats(d) {
+  var pNum = profileNum(d.profileCount);
+  var reach = pNum * 150 * 4;
+  var target = or(d.meetingTarget, '10');
+  return [
+    { num: d.profileCount || '1', label: 'Active Profiles' },
+    { num: reach.toLocaleString() + '+', label: 'Monthly Reach' },
+    { num: target + '/mo', label: 'Target Meetings' }
+  ].map(function(s) {
+    return '<div class="stat-box"><div class="stat-num">' + escHtml(s.num) + '</div><div class="stat-label">' + escHtml(s.label) + '</div></div>';
+  }).join('');
+}
+
+function buildLinkedInStrategy(d) {
+  var pNum = profileNum(d.profileCount);
+  var founderLed = arr(d.profileOwners).some(function(o) { return o.includes('Founder') || o.includes('CEO'); });
+  var needsOptimization = d.profileOptimization === 'Needs work' || d.profileOptimization === 'Partially optimized';
+  var hasSalesNav = d.hasSalesNav === true;
+  var co = or(d.companyName, 'the company');
+  var titles = join(d.targetTitles);
+
+  var text = 'Our LinkedIn outbound strategy for ' + co + ' will leverage ' + (pNum > 1 ? 'a coordinated multi-profile approach across ' + pNum + ' accounts' : 'a focused single-profile approach') + ' to systematically reach ' + titles + '. ';
+
+  if (founderLed) text += 'Founder-led outreach consistently outperforms generic SDR messaging — we will lean into this positioning to build authentic, high-converting connections. ';
+  else text += 'We will position the outreach senders with clear authority and contextual relevance to the ICP to maximize acceptance rates. ';
+
+  if (needsOptimization) text += 'Profile optimization is a priority in Week 1 — we will update headlines, about sections, and featured content to speak directly to the ICP before any outreach begins. ';
+  else text += 'With profiles already in good shape, we can begin outreach with minimal ramp-up time. ';
+
+  if (!hasSalesNav) text += 'We strongly recommend activating Sales Navigator before launch — its advanced filters (job changes, company growth signals, department headcount) will significantly improve targeting precision and list quality. ';
+  else text += 'Sales Navigator will power our list-building with advanced filters including seniority, function, company headcount, and growth signals. ';
+
+  return text;
+}
+
+function buildSequenceFlow(d) {
+  var steps = [
+    { day: 'Day 1', title: 'Connection Request', desc: 'Personalized note referencing a trigger or insight', orange: true },
+    { day: 'Day 3', title: 'Welcome + Value', desc: 'Thank for connecting, share a relevant insight or resource', orange: false },
+    { day: 'Day 7', title: 'Case Study / Proof', desc: 'Share a relevant result for a similar company', orange: false },
+    { day: 'Day 12', title: 'Soft CTA', desc: 'Low-friction ask — free audit, quick call, or resource', orange: false },
+    { day: 'Day 18', title: 'Follow-up / Bump', desc: 'Final nudge, different angle or updated trigger', orange: false }
+  ];
+  return steps.map(function(s, i) {
+    return '<div class="seq-step">' +
+      '<div class="seq-day">' + s.day + '</div>' +
+      '<div class="seq-dot' + (s.orange ? ' orange' : '') + '">' + (i+1) + '</div>' +
+      '<div class="seq-title">' + escHtml(s.title) + '</div>' +
+      '<div class="seq-desc">' + escHtml(s.desc) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function buildMessagingAngle(d) {
+  var co = or(d.companyName, 'the company');
+  var diff = or(d.differentiators, 'a distinctive approach in the market');
+  var quote = d.bestQuote ? '"' + d.bestQuote.trim() + '"' : null;
+  var objections = join(d.objections);
+  var cta = d.lowFrictionCTA ? d.lowFrictionCTA : 'a discovery call';
+
+  var text = 'All outreach messaging for ' + co + ' will be anchored in their core differentiation: ' + diff + '. ';
+
+  if (quote) text += 'The most powerful proof point in their arsenal is the voice of their buyers — ' + quote + ' — and we will weave this kind of language into sequence touch 3 and follow-up messaging. ';
+
+  if (objections !== '—') text += 'The most common objections — ' + objections + ' — will be proactively addressed in the value framing of the sequence, with messaging designed to neutralize resistance before the call even happens. ';
+
+  text += 'Every sequence will close with a clear, low-friction ask: ' + cta + '. The goal is to reduce the perceived risk of saying yes to a conversation, not to sell on LinkedIn.';
+
+  return text;
+}
+
+function buildRoadmap(d) {
+  var phases = [
+    {
+      num: '01', color: '#F5A623', label: 'FOUNDATION', title: 'Foundation', weeks: 'Weeks 1–2',
+      tasks: ['Profile optimization/audit', 'ICP & list building in Sales Nav', 'Messaging workshop', 'CRM integration', 'Baseline metrics established']
+    },
+    {
+      num: '02', color: '#2D3270', label: 'LAUNCH', title: 'Launch', weeks: 'Weeks 3–4',
+      tasks: ['Soft launch at 50% volume', 'A/B test connection notes', 'First reply handling SOP', 'Content cadence (if needed)', 'Weekly reporting live']
+    },
+    {
+      num: '03', color: '#4a5299', label: 'OPTIMIZE', title: 'Optimize', weeks: 'Month 2',
+      tasks: ['Scale to full volume', 'Kill underperformers', 'Double down on winners', 'Add follow-up sequences', 'Mid-point review call']
+    },
+    {
+      num: '04', color: '#1E2155', label: 'SCALE', title: 'Scale', weeks: 'Month 3',
+      tasks: ['Scale winning sequences', 'Add cold email layer', 'Referral playbook', '90-day report', 'Q2 planning session']
+    }
+  ];
+
+  return phases.map(function(p) {
+    var tasks = p.tasks.map(function(t) { return '<li>' + escHtml(t) + '</li>'; }).join('');
+    return '<div class="phase-card">' +
+      '<div class="phase-dot-wrap"><div class="phase-dot" style="background:' + p.color + '">' + p.num + '</div></div>' +
+      '<div class="phase-bg">' +
+        '<div class="phase-label" style="color:' + p.color + '">' + p.label + '</div>' +
+        '<div class="phase-title">' + p.title + '</div>' +
+        '<div class="phase-weeks">' + p.weeks + '</div>' +
+        '<ul class="phase-tasks">' + tasks + '</ul>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function buildKPIs(d) {
+  var pNum = profileNum(d.profileCount);
+  var reach = pNum * 150 * 4;
+  var target = or(d.meetingTarget, '10');
+  var closeRate = or(d.closeRate, '15–30%');
+  var pipeline = or(d.pipelineTarget, 'TBD');
+
+  var kpis = [
+    { val: target + '/mo', desc: 'Meetings / Month', highlight: true },
+    { val: '30%+', desc: 'Acceptance Rate Target', highlight: false },
+    { val: '10%+', desc: 'Reply Rate Target', highlight: false },
+    { val: reach.toLocaleString() + '+', desc: 'Monthly Reach', highlight: false },
+    { val: closeRate, desc: 'Close Rate (Baseline)', highlight: false },
+    { val: pipeline, desc: 'Pipeline Target', highlight: false }
+  ];
+
+  return kpis.map(function(k) {
+    return '<div class="kpi-card' + (k.highlight ? ' highlight' : '') + '">' +
+      '<div class="kpi-val">' + escHtml(k.val) + '</div>' +
+      '<div class="kpi-desc">' + escHtml(k.desc) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function buildInvestment(d) {
+  var budget = or(d.budget, 'To be confirmed');
+  var start = or(d.startDate, 'ASAP');
+  var urgency = d.urgencyDriver ? d.urgencyDriver : null;
+
+  var rows = [
+    { label: 'Engagement Model', value: 'Monthly retainer — rolling 30-day notice after month 3', highlight: false },
+    { label: 'Investment Range', value: budget, highlight: true },
+    { label: 'Minimum Commitment', value: '3 months', highlight: false },
+    { label: 'Kickoff Date', value: start, highlight: false },
+    { label: 'Reporting', value: 'Weekly scorecard + bi-weekly strategy call', highlight: false },
+    { label: 'Dedicated Account Lead', value: 'SellTech Senior GTM Strategist', highlight: false }
+  ];
+
+  var html = rows.map(function(r) {
+    return '<tr' + (r.highlight ? ' class="highlight-row"' : '') + '>' +
+      '<td>' + escHtml(r.label) + '</td>' +
+      '<td>' + escHtml(r.value) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var noteText = 'All engagements begin with a 90-minute kickoff session to align on targeting, messaging, and reporting cadence.';
+  if (urgency) noteText += ' Given your urgency driver — ' + urgency + ' — we recommend beginning the onboarding process within the next 5 business days to stay on timeline.';
+
+  return { tableHtml: html, note: noteText };
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════
+// GENERATE + SHOW PLAN
+// ═══════════════════════════════════════════════════════
+function generateAndShowPlan() {
+  var d = formData;
+
+  // Cover
+  var co = or(d.companyName, 'Company');
+  document.getElementById('cover-title').textContent = co + ' — GTM Strategy';
+  var now = new Date();
+  document.getElementById('cover-year').textContent = now.getFullYear();
+  document.getElementById('cover-prepared-for').textContent = or(d.contactName, co);
+  document.getElementById('cover-date').textContent = now.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('cover-start').textContent = or(d.startDate, 'TBD');
+
+  // Exec Summary
+  var execEl = document.getElementById('exec-summary-text');
+  var summary = buildExecSummary(d);
+  var parts = summary.split('\n\n');
+  execEl.innerHTML = parts.map(function(p) { return '<p class="plan-p">' + escHtml(p) + '</p>'; }).join('');
+
+  // ICP
+  document.getElementById('icp-intro').textContent = 'SellTech\'s targeting for ' + co + ' focuses on a tightly defined ICP. Every prospect touched in outreach must match the following criteria — quality over quantity is the guiding principle.';
+  document.getElementById('icp-grid').innerHTML = buildICPGrid(d);
+
+  // Channels
+  document.getElementById('channel-intro').textContent = 'Based on ' + co + '\'s current assets, team structure, and goals, we recommend the following channel allocation. LinkedIn Outbound is the primary engine, supported by content and supplementary channels.';
+  document.getElementById('channel-list').innerHTML = buildChannelList(d);
+
+  // LI Strategy
+  document.getElementById('li-stats').innerHTML = buildLiStats(d);
+  document.getElementById('li-strategy-text').textContent = buildLinkedInStrategy(d);
+  document.getElementById('sequence-flow').innerHTML = buildSequenceFlow(d);
+  document.getElementById('messaging-angle-text').textContent = buildMessagingAngle(d);
+
+  // Roadmap
+  document.getElementById('roadmap-phases').innerHTML = buildRoadmap(d);
+
+  // KPIs
+  document.getElementById('kpi-grid').innerHTML = buildKPIs(d);
+  document.getElementById('kpi-note').textContent = 'Performance is reviewed bi-weekly. If acceptance rates fall below 20% or reply rates below 6% after 3 weeks, SellTech will trigger a messaging review and ICP refinement session at no additional cost.';
+
+  // Investment
+  var invest = buildInvestment(d);
+  document.getElementById('invest-table').innerHTML = invest.tableHtml;
+  document.getElementById('invest-note').textContent = invest.note;
+
+  // Switch modes
+  document.getElementById('discovery-mode').style.display = 'none';
+  document.getElementById('plan-mode').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  // Animate bars
+  setTimeout(function() {
+    document.querySelectorAll('.channel-bar').forEach(function(bar) {
+      var target = bar.getAttribute('data-target');
+      bar.style.width = target;
+    });
+  }, 200);
+}
+
+// ═══════════════════════════════════════════════════════
+// EDIT MODE
+// ═══════════════════════════════════════════════════════
+function toggleEditMode() {
+  editModeOn = !editModeOn;
+  var btn = document.getElementById('btn-edit-toggle');
+  var badge = document.getElementById('edit-badge');
+
+  // Elements to make editable
+  var editables = document.querySelectorAll(
+    '#plan-mode .plan-p, #plan-mode .cover-title, #plan-mode .cover-subtitle, ' +
+    '#plan-mode .icp-card-value, #plan-mode .channel-name, #plan-mode .channel-pct, ' +
+    '#plan-mode .stat-num, #plan-mode .stat-label, #plan-mode .seq-title, #plan-mode .seq-desc, ' +
+    '#plan-mode .phase-title, #plan-mode .phase-tasks li, #plan-mode .kpi-val, #plan-mode .kpi-desc, ' +
+    '#plan-mode .invest-table td:last-child, #plan-mode .plan-note, #plan-mode .cover-meta-item strong, ' +
+    '#plan-mode .section-heading'
+  );
+
+  editables.forEach(function(el) {
+    el.contentEditable = editModeOn ? 'true' : 'false';
+  });
+
+  if (editModeOn) {
+    btn.classList.add('active');
+    badge.textContent = 'Edit On';
+    btn.innerHTML = '✓ Done Editing <span class="edit-badge" id="edit-badge">Edit On</span>';
+  } else {
+    btn.classList.remove('active');
+    badge.textContent = 'Edit Off';
+    btn.innerHTML = '✏ Edit Plan <span class="edit-badge" id="edit-badge">Edit Off</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════════════════════
+function exportPDF() {
+  if (editModeOn) toggleEditMode();
+  setTimeout(function() { window.print(); }, 100);
+}
+
+// ═══════════════════════════════════════════════════════
+// BACK TO FORM
+// ═══════════════════════════════════════════════════════
+function backToForm() {
+  document.getElementById('plan-mode').style.display = 'none';
+  document.getElementById('discovery-mode').style.display = 'flex';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+(function init() {
+  // Render all chip groups
+  Object.keys(CHIPS).forEach(function(group) {
+    var containerId = 'chips-' + group;
+    if (document.getElementById(containerId)) {
+      renderChips(group, CHIPS[group], containerId);
+    }
+  });
+
+  // Show first step
+  showStep(1);
+})();
+</script>
+</body>
+</html>
