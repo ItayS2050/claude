@@ -15,6 +15,9 @@ function render(data) {
   toggle.checked = enabled;
   document.getElementById('paused-banner').style.display = enabled ? 'none' : 'block';
 
+  // Sound toggle
+  document.getElementById('sound-toggle').checked = data.soundEnabled !== false;
+
   renderWordList('hebrew-words', hebrewWords, 'hebrew', (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
 }
@@ -40,7 +43,7 @@ function removeWord(word, type) {
     const key = type === 'hebrew' ? 'learnedHebrew' : 'learnedEnglish';
     const list = (data[key] || []).filter(w => w !== word);
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
+      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
     });
   });
 }
@@ -51,7 +54,7 @@ function addWord(word, type) {
   chrome.storage.local.get([key], (data) => {
     const list = [...new Set([...(data[key] || []), word.trim().toLowerCase()])];
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
+      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
     });
   });
 }
@@ -60,6 +63,11 @@ function addWord(word, type) {
 document.getElementById('detection-toggle').addEventListener('change', (e) => {
   chrome.storage.local.set({ detectionEnabled: e.target.checked });
   document.getElementById('paused-banner').style.display = e.target.checked ? 'none' : 'block';
+});
+
+// Sound on/off toggle
+document.getElementById('sound-toggle').addEventListener('change', (e) => {
+  chrome.storage.local.set({ soundEnabled: e.target.checked });
 });
 
 // Re-enable button in the paused banner
@@ -93,9 +101,9 @@ document.getElementById('reset-btn').addEventListener('click', () => {
     learnedEnglish: [],
     stats: { detected: 0, converted: 0, rejected: 0 }
   }, () => {
-    chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
+    chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
   });
 });
 
 // Load on open
-chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled'], render);
+chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);

@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.0.0 – Hebrew ↔ English Layout Fixer
+// Kiko v3.1.0 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.0.0 loaded');
+console.log('[Kiko] v3.1.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -27,17 +27,19 @@ let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
+let soundEnabled     = true;
 let toastPos        = null;
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','stats','detectionEnabled','toastPos']
+      ['learnedHebrew','learnedEnglish','stats','detectionEnabled','soundEnabled','toastPos']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
+    soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
   } catch {}
 }
@@ -48,6 +50,7 @@ try {
       detectionEnabled = changes.detectionEnabled.newValue !== false;
       if (!detectionEnabled) { removeToast(false); hideHint(); }
     }
+    if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
   });
 } catch {}
@@ -561,6 +564,35 @@ function injectStyles() {
   (document.head || document.documentElement).appendChild(s);
 }
 
+// ── Detection sound ───────────────────────────────────────────
+
+function playDetectionSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t   = ctx.currentTime;
+
+    function note(freq, start, dur, vol) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, t + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
+      osc.start(t + start);
+      osc.stop(t + start + dur);
+      return osc;
+    }
+
+    // Two-note soft "di-dong" — high then low
+    note(880, 0,    0.22, 0.22);
+    const last = note(660, 0.14, 0.38, 0.18);
+    last.onended = () => ctx.close();
+  } catch {}
+}
+
 // ── Toast ─────────────────────────────────────────────────────
 
 function showToast(element, detection) {
@@ -600,6 +632,7 @@ function showToast(element, detection) {
 
   stats.detected++;
   try { chrome.storage.local.set({ stats }).catch(() => {}); } catch {}
+  playDetectionSound();
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';

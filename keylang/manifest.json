@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Kiko – Hebrew ↔ English Layout Fixer",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Kiko watches your typing and instantly catches when you're in the wrong keyboard layout — Hebrew or English. One click fixes it.",
   "author": "Kiko",
   "homepage_url": "https://kiko.app",
