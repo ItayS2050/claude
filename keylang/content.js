@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.1.0 – Hebrew ↔ English Layout Fixer
+// Kiko v3.2.0 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.1.0 loaded');
+console.log('[Kiko] v3.2.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -57,11 +57,13 @@ try {
 
 async function saveFeedback(words, isHebrew) {
   try {
+    // Always normalise to lowercase so lookups in wordCouldBeHebrew() match
+    const normalised = words.map(w => w.toLowerCase()).filter(Boolean);
     if (isHebrew) {
-      words.forEach(w => { learnedHebrew.add(w); learnedEnglish.delete(w); });
+      normalised.forEach(w => { learnedHebrew.add(w); learnedEnglish.delete(w); });
       stats.converted++;
     } else {
-      words.forEach(w => { learnedEnglish.add(w); learnedHebrew.delete(w); });
+      normalised.forEach(w => { learnedEnglish.add(w); learnedHebrew.delete(w); });
       stats.rejected++;
     }
     await chrome.storage.local.set({
@@ -217,7 +219,7 @@ function wordCouldBeHebrew(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedHebrew.has(lower))  return true;
   if (EN_WORDS.has(lower))       return false;
-  if (englishScore(lower) >= 0.15) return false;
+  if (englishScore(lower) >= 0.20) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
   // Final-form letters (ך ם ן ף ץ) only appear at word-end in valid Hebrew.
@@ -259,11 +261,11 @@ function getTextBeforeCursor(el) {
 }
 
 // ── Core analysis ─────────────────────────────────────────────
-function analyze(el) {
-  const rawText = getTextBeforeCursor(el);
+// scanAll = true → don't slice (used for explicit user-triggered full scan)
+function analyzeText(rawText, scanAll = false) {
   if (!rawText || rawText.trim().length < 3) return null;
 
-  const text = rawText.slice(-600);
+  const text = scanAll ? rawText : rawText.slice(-2000);
   const textHasHebrew = hasHebrew(text);
 
   // ── Case 1: Hebrew characters typed while English keyboard layout was expected
@@ -350,6 +352,17 @@ function analyze(el) {
   }
 
   return null;
+}
+
+function analyze(el) {
+  return analyzeText(getTextBeforeCursor(el));
+}
+
+function analyzeFullField(el) {
+  const fullText = el.isContentEditable
+    ? (el.innerText || el.textContent || '')
+    : (el.value || '');
+  return analyzeText(fullText, true);
 }
 
 // ── Text replacement ──────────────────────────────────────────
@@ -476,10 +489,14 @@ const STYLES = `
   }
   .kld-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
   .kld-btn:active { transform: translateY(0); }
-  .kld-primary { background: #3b82f6; color: #fff; flex: 1; }
-  .kld-reject  { background: #1e293b; color: #f87171; border: 1px solid #f8717140; }
-  .kld-dismiss { background: #1e293b; color: #64748b; padding: 7px 9px; }
-  .kld-hint    { font-size: 10px; color: #334155; }
+  .kld-primary    { background: #3b82f6; color: #fff; flex: 1; }
+  .kld-reject     { background: #1e293b; color: #f87171; border: 1px solid #f8717140; }
+  .kld-dismiss    { background: none; border: none; color: #64748b; padding: 4px 6px; font-size: 14px; line-height: 1; }
+  .kld-dismiss:hover { color: #e2e8f0; }
+  .kld-sound-btn  { background: none; border: none; padding: 4px 5px; font-size: 14px; line-height: 1; cursor: pointer; }
+  .kld-footer     { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #334155; }
+  .kld-pause-btn  { background: none; border: none; color: #475569; font-size: 10px; cursor: pointer; padding: 0; }
+  .kld-pause-btn:hover { color: #f87171; }
 
   @keyframes kld-pulse {
     0%,100% { box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
@@ -608,8 +625,8 @@ function showToast(element, detection) {
     return;
   }
 
-  // Long runs (≥10 words) just pulse the hint bubble — don't interrupt typing
-  if (detection.words.length >= 10) {
+  // Longer runs (≥5 words) just pulse the hint bubble — don't interrupt typing
+  if (detection.words.length >= 5) {
     const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
     lastElement   = element;
@@ -637,20 +654,43 @@ function showToast(element, detection) {
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
-    <div class="kld-header"><span>⌨️</span><span>${escapeHtml(detection.message)}</span></div>
+    <div class="kld-header">
+      <span>⌨️</span>
+      <span style="flex:1">${escapeHtml(detection.message)}</span>
+      <button class="kld-btn kld-sound-btn" title="Toggle sound">${soundEnabled ? '🔔' : '🔕'}</button>
+      <button class="kld-btn kld-dismiss" title="Dismiss (Esc)">✕</button>
+    </div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
       <button class="kld-btn kld-reject">${escapeHtml(detection.rejectLabel)}</button>
-      <button class="kld-btn kld-dismiss" title="Dismiss (Esc)">✕</button>
     </div>
-    <div class="kld-hint">Drag to move · Alt+Shift+K to convert selection</div>
+    <div class="kld-footer">
+      <span>Drag · Alt+Shift+K to scan field</span>
+      <button class="kld-pause-btn" title="Pause auto-detection">⏸ Pause Kiko</button>
+    </div>
   `;
 
   // Prevent buttons from stealing focus from the editor
-  toast.querySelectorAll('.kld-btn').forEach(btn =>
+  toast.querySelectorAll('.kld-btn, .kld-pause-btn').forEach(btn =>
     btn.addEventListener('mousedown', e => e.preventDefault())
   );
+
+  // Sound toggle — inline, no popup needed
+  toast.querySelector('.kld-sound-btn').addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    toast.querySelector('.kld-sound-btn').textContent = soundEnabled ? '🔔' : '🔕';
+    try { chrome.storage.local.set({ soundEnabled }).catch(() => {}); } catch {}
+  });
+
+  // Pause Kiko — disable detection until user re-enables from popup
+  toast.querySelector('.kld-pause-btn').addEventListener('click', () => {
+    detectionEnabled = false;
+    try { chrome.storage.local.set({ detectionEnabled: false }).catch(() => {}); } catch {}
+    removeToast(false);
+    hideHint();
+    showConfirm('Kiko paused — re-enable from the 🦜 popup');
+  });
 
   // Primary — fix the text in place
   toast.querySelector('.kld-primary').addEventListener('click', async () => {
@@ -678,7 +718,7 @@ function showToast(element, detection) {
     removeToast(false);
   });
 
-  // Dismiss — hide without teaching anything, but show recall hint
+  // Dismiss (✕) — hide without teaching anything, show recall hint
   toast.querySelector('.kld-dismiss').addEventListener('click', () => {
     dismissedSignature = sig;
     removeToast(true);
@@ -716,11 +756,12 @@ function showHint() {
 
   hintEl = document.createElement('div');
   hintEl.id = 'kld-hint';
-  const preview = lastDetection.converted.slice(0, 20) +
-    (lastDetection.converted.length > 20 ? '…' : '');
+  const wc      = lastDetection.words.length;
+  const dir     = lastDetection.type === 'hebrew_as_english' ? '→ EN' : '→ HE';
+  const wcLabel = wc >= 5 ? `${wc} words ${dir}` : escapeHtml(lastDetection.converted.slice(0, 22) + (lastDetection.converted.length > 22 ? '…' : ''));
   hintEl.innerHTML = `
     <span>⌨️</span>
-    <span class="kld-hint-text" title="Click to fix">${escapeHtml(preview)}</span>
+    <span class="kld-hint-text" title="Click to open fix">${wcLabel}</span>
     <button class="kld-hint-close" title="Dismiss">✕</button>
   `;
 
@@ -768,9 +809,27 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Alt+Shift+K without selection — toggle the last auto-detection toast
-  if (activeToast) removeToast();
-  else if (lastDetection && lastElement) showToast(lastElement, lastDetection);
+  // Alt+Shift+K without selection:
+  // 1. Active toast → dismiss it
+  if (activeToast) { removeToast(); return; }
+  // 2. Remembered detection on same element → re-show toast
+  const focusedEl = document.activeElement;
+  if (lastDetection && lastElement && focusedEl === lastElement) {
+    dismissedSignature = null;
+    showToast(lastElement, lastDetection);
+    return;
+  }
+  // 3. Scan the FULL text of the currently focused field
+  if (focusedEl && (focusedEl.isContentEditable || focusedEl.matches?.(SELECTOR))) {
+    const det = analyzeFullField(focusedEl);
+    if (det) {
+      lastDetection = det;
+      lastElement   = focusedEl;
+      showToast(focusedEl, det);
+    } else {
+      showConfirm('✓ No layout issues found in this field');
+    }
+  }
 });
 
 // ── Manual selection conversion (Alt+Shift+K / right-click) ──
