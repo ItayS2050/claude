@@ -582,12 +582,40 @@ function injectStyles() {
 }
 
 // ── Detection sound ───────────────────────────────────────────
+// One persistent AudioContext, unlocked on first user gesture.
+// Creating a fresh ctx inside a debounced callback (700 ms after
+// the keystroke) falls outside Chrome's autoplay user-gesture
+// window and gets silently blocked — reusing a pre-created,
+// already-running context avoids that entirely.
+
+let _audioCtx = null;
+
+function _getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  }
+  return _audioCtx;
+}
+
+function _unlockAudio() {
+  const ctx = _getAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+}
+
+// Unlock on every user interaction (typing, clicks, touch)
+try {
+  document.addEventListener('keydown',    _unlockAudio, { passive: true, capture: true });
+  document.addEventListener('click',      _unlockAudio, { passive: true, capture: true });
+  document.addEventListener('touchstart', _unlockAudio, { passive: true, capture: true });
+} catch {}
 
 function playDetectionSound() {
   if (!soundEnabled) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const t   = ctx.currentTime;
+    const ctx = _getAudioCtx();
+    if (!ctx || ctx.state !== 'running') return;
+
+    const t = ctx.currentTime;
 
     function note(freq, start, dur, vol) {
       const osc  = ctx.createOscillator();
@@ -600,13 +628,11 @@ function playDetectionSound() {
       gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
       osc.start(t + start);
       osc.stop(t + start + dur);
-      return osc;
     }
 
     // Two-note soft "di-dong" — high then low
     note(880, 0,    0.22, 0.22);
-    const last = note(660, 0.14, 0.38, 0.18);
-    last.onended = () => ctx.close();
+    note(660, 0.14, 0.38, 0.18);
   } catch {}
 }
 
