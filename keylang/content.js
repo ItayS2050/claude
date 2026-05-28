@@ -424,25 +424,31 @@ function applyConversion(el, detection) {
 
   el.focus();
 
-  // True success = content changed AND original is no longer at position idx.
-  // Lexical/Slate editors can intercept our event but insert at their own internal
-  // cursor (end of text) instead of the selection — that changes content but is wrong.
+  // Lexical editors (WhatsApp Web, Notion) update their DOM state asynchronously
+  // via React. Checking the DOM immediately after dispatching an event always sees
+  // the old text, so every strategy appears to fail and they all fire — causing
+  // the replacement text to be inserted multiple times.
+  // Fix: for Lexical, fire execCommand once and return true immediately (trust it).
+  // execCommand generates a trusted beforeinput with correct getTargetRanges() so
+  // Lexical replaces exactly the right range.
+  const isLexical = el.hasAttribute('data-lexical-editor');
+  if (isLexical) {
+    if (selectTextRange(el, idx, original.length)) {
+      doc.execCommand('insertText', false, converted);
+      return true;
+    }
+    return false;
+  }
+
+  // For non-Lexical contenteditable: use synchronous DOM check to detect success
+  // and fall through to the next strategy only if the previous one truly failed.
   function replaced() {
     const after = el.innerText || el.textContent || '';
     return after !== before && after.slice(idx, idx + original.length) !== original;
   }
 
-  // Before each strategy we dispatch 'selectionchange' so frameworks like Lexical
-  // (WhatsApp Web) sync their internal cursor state from the DOM selection we just set.
-  function syncSelection() {
-    try { document.dispatchEvent(new Event('selectionchange')); } catch {}
-  }
-
-  // Strategy 1 — execCommand insertText (standard contenteditable, Gmail,
-  // Slack/ProseMirror — fires a trusted beforeinput that framework state managers
-  // respond to correctly).
+  // Strategy 1 — execCommand insertText (standard contenteditable, Gmail, Slack).
   if (selectTextRange(el, idx, original.length)) {
-    syncSelection();
     doc.execCommand('insertText', false, converted);
     if (replaced()) return true;
   }
@@ -450,7 +456,6 @@ function applyConversion(el, detection) {
   // Strategy 2 — synthetic ClipboardEvent (some older ProseMirror editors).
   try {
     if (selectTextRange(el, idx, original.length)) {
-      syncSelection();
       const dt = new DataTransfer();
       dt.setData('text/plain', converted);
       el.dispatchEvent(new ClipboardEvent('paste', {
@@ -460,29 +465,9 @@ function applyConversion(el, detection) {
     }
   } catch {}
 
-  // Strategy 3 — beforeinput insertText (Lexical/Slate: WhatsApp Web, Notion,
-  // Claude.ai — after selectionchange, the editor's internal selection matches ours).
+  // Strategy 3 — beforeinput insertText (Slate and other non-Lexical editors).
   try {
     if (selectTextRange(el, idx, original.length)) {
-      syncSelection();
-      el.dispatchEvent(new InputEvent('beforeinput', {
-        bubbles: true, cancelable: true,
-        inputType: 'insertText',
-        data: converted
-      }));
-      if (replaced()) return true;
-    }
-  } catch {}
-
-  // Strategy 4 — deleteContent then insertText (Lexical fallback: explicit
-  // delete of selection followed by insert at the resulting cursor position).
-  try {
-    if (selectTextRange(el, idx, original.length)) {
-      syncSelection();
-      el.dispatchEvent(new InputEvent('beforeinput', {
-        bubbles: true, cancelable: true,
-        inputType: 'deleteContent'
-      }));
       el.dispatchEvent(new InputEvent('beforeinput', {
         bubbles: true, cancelable: true,
         inputType: 'insertText',
