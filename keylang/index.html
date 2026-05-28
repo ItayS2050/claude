@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiko – Hebrew ↔ English Layout Fixer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a; color: #e2e8f0; line-height: 1.6;
+    }
+    a { color: #7dd3fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px; border-bottom: 1px solid #1e293b;
+    }
+    .nav-logo { font-size: 20px; font-weight: 700; color: #7dd3fc; }
+    .nav-links { display: flex; gap: 24px; font-size: 14px; color: #94a3b8; }
+    .nav-links a { color: #94a3b8; }
+    .nav-links a:hover { color: #e2e8f0; text-decoration: none; }
+
+    /* Hero */
+    .hero {
+      text-align: center; padding: 80px 24px 60px;
+      max-width: 700px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block; background: #1e3a5f; color: #7dd3fc;
+      font-size: 12px; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; border: 1px solid #3b82f640; margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: 48px; font-weight: 800; color: #f1f5f9;
+      line-height: 1.15; margin-bottom: 20px;
+    }
+    .hero h1 span { color: #7dd3fc; }
+    .hero p {
+      font-size: 18px; color: #94a3b8; margin-bottom: 36px; max-width: 520px; margin-inline: auto;
+    }
+    .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: #3b82f6; color: #fff; padding: 14px 28px;
+      border-radius: 10px; font-size: 15px; font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; text-decoration: none; }
+    .btn-secondary {
+      background: #1e293b; color: #94a3b8; padding: 14px 28px;
+      border-radius: 10px; font-size: 15px; border: 1px solid #334155;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: #334155; color: #e2e8f0; text-decoration: none; }
+
+    /* How it works */
+    .section { padding: 64px 24px; max-width: 900px; margin: 0 auto; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #3b82f6; margin-bottom: 12px;
+    }
+    .section h2 { font-size: 32px; font-weight: 700; color: #f1f5f9; margin-bottom: 40px; }
+
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+    .step {
+      background: #1e293b; border-radius: 12px; padding: 24px;
+      border: 1px solid #334155;
+    }
+    .step-num {
+      width: 32px; height: 32px; background: #3b82f620; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #7dd3fc; margin-bottom: 14px;
+    }
+    .step h3 { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px; }
+    .step p { font-size: 13px; color: #64748b; }
+
+    /* Features */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .feature {
+      background: #1e293b; border-radius: 12px; padding: 20px 22px;
+      border: 1px solid #334155; display: flex; gap: 14px; align-items: flex-start;
+    }
+    .feature-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+    .feature h3 { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+    .feature p  { font-size: 13px; color: #64748b; }
+
+    /* Pricing */
+    .pricing-wrap { display: flex; justify-content: center; }
+    .pricing-card {
+      background: #1e293b; border: 2px solid #3b82f6; border-radius: 16px;
+      padding: 40px 48px; text-align: center; max-width: 380px; width: 100%;
+    }
+    .pricing-card .plan { font-size: 13px; font-weight: 600; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .pricing-card .price { font-size: 56px; font-weight: 800; color: #f1f5f9; line-height: 1; }
+    .pricing-card .price span { font-size: 18px; color: #64748b; font-weight: 400; }
+    .pricing-card .desc { color: #94a3b8; font-size: 14px; margin: 12px 0 28px; }
+    .pricing-card ul { text-align: left; list-style: none; margin-bottom: 32px; }
+    .pricing-card ul li {
+      font-size: 14px; color: #cbd5e1; padding: 6px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pricing-card ul li::before { content: '✓'; color: #86efac; font-weight: 700; flex-shrink: 0; }
+    .pricing-card .btn-primary { display: block; width: 100%; text-align: center; padding: 14px; font-size: 16px; }
+    .pricing-note { font-size: 12px; color: #475569; margin-top: 14px; }
+
+    /* Footer */
+    footer {
+      text-align: center; padding: 32px 24px; border-top: 1px solid #1e293b;
+      font-size: 13px; color: #475569;
+    }
+    footer a { color: #64748b; margin: 0 10px; }
+    footer a:hover { color: #94a3b8; }
+
+    @media (max-width: 600px) {
+      nav { padding: 14px 20px; }
+      .hero h1 { font-size: 32px; }
+      .pricing-card { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-logo">🦜 Kiko</div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge">Chrome Extension · Hebrew ↔ English</div>
+    <h1>Stop typing in the<br><span>wrong language</span></h1>
+    <p>Kiko instantly detects when you're typing Hebrew on an English keyboard (or vice versa) and fixes it with one click.</p>
+    <div class="hero-btns">
+      <a class="btn-primary" href="#pricing">Get Kiko – $5/mo</a>
+      <a class="btn-secondary" href="#how-it-works">See how it works</a>
+    </div>
+  </div>
+
+  <div class="section" id="how-it-works">
+    <div class="section-label">How it works</div>
+    <h2>Type freely. Kiko has your back.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>You type normally</h3>
+        <p>Write in any text field on any website — Gmail, WhatsApp Web, Google Docs, LinkedIn…</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Kiko detects a mismatch</h3>
+        <p>If you accidentally switch layouts, Kiko spots it and plays a soft alert sound.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>One click to fix</h3>
+        <p>A small popup shows the corrected text. Click "Fix" and it's replaced instantly.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>It learns from you</h3>
+        <p>Tell Kiko when it's wrong — it remembers and gets smarter with every correction.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Features</div>
+    <h2>Everything you need.</h2>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <div>
+          <h3>Real-time detection</h3>
+          <p>Catches layout mistakes as you type — no need to select text or press anything.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔔</div>
+        <div>
+          <h3>Sound alert</h3>
+          <p>A soft audio ding tells you to look up before you keep typing the wrong layout.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔍</div>
+        <div>
+          <h3>Full-field scan</h3>
+          <p>Press Alt+Shift+K on any field to scan the entire text — not just near the cursor.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🧠</div>
+        <div>
+          <h3>Self-learning</h3>
+          <p>Kiko remembers your feedback and stops showing false positives over time.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🌐</div>
+        <div>
+          <h3>Works everywhere</h3>
+          <p>Gmail, WhatsApp, LinkedIn, Google Docs, Notion — any text field on any website.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔒</div>
+        <div>
+          <h3>100% private</h3>
+          <p>All processing happens inside your browser. No servers, no data collection, ever.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="pricing">
+    <div class="section-label">Pricing</div>
+    <h2>Simple, transparent pricing.</h2>
+    <div class="pricing-wrap">
+      <div class="pricing-card">
+        <div class="plan">Pro</div>
+        <div class="price">$5<span>/month</span></div>
+        <div class="desc">Everything you need. Cancel anytime.</div>
+        <ul>
+          <li>Auto-detection on all websites</li>
+          <li>Sound alert when wrong layout detected</li>
+          <li>Full-field scan (Alt+Shift+K)</li>
+          <li>Self-learning from your corrections</li>
+          <li>Supports Hebrew ↔ English</li>
+          <li>100% private — no data collected</li>
+        </ul>
+        <a class="btn-primary" href="#" id="buy-btn">Get started</a>
+        <div class="pricing-note">Secure payment via Paddle · Cancel anytime</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div style="margin-bottom:10px">🦜 Kiko · Hebrew ↔ English Layout Fixer</div>
+    <div>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="refund.html">Refund Policy</a>
+      <a href="mailto:hello@kiko.app">Contact</a>
+    </div>
+    <div style="margin-top:10px">© 2026 Kiko. All rights reserved.</div>
+  </footer>
+
+</body>
+</html>
