@@ -424,20 +424,24 @@ function applyConversion(el, detection) {
 
   el.focus();
 
-  // Lexical editors (WhatsApp Web, Notion) update their DOM state asynchronously
-  // via React. Checking the DOM immediately after dispatching an event always sees
-  // the old text, so every strategy appears to fail and they all fire — causing
-  // the replacement text to be inserted multiple times.
-  // Fix: for Lexical, fire execCommand once and return true immediately (trust it).
-  // execCommand generates a trusted beforeinput with correct getTargetRanges() so
-  // Lexical replaces exactly the right range.
-  const isLexical = el.hasAttribute('data-lexical-editor');
+  // Lexical editors (WhatsApp Web) keep internal cursor state that diverges from
+  // the DOM selection. Selecting a range + execCommand gives Lexical a trusted
+  // beforeinput, but Lexical uses its *own* internal cursor (end of text) for the
+  // insert — not the range we selected. Using getTargetRanges() requires the DOM
+  // selection AND the internal Lexical state to agree.
+  //
+  // Solution: execCommand('selectAll') fires a selectionchange that Lexical does
+  // sync from (it reads document.getSelection() on selectionchange). After that,
+  // execCommand('insertText') with the full corrected text replaces everything.
+  const isLexical = el.hasAttribute('data-lexical-editor') ||
+                    !!el.closest?.('[data-lexical-editor]');
   if (isLexical) {
-    if (selectTextRange(el, idx, original.length)) {
-      doc.execCommand('insertText', false, converted);
-      return true;
-    }
-    return false;
+    const fullText  = (el.innerText || el.textContent || '').trimEnd();
+    const fixedText = fullText.replace(original, converted);
+    if (fixedText === fullText) return false;
+    doc.execCommand('selectAll');
+    doc.execCommand('insertText', false, fixedText);
+    return true;
   }
 
   // For non-Lexical contenteditable: use synchronous DOM check to detect success
