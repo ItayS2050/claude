@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.2 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.3 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.2 loaded');
+console.log('[Kiko] v3.3.3 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -314,40 +314,57 @@ function analyzeText(rawText, scanAll = false) {
       return hc.length >= 2 && hc.slice(0, -1).some(c => FINAL_FORMS.has(c));
     }).length;
 
-    if (run1.length >= 2) {
+    if (run1.length >= 1) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
-        // Strong signal: final-form Hebrew letters in wrong position (original check)
-        const strongSignal = badCount >= 2;
+        // Fast single-word trigger: if the converted word is an obvious common
+        // English word (3+ chars) fire immediately without waiting for more words.
+        if (run1.length === 1) {
+          const w = converted.trim().replace(/[^a-z]/gi, '').toLowerCase();
+          if (w.length >= 3 && COMMON_EN_WORDS.has(w)) {
+            return {
+              type: 'hebrew_as_english',
+              message: 'Wrong layout? Looks like English:',
+              original, converted,
+              btnLabel: 'Fix → English',
+              rejectLabel: 'Not English',
+              words: run1.filter(w => HEBREW_RE.test(w))
+            };
+          }
+          // Single unrecognised word — wait for more context
+        } else {
+          // Strong signal: final-form Hebrew letters in wrong position
+          const strongSignal = badCount >= 2;
 
-        // Fallback signal: convert Hebrew → English and score how "English-like" it is.
-        // Each word scores +2 if it's a common English word, +1 if it has a good
-        // vowel ratio (20–70%) and no impossible consonant clusters. Threshold ≥ 3
-        // prevents false positives from short accidental matches.
-        let engScore = 0;
-        if (!strongSignal) {
-          const convWords = converted.split(/\s+/)
-            .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
-            .filter(w => w.length >= 2);
-          engScore = convWords.reduce((acc, w) => {
-            if (COMMON_EN_WORDS.has(w)) return acc + 2;
-            if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
-            if (/[^aeiou]{4,}/.test(w)) return acc; // 4+ consecutive consonants = not English
-            const r = (w.match(/[aeiou]/g) || []).length / w.length;
-            return (r >= 0.20 && r <= 0.70) ? acc + 1 : acc;
-          }, 0);
-        }
+          // Fallback: score converted text for English-likeness.
+          // +2 per common word, +1 per English-like word (good vowel ratio, no consonant pile-up).
+          // Threshold scales with run length — 3+ words need score ≥ 2, 2 words need ≥ 3.
+          let engScore = 0;
+          if (!strongSignal) {
+            const convWords = converted.split(/\s+/)
+              .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+              .filter(w => w.length >= 2);
+            engScore = convWords.reduce((acc, w) => {
+              if (COMMON_EN_WORDS.has(w)) return acc + 2;
+              if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
+              if (/[^aeiou]{4,}/.test(w)) return acc;
+              const r = (w.match(/[aeiou]/g) || []).length / w.length;
+              return (r >= 0.20 && r <= 0.70) ? acc + 1 : acc;
+            }, 0);
+          }
 
-        if (strongSignal || engScore >= 3) {
-          return {
-            type:     'hebrew_as_english',
-            message:  'Wrong layout? Looks like English:',
-            original, converted,
-            btnLabel: 'Fix → English',
-            rejectLabel: 'Not English',
-            words: run1.filter(w => HEBREW_RE.test(w))
-          };
+          const threshold = run1.length >= 3 ? 2 : 3;
+          if (strongSignal || engScore >= threshold) {
+            return {
+              type:     'hebrew_as_english',
+              message:  'Wrong layout? Looks like English:',
+              original, converted,
+              btnLabel: 'Fix → English',
+              rejectLabel: 'Not English',
+              words: run1.filter(w => HEBREW_RE.test(w))
+            };
+          }
         }
       }
     }
@@ -1016,9 +1033,18 @@ function convertSelection(text, sel) {
 
 // ── Input monitoring ──────────────────────────────────────────
 
-function debounce(fn, ms) {
-  let t;
-  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+function debounce(fn, ms, maxWait = 0) {
+  let t, lastFired = 0;
+  return (...a) => {
+    clearTimeout(t);
+    const now = Date.now();
+    if (maxWait && now - lastFired >= maxWait) {
+      lastFired = now;
+      fn(...a);
+    } else {
+      t = setTimeout(() => { lastFired = Date.now(); fn(...a); }, ms);
+    }
+  };
 }
 
 function attachTo(el) {
@@ -1028,7 +1054,7 @@ function attachTo(el) {
     if (!detectionEnabled) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
-  }, 400);
+  }, 200, 1500);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          check);
   el.addEventListener('compositionend', check);
