@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px; height: 800px; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111b21;
+    }
+
+    /* Browser chrome */
+    .tab-bar { background: #dee1e6; padding: 6px 12px 0; display: flex; gap: 2px; }
+    .tab { background: #fff; border-radius: 8px 8px 0 0; padding: 7px 16px; font-size: 12px; color: #333; display: flex; align-items: center; gap: 6px; }
+    .tab-favicon { width: 14px; height: 14px; border-radius: 2px; background: #25d366; display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700; }
+    .tab-close { color: #999; margin-left: 6px; font-size: 11px; }
+    .browser-bar { background: #dee1e6; padding: 8px 12px 0; display: flex; align-items: center; gap: 8px; }
+    .browser-dots { display: flex; gap: 6px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+    .address-bar { flex: 1; background: #fff; border-radius: 20px; padding: 6px 14px; font-size: 13px; color: #444; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* WhatsApp layout */
+    .page { display: flex; height: 746px; }
+
+    /* Sidebar */
+    .wa-sidebar { width: 360px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; flex-shrink: 0; }
+    .wa-sidebar-header { background: #202c33; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .wa-avatar { width: 40px; height: 40px; border-radius: 50%; background: #6b7280; display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px; }
+    .wa-icons { display:flex;gap:8px;color:#aebac1;font-size:20px; }
+    .wa-search { padding: 8px 12px; background: #111b21; }
+    .wa-search input { width: 100%; background: #202c33; border: none; border-radius: 8px; padding: 8px 12px; color: #e9edef; font-size: 13px; }
+    .wa-chat { display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #1e2c33;cursor:pointer; }
+    .wa-chat.active { background: #2a3942; }
+    .wa-chat-avatar { width: 48px; height: 48px; border-radius: 50%; flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:600; }
+    .wa-chat-info { flex:1;min-width:0; }
+    .wa-chat-name { font-size: 15px; color: #e9edef; font-weight: 500; }
+    .wa-chat-preview { font-size: 13px; color: #8696a0; white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px; }
+    .wa-chat-time { font-size: 11px; color: #8696a0; flex-shrink:0; }
+
+    /* Main chat */
+    .wa-main { flex:1; display:flex;flex-direction:column;background: #0b141a; }
+    .wa-chat-header { background: #202c33; padding: 10px 16px; display:flex;align-items:center;gap:12px; }
+    .wa-chat-header-name { color: #e9edef; font-size: 15px; font-weight: 600; }
+    .wa-chat-header-status { color: #8696a0; font-size: 12px; }
+    .wa-msgs { flex:1;padding:16px;display:flex;flex-direction:column;gap:4px;justify-content:flex-end;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23182229' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .msg { max-width: 65%; padding: 6px 10px 4px; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+    .msg-in { background: #202c33; color: #e9edef; align-self:flex-start; border-radius: 0 8px 8px 8px; }
+    .msg-out { background: #005c4b; color: #e9edef; align-self:flex-end; border-radius: 8px 0 8px 8px; }
+    .msg-time { font-size: 11px; color: #8696a0; text-align:right; margin-top:2px; }
+    .msg-out.wrong { text-decoration: underline wavy #ef4444; }
+
+    /* Input bar */
+    .wa-input-bar { background: #202c33; padding: 8px 16px; display:flex;align-items:center;gap:8px; }
+    .wa-input { flex:1;background:#2a3942;border:none;border-radius:8px;padding:10px 14px;color:#e9edef;font-size:15px;outline:none; }
+    .wa-send { background: #00a884; border:none;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer; }
+
+    /* Kiko toast */
+    .kiko-toast {
+      position: absolute; top: 110px; left: 420px;
+      width: 310px; background: #16213e;
+      border: 1.5px solid #3b82f6; border-radius: 12px;
+      padding: 14px 16px; box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      z-index: 100; animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+    .toast-header { display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:10px; }
+    .toast-preview { background:#0f172a;border-radius:8px;padding:10px 14px;font-size:18px;color:#7dd3fc;direction:rtl;text-align:right;margin-bottom:12px;line-height:1.5; }
+    .toast-actions { display:flex;gap:8px;margin-bottom:10px; }
+    .btn-fix { background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;flex:1; }
+    .btn-not { background:#1e293b;color:#f87171;border:1px solid #f8717140;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer; }
+    .btn-x { background:none;border:none;color:#64748b;padding:8px 6px;font-size:14px;cursor:pointer; }
+    .toast-footer { display:flex;justify-content:space-between;font-size:10px;color:#334155; }
+    .toast-pause { background:none;border:none;color:#475569;font-size:10px;cursor:pointer; }
+
+    .badge { position:absolute;top:54px;left:378px;background:#16213e;border:1.5px solid #7dd3fc;border-radius:12px;padding:8px 14px;font-size:13px;font-weight:700;color:#7dd3fc;box-shadow:0 4px 16px rgba(59,130,246,0.3);z-index:200; }
+
+    .cursor { display:inline-block;width:2px;height:15px;background:#00a884;animation:blink 1s infinite;vertical-align:text-bottom;margin-left:1px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  </style>
+</head>
+<body>
+  <div class="tab-bar">
+    <div class="tab">
+      <div class="tab-favicon">W</div>
+      WhatsApp
+      <span class="tab-close">×</span>
+    </div>
+  </div>
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+    </div>
+    <div class="address-bar"><span>🔒</span><span>web.whatsapp.com</span></div>
+  </div>
+
+  <div class="page" style="position:relative">
+    <div class="wa-sidebar">
+      <div class="wa-sidebar-header">
+        <div class="wa-avatar">י</div>
+        <div class="wa-icons"><span>🔍</span><span>💬</span><span>⋮</span></div>
+      </div>
+      <div class="wa-search"><input placeholder="🔍  Search or start new chat" /></div>
+      <div class="wa-chat active">
+        <div class="wa-chat-avatar" style="background:#0ea5e9">ד</div>
+        <div class="wa-chat-info">
+          <div class="wa-chat-name">David</div>
+          <div class="wa-chat-preview">vhh jcr nv</div>
+        </div>
+        <div class="wa-chat-time">10:31</div>
+      </div>
+      <div class="wa-chat">
+        <div class="wa-chat-avatar" style="background:#8b5cf6">נ</div>
+        <div class="wa-chat-info">
+          <div class="wa-chat-name">Noa</div>
+          <div class="wa-chat-preview">ok see you then!</div>
+        </div>
+        <div class="wa-chat-time">9:45</div>
+      </div>
+      <div class="wa-chat">
+        <div class="wa-chat-avatar" style="background:#f59e0b">מ</div>
+        <div class="wa-chat-info">
+          <div class="wa-chat-name">Mom</div>
+          <div class="wa-chat-preview">מחכים לך לארוחת ערב</div>
+        </div>
+        <div class="wa-chat-time">Yesterday</div>
+      </div>
+    </div>
+
+    <div class="wa-main">
+      <div class="wa-chat-header">
+        <div class="wa-chat-avatar" style="background:#0ea5e9;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:600">ד</div>
+        <div>
+          <div class="wa-chat-header-name">David</div>
+          <div class="wa-chat-header-status">online</div>
+        </div>
+      </div>
+      <div class="wa-msgs">
+        <div class="msg msg-in">Hey! מה נשמע? 👋<div class="msg-time">10:28</div></div>
+        <div class="msg msg-out">הכל טוב, תודה!<div class="msg-time">10:29</div></div>
+        <div class="msg msg-in">מתי נפגש?<div class="msg-time">10:30</div></div>
+        <div class="msg msg-out wrong">vhh jcr nv<span class="cursor"></span><div class="msg-time">10:31</div></div>
+      </div>
+      <div class="wa-input-bar">
+        <span style="color:#8696a0;font-size:22px">😊</span>
+        <div class="wa-input">vhh jcr nv</div>
+        <div class="wa-send">➤</div>
+      </div>
+    </div>
+
+    <!-- Kiko toast -->
+    <div class="kiko-toast">
+      <div class="toast-header">
+        <span>⌨️</span>
+        <span style="flex:1">Wrong layout? Looks like Hebrew:</span>
+        <button style="background:none;border:none;font-size:13px;cursor:pointer">🔔</button>
+        <button class="btn-x">✕</button>
+      </div>
+      <div class="toast-preview">היי חבר מה</div>
+      <div class="toast-actions">
+        <button class="btn-fix">Fix → Hebrew</button>
+        <button class="btn-not">Not Hebrew</button>
+      </div>
+      <div class="toast-footer">
+        <span>Drag · Alt+Shift+K to scan field</span>
+        <button class="toast-pause">⏸ Pause Kiko</button>
+      </div>
+    </div>
+
+    <div class="badge">🦜 Kiko</div>
+  </div>
+</body>
+</html>
