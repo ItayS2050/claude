@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.3 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.4 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.3 loaded');
+console.log('[Kiko] v3.3.4 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -643,6 +643,7 @@ let lastDetection      = null;
 let lastElement        = null;
 let hintEl             = null;
 let dismissedSignature = null;
+let fixCooldownUntil   = 0; // ms timestamp — skip analyze() briefly after a fix to avoid ghost re-detection
 
 function getDefaultPos() {
   return { top: 16, left: window.innerWidth - 360 };
@@ -786,7 +787,7 @@ function showToast(element, detection, forceShow = false) {
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
-    if (ok) fixTextDirection(element, detection.type);
+    if (ok) { fixTextDirection(element, detection.type); fixCooldownUntil = Date.now() + 900; }
     saveFeedback(detection.words, true);
     removeToast(false);
     if (ok) {
@@ -1052,6 +1053,7 @@ function attachTo(el) {
   el._kld = true;
   const check = debounce(() => {
     if (!detectionEnabled) return;
+    if (Date.now() < fixCooldownUntil) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
   }, 200, 1500);
@@ -1081,6 +1083,8 @@ document.querySelectorAll(SELECTOR).forEach(attachTo);
 
 document.addEventListener('focusin', e => {
   const el = e.target;
+  // Moving to a different input: old dismissal is no longer relevant
+  if (el !== lastElement) dismissedSignature = null;
   if (!el || el._kld) return;
   if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
 }, true);
