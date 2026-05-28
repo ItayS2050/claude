@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.0 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.1 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.0 loaded');
+console.log('[Kiko] v3.3.1 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
