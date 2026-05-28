@@ -76,8 +76,22 @@ async function saveFeedback(words, isHebrew) {
 
 loadLearned();
 
-// ── English word detection ────────────────────────────────────
-const EN_BIGRAMS  = new Set(['st','ng','ll','oo','ee','ly','ld','wh','tw','qu','ck','nd']);
+// ── Common English words (used for Case 1 fallback detection) ────────────────
+const COMMON_EN_WORDS = new Set([
+  'the','a','an','in','on','at','to','of','is','it','be','as','by','or','do',
+  'he','she','we','they','i','you','my','your','his','her','our','its','us','me','him',
+  'and','but','if','not','no','yes','so','up','out','am',
+  'what','how','why','when','where','who','which',
+  'are','was','were','been','did','have','has','had','will','would','can','could',
+  'may','might','shall','should','must','dont','cant','wont','im','its',
+  'this','that','these','those','here','there','now','then','just','all','one',
+  'hey','hi','ok','okay','sure','good','great','nice','thanks','please','sorry','cool',
+  'with','from','for','about','like','also','very','too','more','some','any',
+  'come','go','see','know','think','want','need','make','take','get','give','say',
+  'time','day','way','back','after','before','again','work','help','wait','stop',
+  'love','miss','hi','bye','yes','no','oh','wow','haha','lol',
+]);
+
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
 
 function englishScore(word) {
@@ -294,18 +308,41 @@ function analyzeText(rawText, scanAll = false) {
       return hc.length >= 2 && hc.slice(0, -1).some(c => FINAL_FORMS.has(c));
     }).length;
 
-    if (badCount >= 2 && run1.length >= 2) {
+    if (run1.length >= 2) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
-        return {
-          type:     'hebrew_as_english',
-          message:  'Wrong layout? Looks like English:',
-          original, converted,
-          btnLabel: 'Fix → English',
-          rejectLabel: 'Not English',
-          words: run1.filter(w => HEBREW_RE.test(w))
-        };
+        // Strong signal: final-form Hebrew letters in wrong position (original check)
+        const strongSignal = badCount >= 2;
+
+        // Fallback signal: convert Hebrew → English and score how "English-like" it is.
+        // Each word scores +2 if it's a common English word, +1 if it has a good
+        // vowel ratio (20–70%) and no impossible consonant clusters. Threshold ≥ 3
+        // prevents false positives from short accidental matches.
+        let engScore = 0;
+        if (!strongSignal) {
+          const convWords = converted.split(/\s+/)
+            .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+            .filter(w => w.length >= 2);
+          engScore = convWords.reduce((acc, w) => {
+            if (COMMON_EN_WORDS.has(w)) return acc + 2;
+            if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
+            if (/[^aeiou]{4,}/.test(w)) return acc; // 4+ consecutive consonants = not English
+            const r = (w.match(/[aeiou]/g) || []).length / w.length;
+            return (r >= 0.20 && r <= 0.70) ? acc + 1 : acc;
+          }, 0);
+        }
+
+        if (strongSignal || engScore >= 3) {
+          return {
+            type:     'hebrew_as_english',
+            message:  'Wrong layout? Looks like English:',
+            original, converted,
+            btnLabel: 'Fix → English',
+            rejectLabel: 'Not English',
+            words: run1.filter(w => HEBREW_RE.test(w))
+          };
+        }
       }
     }
   }
