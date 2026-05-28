@@ -448,6 +448,20 @@ function applyConversion(el, detection) {
     }
   } catch {}
 
+  // Strategy 3 — beforeinput InputEvent (Lexical / Slate editors:
+  // WhatsApp Web, Notion, Claude.ai — they listen to beforeinput
+  // rather than execCommand or paste events).
+  try {
+    if (selectTextRange(el, idx, original.length)) {
+      el.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true,
+        inputType: 'insertText',
+        data: converted
+      }));
+      if ((el.innerText || el.textContent || '') !== before) return true;
+    }
+  } catch {}
+
   return false;
 }
 
@@ -959,6 +973,9 @@ const SELECTOR = [
   '[role="searchbox"]',
   '[role="article"] [contenteditable]',
   '.ql-editor',
+  '[data-lexical-editor]',
+  '[data-qa="message_input"]',
+  '[data-testid="conversation-compose-box-input"]',
 ].join(', ');
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
