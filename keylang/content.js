@@ -416,49 +416,79 @@ function applyConversion(el, detection) {
     return true;
   }
 
-  // ── contenteditable — two synchronous strategies ─────────────
+  // ── contenteditable ──────────────────────────────────────────
   const doc    = el.ownerDocument || document;
   const before = el.innerText || el.textContent || '';
   const idx    = before.lastIndexOf(original);
   if (idx === -1) return false;
 
-  // Focus must be in the editor for execCommand to target the right document.
-  // mousedown.preventDefault() on the button kept editor focus, but we call
-  // focus() explicitly to handle edge cases (iframes, shadow roots, etc.).
   el.focus();
 
-  // Strategy 1 — execCommand insertText (standard contenteditable, Gmail,
-  // Slack/ProseMirror, LinkedIn/Lexical — fires a trusted beforeinput event
-  // that framework state managers respond to correctly).
-  if (selectTextRange(el, idx, original.length)) {
-    doc.execCommand('insertText', false, converted);
-    if ((el.innerText || el.textContent || '') !== before) return true;
+  // True success = content changed AND original is no longer at position idx.
+  // Lexical/Slate editors can intercept our event but insert at their own internal
+  // cursor (end of text) instead of the selection — that changes content but is wrong.
+  function replaced() {
+    const after = el.innerText || el.textContent || '';
+    return after !== before && after.slice(idx, idx + original.length) !== original;
   }
 
-  // Strategy 2 — synthetic ClipboardEvent (some older ProseMirror editors
-  // handle paste events even when isTrusted=false).
+  // Before each strategy we dispatch 'selectionchange' so frameworks like Lexical
+  // (WhatsApp Web) sync their internal cursor state from the DOM selection we just set.
+  function syncSelection() {
+    try { document.dispatchEvent(new Event('selectionchange')); } catch {}
+  }
+
+  // Strategy 1 — execCommand insertText (standard contenteditable, Gmail,
+  // Slack/ProseMirror — fires a trusted beforeinput that framework state managers
+  // respond to correctly).
+  if (selectTextRange(el, idx, original.length)) {
+    syncSelection();
+    doc.execCommand('insertText', false, converted);
+    if (replaced()) return true;
+  }
+
+  // Strategy 2 — synthetic ClipboardEvent (some older ProseMirror editors).
   try {
     if (selectTextRange(el, idx, original.length)) {
+      syncSelection();
       const dt = new DataTransfer();
       dt.setData('text/plain', converted);
       el.dispatchEvent(new ClipboardEvent('paste', {
         clipboardData: dt, bubbles: true, cancelable: true
       }));
-      if ((el.innerText || el.textContent || '') !== before) return true;
+      if (replaced()) return true;
     }
   } catch {}
 
-  // Strategy 3 — beforeinput InputEvent (Lexical / Slate editors:
-  // WhatsApp Web, Notion, Claude.ai — they listen to beforeinput
-  // rather than execCommand or paste events).
+  // Strategy 3 — beforeinput insertText (Lexical/Slate: WhatsApp Web, Notion,
+  // Claude.ai — after selectionchange, the editor's internal selection matches ours).
   try {
     if (selectTextRange(el, idx, original.length)) {
+      syncSelection();
       el.dispatchEvent(new InputEvent('beforeinput', {
         bubbles: true, cancelable: true,
         inputType: 'insertText',
         data: converted
       }));
-      if ((el.innerText || el.textContent || '') !== before) return true;
+      if (replaced()) return true;
+    }
+  } catch {}
+
+  // Strategy 4 — deleteContent then insertText (Lexical fallback: explicit
+  // delete of selection followed by insert at the resulting cursor position).
+  try {
+    if (selectTextRange(el, idx, original.length)) {
+      syncSelection();
+      el.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true,
+        inputType: 'deleteContent'
+      }));
+      el.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true,
+        inputType: 'insertText',
+        data: converted
+      }));
+      if (replaced()) return true;
     }
   } catch {}
 
