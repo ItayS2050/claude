@@ -223,6 +223,12 @@ const PASSTHROUGH = new Set([
 function hasHebrew(t)        { return HEBREW_RE.test(t); }
 function convertToHebrew(t)  { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
 function convertToEnglish(t) { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
+function truncatePreview(text, maxWords = 9) {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + ' …';
+}
+
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -679,9 +685,9 @@ function showToast(element, detection, forceShow = false) {
     return;
   }
 
-  // Longer runs (≥5 words) just pulse the hint bubble — don't interrupt typing.
+  // Very long runs (≥10 words) just pulse the hint bubble — don't cover the screen.
   // forceShow = true bypasses this so hint-click always opens the full toast.
-  if (!forceShow && detection.words.length >= 5) {
+  if (!forceShow && detection.words.length >= 10) {
     const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
     lastElement   = element;
@@ -715,7 +721,7 @@ function showToast(element, detection, forceShow = false) {
       <button class="kld-btn kld-sound-btn" title="Toggle sound">${soundEnabled ? '🔔' : '🔕'}</button>
       <button class="kld-btn kld-dismiss" title="Dismiss (Esc)">✕</button>
     </div>
-    <div class="kld-preview">${escapeHtml(detection.converted)}</div>
+    <div class="kld-preview">${escapeHtml(truncatePreview(detection.converted))}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
       <button class="kld-btn kld-reject">${escapeHtml(detection.rejectLabel)}</button>
