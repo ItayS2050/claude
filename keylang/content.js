@@ -312,25 +312,30 @@ function analyzeText(rawText, scanAll = false) {
 
   // ── Case 2: English characters typed while Hebrew keyboard layout was expected
   const words = extractWords(text);
-  const run   = [];
-  let gapBuf  = [];
+  const minRun = textHasHebrew ? 1 : 2;
 
-  for (let i = words.length - 1; i >= 0; i--) {
-    const w = words[i];
+  // Collect ALL contiguous runs of Hebrew-candidate words (forward pass),
+  // then pick the LAST one (closest to cursor). This ensures words at the
+  // START of mixed Hebrew/Latin text are not silently skipped.
+  const allRuns = [];
+  let curRun = [], curGap = [];
+  for (const w of words) {
     if (wordCouldBeHebrew(w)) {
-      if (gapBuf.length > 0 && run.length > 0) run.unshift(...gapBuf);
-      gapBuf = [];
-      run.unshift(w);
-    } else if (PASSTHROUGH.has(w.toLowerCase()) && gapBuf.length < 2) {
-      gapBuf.unshift(w);
+      if (curGap.length > 0) curRun.push(...curGap);
+      curGap = [];
+      curRun.push(w);
+    } else if (PASSTHROUGH.has(w.toLowerCase()) && curGap.length < 2 && curRun.length > 0) {
+      curGap.push(w);
     } else {
-      break;
+      if (curRun.length > 0) allRuns.push([...curRun]);
+      curRun = []; curGap = [];
     }
   }
-  if (gapBuf.length > 0 && run.length > 0) run.unshift(...gapBuf);
+  if (curRun.length > 0) allRuns.push(curRun);
 
+  // Use the last (most recent) run that meets the minimum threshold
+  const run = [...allRuns].reverse().find(r => r.filter(w => wordCouldBeHebrew(w)).length >= minRun) || [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
-  const minRun      = textHasHebrew ? 1 : 2;
 
   if (hebrewCount >= minRun) {
     const runText  = run.join(' ');
@@ -341,12 +346,13 @@ function analyzeText(rawText, scanAll = false) {
     const converted = convertToHebrew(runText.toLowerCase()) + punct;
     if (hasHebrew(converted)) {
       return {
-        type:     'english_as_hebrew',
-        message:  'Wrong layout? Looks like Hebrew:',
+        type:      'english_as_hebrew',
+        message:   'Wrong layout? Looks like Hebrew:',
         original, converted,
-        btnLabel: 'Fix → Hebrew',
+        btnLabel:  'Fix → Hebrew',
         rejectLabel: 'Not Hebrew',
-        words: run.filter(w => wordCouldBeHebrew(w))
+        words:     run.filter(w => wordCouldBeHebrew(w)),
+        moreRuns:  allRuns.length > 1  // flag: there may be other mismatched runs
       };
     }
   }
@@ -683,9 +689,18 @@ function showToast(element, detection) {
     if (ok) {
       const kb = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
       showConfirm(`✓ Fixed! Switch keyboard: ${kb}`);
+      // Re-scan after a short delay to catch any remaining mismatched words
+      // (e.g. a sentence with both Hebrew text and Latin-on-Hebrew-keyboard words)
+      setTimeout(() => {
+        if (activeToast || !detectionEnabled) return;
+        const next = analyzeFullField(element);
+        if (next && next.words.join('|') !== sig) {
+          lastDetection = next; lastElement = element;
+          dismissedSignature = null;
+          showToast(element, next);
+        }
+      }, 500);
     } else {
-      // Both sync strategies failed — write to clipboard as last resort.
-      // (async is fine here; user activation is no longer needed)
       await navigator.clipboard.writeText(detection.converted).catch(() => {});
       showConfirm('✓ Copied — select your text then paste (Ctrl+V)');
     }
