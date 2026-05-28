@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.1 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.2 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.1 loaded');
+console.log('[Kiko] v3.3.2 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -524,6 +524,17 @@ function applyConversion(el, detection) {
   return false;
 }
 
+function fixTextDirection(el, type) {
+  if (!el || !el.isContentEditable) return;
+  const targetDir = type === 'hebrew_as_english' ? 'ltr' : 'rtl';
+  el.dir = targetDir;
+  // Also fix any block children that carry the opposite dir explicitly
+  const opposite = targetDir === 'ltr' ? 'rtl' : 'ltr';
+  el.querySelectorAll('[dir="' + opposite + '"]').forEach(child => {
+    child.dir = targetDir;
+  });
+}
+
 // ── Styles ────────────────────────────────────────────────────
 const STYLES = `
   #kld-toast {
@@ -758,6 +769,7 @@ function showToast(element, detection, forceShow = false) {
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
+    if (ok) fixTextDirection(element, detection.type);
     saveFeedback(detection.words, true);
     removeToast(false);
     if (ok) {
