@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.2.0 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.0 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.2.0 loaded');
+console.log('[Kiko] v3.3.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -582,61 +582,13 @@ function injectStyles() {
 }
 
 // ── Detection sound ───────────────────────────────────────────
-// One persistent AudioContext, unlocked on first user gesture.
-// Creating a fresh ctx inside a debounced callback (700 ms after
-// the keystroke) falls outside Chrome's autoplay user-gesture
-// window and gets silently blocked — reusing a pre-created,
-// already-running context avoids that entirely.
+// Sound is played via an offscreen document (background.js manages
+// it). AudioContext is blocked in content scripts by Chrome's
+// autoplay policy; offscreen documents don't have this restriction.
 
-let _audioCtx = null;
-
-function _getAudioCtx() {
-  if (!_audioCtx) {
-    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
-  }
-  return _audioCtx;
-}
-
-function _unlockAudio() {
-  const ctx = _getAudioCtx();
-  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-}
-
-// Unlock on every user interaction (typing, clicks, touch)
-try {
-  document.addEventListener('keydown',    _unlockAudio, { passive: true, capture: true });
-  document.addEventListener('click',      _unlockAudio, { passive: true, capture: true });
-  document.addEventListener('touchstart', _unlockAudio, { passive: true, capture: true });
-} catch {}
-
-async function playDetectionSound() {
+function playDetectionSound() {
   if (!soundEnabled) return;
-  try {
-    const ctx = _getAudioCtx();
-    if (!ctx) return;
-    // Resume if suspended — works after any prior user gesture (sticky activation)
-    if (ctx.state !== 'running') await ctx.resume();
-    if (ctx.state !== 'running') return;
-
-    const t = ctx.currentTime;
-
-    function note(freq, start, dur, vol) {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(vol, t + start);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
-      osc.start(t + start);
-      osc.stop(t + start + dur);
-    }
-
-    // Two-note soft "di-dong" — high then low
-    note(880, 0,    0.22, 0.22);
-    note(660, 0.14, 0.38, 0.18);
-  } catch {}
+  try { chrome.runtime.sendMessage({ type: 'kiko-play-sound' }).catch(() => {}); } catch {}
 }
 
 // ── Toast ─────────────────────────────────────────────────────

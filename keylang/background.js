@@ -14,3 +14,30 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }, { frameId: info.frameId || 0 }, () => void chrome.runtime.lastError);
   }
 });
+
+// ── Sound via offscreen document ──────────────────────────────
+// AudioContext is blocked in content scripts by Chrome's autoplay
+// policy. Offscreen documents don't have this restriction.
+
+async function ensureOffscreen() {
+  try {
+    const existing = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT']
+    });
+    if (existing.length === 0) {
+      await chrome.offscreen.createDocument({
+        url:           'offscreen.html',
+        reasons:       ['AUDIO_PLAYBACK'],
+        justification: 'Kiko detection alert sound'
+      });
+    }
+  } catch {}
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type !== 'kiko-play-sound') return;
+  ensureOffscreen().then(() => {
+    chrome.runtime.sendMessage({ type: 'kiko-play-sound' }).catch(() => {});
+  });
+  sendResponse();
+});
