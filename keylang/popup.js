@@ -70,6 +70,26 @@ document.getElementById('sound-toggle').addEventListener('change', (e) => {
   chrome.storage.local.set({ soundEnabled: e.target.checked });
 });
 
+// Test sound button — plays directly in popup (guaranteed user gesture)
+document.getElementById('test-sound-btn').addEventListener('click', () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t   = ctx.currentTime;
+    function note(freq, start, dur, vol) {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, t + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + start + dur);
+      osc.start(t + start); osc.stop(t + start + dur);
+      return osc;
+    }
+    note(880, 0, 0.22, 0.22);
+    const last = note(660, 0.14, 0.38, 0.18);
+    last.onended = () => ctx.close();
+  } catch {}
+});
+
 // Re-enable button in the paused banner
 document.getElementById('reenable-btn').addEventListener('click', () => {
   chrome.storage.local.set({ detectionEnabled: true });

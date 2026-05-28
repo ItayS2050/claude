@@ -609,11 +609,14 @@ try {
   document.addEventListener('touchstart', _unlockAudio, { passive: true, capture: true });
 } catch {}
 
-function playDetectionSound() {
+async function playDetectionSound() {
   if (!soundEnabled) return;
   try {
     const ctx = _getAudioCtx();
-    if (!ctx || ctx.state !== 'running') return;
+    if (!ctx) return;
+    // Resume if suspended — works after any prior user gesture (sticky activation)
+    if (ctx.state !== 'running') await ctx.resume();
+    if (ctx.state !== 'running') return;
 
     const t = ctx.currentTime;
 
@@ -971,7 +974,7 @@ function attachTo(el) {
     if (!detectionEnabled) return;
     const detection = analyze(el);
     if (detection) showToast(el, detection);
-  }, 700);
+  }, 400);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          check);
   el.addEventListener('compositionend', check);
