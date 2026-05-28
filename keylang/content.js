@@ -629,21 +629,22 @@ function playDetectionSound() {
 
 // ── Toast ─────────────────────────────────────────────────────
 
-function showToast(element, detection) {
+function showToast(element, detection, forceShow = false) {
   if (!detectionEnabled) return;
 
   const sig = detection.words.join('|');
 
   // Don't re-show a detection the user explicitly dismissed
-  if (sig && sig === dismissedSignature) {
+  if (!forceShow && sig && sig === dismissedSignature) {
     lastDetection = detection;
     lastElement   = element;
     if (!hintEl) showHint();
     return;
   }
 
-  // Longer runs (≥5 words) just pulse the hint bubble — don't interrupt typing
-  if (detection.words.length >= 5) {
+  // Longer runs (≥5 words) just pulse the hint bubble — don't interrupt typing.
+  // forceShow = true bypasses this so hint-click always opens the full toast.
+  if (!forceShow && detection.words.length >= 5) {
     const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
     lastElement   = element;
@@ -795,7 +796,8 @@ function showHint() {
     if (e.target.closest('.kld-hint-close')) return;
     if (lastDetection && lastElement) {
       dismissedSignature = null;
-      showToast(lastElement, lastDetection);
+      hideHint();
+      showToast(lastElement, lastDetection, true); // forceShow bypasses word-count guard
     }
   });
   hintEl.querySelector('.kld-hint-close').addEventListener('click', e => {
