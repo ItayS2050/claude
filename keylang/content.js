@@ -424,23 +424,20 @@ function applyConversion(el, detection) {
 
   el.focus();
 
-  // Lexical editors (WhatsApp Web) keep internal cursor state that diverges from
-  // the DOM selection. Selecting a range + execCommand gives Lexical a trusted
-  // beforeinput, but Lexical uses its *own* internal cursor (end of text) for the
-  // insert — not the range we selected. Using getTargetRanges() requires the DOM
-  // selection AND the internal Lexical state to agree.
-  //
-  // Solution: execCommand('selectAll') fires a selectionchange that Lexical does
-  // sync from (it reads document.getSelection() on selectionchange). After that,
-  // execCommand('insertText') with the full corrected text replaces everything.
+  // Lexical editors (WhatsApp Web) maintain their own internal cursor state.
+  // selectTextRange sets the DOM selection, but Lexical won't use it unless we
+  // fire 'selectionchange' first — that's the signal Lexical listens to in order
+  // to sync its internal cursor from the DOM. After syncing, execCommand fires
+  // a trusted beforeinput with targetRanges, and Lexical replaces the right text.
+  // We return immediately without checking the DOM (Lexical updates async via React,
+  // so any immediate DOM check would fail and trigger duplicate insertions).
   const isLexical = el.hasAttribute('data-lexical-editor') ||
                     !!el.closest?.('[data-lexical-editor]');
   if (isLexical) {
-    const fullText  = (el.innerText || el.textContent || '').trimEnd();
-    const fixedText = fullText.replace(original, converted);
-    if (fixedText === fullText) return false;
-    doc.execCommand('selectAll');
-    doc.execCommand('insertText', false, fixedText);
+    if (selectTextRange(el, idx, original.length)) {
+      try { document.dispatchEvent(new Event('selectionchange')); } catch {}
+      doc.execCommand('insertText', false, converted);
+    }
     return true;
   }
 
