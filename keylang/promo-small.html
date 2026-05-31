@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 440px; height: 280px; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b1220;
+    }
+
+    /* Background glow */
+    .glow-blue {
+      position: absolute;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%);
+      top: -60px; right: -60px;
+    }
+    .glow-teal {
+      position: absolute;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(125,211,252,0.10) 0%, transparent 70%);
+      bottom: -40px; left: -30px;
+    }
+
+    .container {
+      position: relative;
+      width: 440px; height: 280px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 32px 36px;
+      z-index: 1;
+    }
+
+    .parrot { font-size: 42px; margin-bottom: 10px; line-height: 1; }
+
+    .brand {
+      font-size: 34px; font-weight: 800;
+      color: #7dd3fc;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.5;
+      max-width: 200px;
+      margin-bottom: 18px;
+    }
+
+    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 11px;
+      color: #7dd3fc;
+      font-weight: 600;
+    }
+
+    /* Mini toast mockup on the right */
+    .toast-mock {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 168px;
+      background: #16213e;
+      border: 1.5px solid #3b82f6;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.15);
+    }
+    .toast-top {
+      font-size: 9px; color: #64748b; font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+      margin-bottom: 8px;
+    }
+    .toast-preview {
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 7px 9px;
+      font-size: 13px;
+      color: #7dd3fc;
+      direction: rtl;
+      text-align: right;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .toast-btn {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .toast-btn2 {
+      background: #1e293b;
+      color: #f87171;
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Subtle grid lines */
+    .grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow-blue"></div>
+  <div class="glow-teal"></div>
+
+  <div class="container">
+    <div class="parrot">🦜</div>
+    <div class="brand">Kiko</div>
+    <div class="tagline">Wrong keyboard layout?<br>Detected and fixed in one click.</div>
+    <div class="badge-row">
+      <div class="badge">Hebrew ↔ English</div>
+      <div class="badge">Works everywhere</div>
+    </div>
+  </div>
+
+  <div class="toast-mock">
+    <div class="toast-top">⌨️ Wrong layout? Looks like Hebrew:</div>
+    <div class="toast-preview">היי מה שלומך?</div>
+    <div class="toast-btn">Fix → Hebrew</div>
+    <div class="toast-btn2">Not Hebrew</div>
+  </div>
+</body>
+</html>

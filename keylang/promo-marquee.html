@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1400px; height: 560px; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #080e1a;
+    }
+
+    /* Background glows */
+    .glow1 {
+      position: absolute;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 65%);
+      top: -200px; left: 200px;
+      pointer-events: none;
+    }
+    .glow2 {
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(125,211,252,0.09) 0%, transparent 65%);
+      bottom: -100px; left: 50px;
+      pointer-events: none;
+    }
+    .glow3 {
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 65%);
+      top: -100px; right: 100px;
+      pointer-events: none;
+    }
+
+    /* Subtle dot grid */
+    .grid {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+    }
+
+    /* Layout */
+    .layout {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 1400px; height: 560px;
+      padding: 0 100px;
+      gap: 80px;
+      z-index: 1;
+    }
+
+    /* Left — branding */
+    .left {
+      flex: 0 0 500px;
+    }
+
+    .parrot-brand {
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 24px;
+    }
+    .parrot { font-size: 72px; line-height: 1; }
+    .brand-name {
+      font-size: 72px; font-weight: 900;
+      color: #7dd3fc;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .headline {
+      font-size: 28px; font-weight: 700;
+      color: #e2e8f0;
+      line-height: 1.35;
+      margin-bottom: 16px;
+    }
+    .headline .hl { color: #7dd3fc; }
+
+    .sub {
+      font-size: 16px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 32px;
+      max-width: 420px;
+    }
+
+    .pills { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      background: #0f1e35;
+      border: 1px solid #1e3a5f;
+      border-radius: 24px;
+      padding: 8px 18px;
+      font-size: 13px; font-weight: 600;
+      color: #7dd3fc;
+    }
+    .pill.green {
+      background: #0a1f14;
+      border-color: #166534;
+      color: #86efac;
+    }
+
+    /* Right — mockup */
+    .right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Browser mockup */
+    .browser {
+      width: 560px;
+      background: #0f172a;
+      border-radius: 12px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+    .browser-bar {
+      background: #1e293b;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dots { display: flex; gap: 5px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .url-bar {
+      flex: 1; background: #0f172a; border-radius: 12px;
+      padding: 4px 12px; font-size: 11px; color: #475569;
+    }
+
+    /* Page content inside browser */
+    .browser-content {
+      background: #f8fafc;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* Gmail compose strip */
+    .compose-strip {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .compose-hdr {
+      background: #404040; color: #fff;
+      padding: 8px 14px; font-size: 12px; font-weight: 500;
+      display: flex; justify-content: space-between;
+    }
+    .compose-field {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 5px 12px; font-size: 11px; color: #555;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .compose-lbl { color: #888; width: 36px; }
+    .compose-body {
+      padding: 10px 12px; font-size: 12px; color: #777;
+      line-height: 1.6;
+    }
+    .cursor { display: inline-block; width: 1.5px; height: 13px; background: #1a73e8; vertical-align: text-bottom; margin-left: 1px; animation: blink 1s infinite; }
+
+    /* Toast */
+    .toast {
+      background: #16213e;
+      border: 1.5px solid #3b82f6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .toast-hdr { font-size: 10px; font-weight: 600; color: #94a3b8; display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+    .toast-preview {
+      background: #0f172a; border-radius: 6px;
+      padding: 8px 12px; font-size: 15px; color: #7dd3fc;
+      direction: rtl; text-align: right; margin-bottom: 10px; line-height: 1.4;
+    }
+    .toast-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .t-fix { background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 11px; font-weight: 700; flex: 1; }
+    .t-not { background: #1e293b; color: #f87171; border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; padding: 7px 12px; font-size: 11px; font-weight: 600; }
+    .toast-foot { font-size: 9px; color: #334155; display: flex; justify-content: space-between; }
+
+    /* Sound ripple badge */
+    .sound-badge {
+      position: absolute;
+      top: -12px; right: -12px;
+      background: #1e3a5f;
+      border: 1.5px solid #3b82f6;
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 0 6px rgba(59,130,246,0.12);
+    }
+
+    /* Bottom label */
+    .bottom-label {
+      position: absolute;
+      bottom: 32px; left: 100px;
+      font-size: 12px; color: #334155;
+      letter-spacing: 0.3px;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow1"></div>
+  <div class="glow2"></div>
+  <div class="glow3"></div>
+
+  <div class="layout">
+
+    <!-- Left: branding -->
+    <div class="left">
+      <div class="parrot-brand">
+        <div class="parrot">🦜</div>
+        <div class="brand-name">Kiko</div>
+      </div>
+      <div class="headline">
+        Typed in the <span class="hl">wrong language</span>?<br>
+        Fixed in one click.
+      </div>
+      <div class="sub">
+        Kiko watches what you type and instantly catches when your keyboard is in the wrong layout — Hebrew or English. One click and it's corrected.
+      </div>
+      <div class="pills">
+        <div class="pill">⌨️ Hebrew ↔ English</div>
+        <div class="pill">🔔 Instant sound alert</div>
+        <div class="pill green">✓ 100% private</div>
+        <div class="pill">Works in Gmail, WhatsApp &amp; more</div>
+      </div>
+    </div>
+
+    <!-- Right: browser + toast -->
+    <div class="right">
+      <div style="width:560px">
+        <div class="browser">
+          <div class="browser-bar">
+            <div class="dots">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+            </div>
+            <div class="url-bar">🔒 mail.google.com</div>
+          </div>
+          <div class="browser-content">
+            <div class="compose-strip">
+              <div class="compose-hdr">New Message <span>— ⤢ ×</span></div>
+              <div class="compose-field"><span class="compose-lbl">To</span> yossi@example.com</div>
+              <div class="compose-field"><span class="compose-lbl">Subject</span> היי יוסי</div>
+              <div class="compose-body">vhh jcr akh nv akunl?<span class="cursor"></span></div>
+            </div>
+
+            <div class="toast" style="position:relative">
+              <div class="sound-badge">🔔</div>
+              <div class="toast-hdr">⌨️ Wrong layout? Looks like Hebrew:</div>
+              <div class="toast-preview">היי חבר אחד נו אקונל?</div>
+              <div class="toast-row">
+                <button class="t-fix">Fix → Hebrew</button>
+                <button class="t-not">Not Hebrew</button>
+                <button style="background:none;border:none;color:#475569;font-size:12px;cursor:pointer;padding:0 4px">✕</button>
+              </div>
+              <div class="toast-foot">
+                <span>Drag · Alt+Shift+K to scan field</span>
+                <span>⏸ Pause Kiko</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-label">Free · No account required · All processing stays in your browser</div>
+
+</body>
+</html>
