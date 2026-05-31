@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1280px; height: 800px; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f1f3f4;
+    }
+
+    /* Chrome */
+    .tab-bar { background: #dee1e6; padding: 6px 12px 0; display: flex; gap: 2px; }
+    .tab { background: #fff; border-radius: 8px 8px 0 0; padding: 7px 16px; font-size: 12px; color: #333; display: flex; align-items: center; gap: 6px; }
+    .browser-bar { background: #dee1e6; padding: 8px 12px 0; display: flex; align-items: center; gap: 8px; }
+    .browser-dots { display: flex; gap: 6px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .address-bar { flex: 1; background: #fff; border-radius: 20px; padding: 6px 14px; font-size: 13px; color: #444; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Slack-style layout */
+    .page { height: 746px; background: #fff; display: flex; }
+
+    /* Slack sidebar */
+    .slack-sidebar { width: 240px; background: #3f0e40; color: #cfc3d0; display: flex; flex-direction: column; padding: 0; }
+    .slack-workspace { padding: 14px 16px; font-size: 15px; font-weight: 900; color: #fff; border-bottom: 1px solid #5b2c5e; display: flex; align-items: center; justify-content: space-between; }
+    .slack-section { padding: 20px 12px 4px; font-size: 13px; font-weight: 700; color: #cfc3d0; text-transform: none; opacity: 0.8; }
+    .slack-channel { padding: 6px 16px; font-size: 15px; color: #cfc3d0; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 4px; margin: 0 4px; }
+    .slack-channel.active { background: #1264a3; color: #fff; }
+    .slack-channel:hover { background: rgba(255,255,255,0.08); }
+    .slack-hash { color: #b6a9b7; }
+    .unread-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; margin-left: auto; }
+
+    /* Slack main */
+    .slack-main { flex: 1; display: flex; flex-direction: column; }
+    .slack-header { padding: 12px 20px; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; gap: 10px; }
+    .slack-header-name { font-size: 16px; font-weight: 700; color: #1d1c1d; }
+    .slack-header-members { font-size: 13px; color: #696969; }
+    .slack-messages { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
+    .msg-group { display: flex; gap: 12px; }
+    .msg-avatar { width: 36px; height: 36px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .msg-body .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+    .msg-body .msg-name { font-size: 15px; font-weight: 700; color: #1d1c1d; }
+    .msg-body .msg-time { font-size: 12px; color: #696969; }
+    .msg-body .msg-text { font-size: 15px; color: #1d1c1d; line-height: 1.5; }
+    .msg-body .msg-text.hebrew { direction: rtl; }
+
+    /* Input area */
+    .slack-input-wrap { padding: 12px 20px; border-top: 1px solid #e8e8e8; }
+    .slack-input-box { border: 1px solid #d6d0d7; border-radius: 8px; overflow: hidden; }
+    .slack-input-toolbar { padding: 6px 12px; border-bottom: 1px solid #e8e8e8; display: flex; gap: 12px; }
+    .slack-tool { color: #696969; font-size: 16px; cursor: pointer; }
+    .slack-input-text { padding: 10px 14px; font-size: 15px; color: #1d1c1d; line-height: 1.5; direction: rtl; text-align: right; }
+
+    /* Kiko toast */
+    .kiko-toast {
+      position: absolute;
+      bottom: 120px;
+      left: 260px;
+      width: 330px;
+      background: #16213e;
+      border: 1.5px solid #3b82f6;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      z-index: 200;
+    }
+    .toast-header { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 10px; }
+    .toast-preview { background: #0f172a; border-radius: 8px; padding: 10px 14px; font-size: 16px; color: #86efac; margin-bottom: 12px; line-height: 1.5; }
+    .toast-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+    .btn-fix { background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; flex: 1; }
+    .btn-not { background: #1e293b; color: #94a3b8; border: 1px solid #33415540; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-x { background: none; border: none; color: #64748b; padding: 8px 6px; font-size: 14px; cursor: pointer; }
+    .toast-footer { display: flex; justify-content: space-between; font-size: 10px; color: #334155; }
+    .toast-pause { background: none; border: none; color: #475569; font-size: 10px; cursor: pointer; }
+
+    /* Hint bubble shown on another message */
+    .kiko-hint {
+      position: absolute;
+      top: 310px;
+      right: 24px;
+      background: #16213e;
+      border: 1.5px solid #86efac;
+      border-radius: 20px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #86efac;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+      z-index: 100;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tab-bar">
+    <div class="tab">
+      <div style="width:14px;height:14px;border-radius:3px;background:#4a154b;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;flex-shrink:0">S</div>
+      #general · Slack
+      <span style="margin-left:6px;color:#999">×</span>
+    </div>
+  </div>
+
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+    </div>
+    <div class="address-bar">
+      <span>🔒</span>
+      <span>app.slack.com/client/general</span>
+    </div>
+  </div>
+
+  <div class="page" style="position:relative">
+
+    <!-- Slack sidebar -->
+    <div class="slack-sidebar">
+      <div class="slack-workspace">
+        <span>Acme Corp</span>
+        <span style="font-size:20px;font-weight:400">⌄</span>
+      </div>
+      <div style="padding:12px 8px">
+        <div class="slack-section">Channels</div>
+        <div class="slack-channel"><span class="slack-hash">#</span> general <div class="unread-dot"></div></div>
+        <div class="slack-channel active"><span class="slack-hash">#</span> dev-team</div>
+        <div class="slack-channel"><span class="slack-hash">#</span> design</div>
+        <div class="slack-channel"><span class="slack-hash">#</span> random</div>
+        <div class="slack-section" style="margin-top:12px">Direct messages</div>
+        <div class="slack-channel">🟢 Yossi Cohen</div>
+        <div class="slack-channel">⚪ Noa Levi</div>
+      </div>
+    </div>
+
+    <!-- Slack main -->
+    <div class="slack-main">
+      <div class="slack-header">
+        <div style="font-size:18px">#</div>
+        <div>
+          <div class="slack-header-name">dev-team</div>
+          <div class="slack-header-members">👥 12 members</div>
+        </div>
+      </div>
+
+      <div class="slack-messages">
+        <div class="msg-group">
+          <div class="msg-avatar" style="background:#dfe5e7">👨</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">David</span>
+              <span class="msg-time">10:02 AM</span>
+            </div>
+            <div class="msg-text">The deploy went out, all clear ✅</div>
+          </div>
+        </div>
+        <div class="msg-group">
+          <div class="msg-avatar" style="background:#d5f0e5">👩</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">Noa</span>
+              <span class="msg-time">10:05 AM</span>
+            </div>
+            <div class="msg-text">Great! I'll update the changelog</div>
+          </div>
+        </div>
+        <div class="msg-group">
+          <div class="msg-avatar" style="background:#f5e6d5">🧑‍💻</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">Itay</span>
+              <span class="msg-time">10:08 AM</span>
+            </div>
+            <!-- Hebrew typed on English keyboard — looks like gibberish -->
+            <div class="msg-text" style="direction:rtl;text-align:right;font-size:15px;color:#8a9ba8">
+              יקט שרק שיא טמו גמנמע ארם אהק?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input box with the same wrong-layout Hebrew chars being typed -->
+      <div class="slack-input-wrap">
+        <div class="slack-input-box">
+          <div class="slack-input-toolbar">
+            <span class="slack-tool">𝐁</span>
+            <span class="slack-tool">𝘐</span>
+            <span class="slack-tool">S̶</span>
+            <span class="slack-tool">🔗</span>
+            <span class="slack-tool">:)</span>
+          </div>
+          <div class="slack-input-text">
+            יקט שרק שיא טמו גמנמע ארם אהק?<span style="display:inline-block;width:2px;height:16px;background:#1d1c1d;vertical-align:text-bottom;margin-left:1px;animation:blink 1s infinite"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kiko toast — Case 1: Hebrew chars typed on English keyboard, detecting as English -->
+    <div class="kiko-toast">
+      <div class="toast-header">
+        <span>⌨️</span>
+        <span style="flex:1">Wrong layout? Looks like English:</span>
+        <button style="background:none;border:none;font-size:13px;cursor:pointer;color:#64748b">🔔</button>
+        <button class="btn-x">✕</button>
+      </div>
+      <div class="toast-preview" style="color:#86efac;direction:ltr;text-align:left">
+        hey are you done fixing arm ache?
+      </div>
+      <div class="toast-actions">
+        <button class="btn-fix">Fix → English</button>
+        <button class="btn-not" style="color:#64748b">Not English</button>
+      </div>
+      <div class="toast-footer">
+        <span>Drag · Alt+Shift+K to scan field</span>
+        <button class="toast-pause">⏸ Pause Kiko</button>
+      </div>
+    </div>
+
+    <!-- Hint showing on a previous message -->
+    <div class="kiko-hint">
+      ⌨️ hey are you done fixing arm ache? <span style="color:#475569;font-size:10px;font-weight:400;margin-left:4px">×</span>
+    </div>
+
+  </div>
+
+  <style>@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }</style>
+
+</body>
+</html>
