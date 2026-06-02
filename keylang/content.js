@@ -1172,3 +1172,14 @@ chrome.runtime.onMessage.addListener(msg => {
   const selText = sel && sel.toString().trim();
   convertSelection(msg.text, selText === msg.text.trim() ? sel : null);
 });
+
+// ── Test API (only active when test.html sets window.__kikoTestMode) ──
+if (typeof window !== 'undefined' && window.__kikoTestMode) {
+  window.__kiko = {
+    analyzeText,
+    setStrictMode:   (ms) => { strictModeUntil = Date.now() + ms; },
+    clearStrictMode: ()   => { strictModeUntil = 0; },
+    setLearnedHebrew: (arr) => { arr.forEach(w => learnedHebrew.add(w)); },
+    clearLearned:    ()   => { learnedHebrew.clear(); learnedEnglish.clear(); },
+  };
+}
