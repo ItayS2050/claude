@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.8 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.9 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.8 loaded');
+console.log('[Kiko] v3.3.9 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -516,22 +516,33 @@ function applyConversion(el, detection) {
     while ((n = tw.nextNode())) s += n.textContent;
     return s;
   };
-  const before = walkText();
-  const idx    = before.lastIndexOf(original);
+  let before = walkText();
+  let idx    = before.lastIndexOf(original);
+  // Fallback: some editors use CSS spacing with no text-node spaces;
+  // innerText includes visual whitespace that walkText misses.
+  if (idx === -1) {
+    before = el.innerText || el.textContent || '';
+    idx    = before.lastIndexOf(original);
+  }
   if (idx === -1) return false;
 
   el.focus();
 
-  // Lexical editors (WhatsApp Web) maintain their own internal cursor state.
-  // selectTextRange sets the DOM selection, but Lexical won't use it unless we
-  // fire 'selectionchange' first — that's the signal Lexical listens to in order
-  // to sync its internal cursor from the DOM. After syncing, execCommand fires
-  // a trusted beforeinput with targetRanges, and Lexical replaces the right text.
-  // We return immediately without checking the DOM (Lexical updates async via React,
-  // so any immediate DOM check would fail and trigger duplicate insertions).
+  // ── Framework editor detection ────────────────────────────────
+  // Lexical, React-managed, and ProseMirror editors all process input
+  // events asynchronously. The synchronous replaced() check always
+  // returns false for them, falling through to clipboard fallback.
+  // Strategy: set selection + dispatch selectionchange + execCommand,
+  // then return true optimistically (same approach that works for Lexical).
   const isLexical = el.hasAttribute('data-lexical-editor') ||
                     !!el.closest?.('[data-lexical-editor]');
-  if (isLexical) {
+  const isReactManaged = Object.keys(el).some(k =>
+    k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance') || k.startsWith('__reactProps')
+  );
+  const isProseMirror = el.classList?.contains('ProseMirror') ||
+                        !!el.closest?.('.ProseMirror');
+
+  if (isLexical || isReactManaged || isProseMirror) {
     if (selectTextRange(el, idx, original.length)) {
       try { document.dispatchEvent(new Event('selectionchange')); } catch {}
       doc.execCommand('insertText', false, converted);
@@ -826,10 +837,10 @@ function showToast(element, detection, forceShow = false) {
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
+    fixCooldownUntil = Date.now() + (ok ? 900 : 30000); // long cooldown on failure prevents re-detection loop
     if (ok) {
       fixTextDirection(element, detection.type);
-      fixCooldownUntil = Date.now() + 900;
-      strictModeUntil  = Date.now() + 15000; // 15 s: only strong signals after a fix
+      strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
     }
     saveFeedback(detection.words, true);
     removeToast(false);
