@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.4 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.5 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.4 loaded');
+console.log('[Kiko] v3.3.5 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -339,14 +339,17 @@ function analyzeText(rawText, scanAll = false) {
 
           // Fallback: score converted text for English-likeness.
           // +2 per common word, +1 per English-like word (good vowel ratio, no consonant pile-up).
-          // Threshold scales with run length — 3+ words need score ≥ 2, 2 words need ≥ 3.
+          // Requires BOTH score ≥ 3 AND at least one COMMON_EN_WORDS hit — real Hebrew text
+          // almost never converts to a recognisable common English word, so this prevents
+          // false positives on legitimate Hebrew sentences.
           let engScore = 0;
+          let hasCommonWord = false;
           if (!strongSignal) {
             const convWords = converted.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
             engScore = convWords.reduce((acc, w) => {
-              if (COMMON_EN_WORDS.has(w)) return acc + 2;
+              if (COMMON_EN_WORDS.has(w)) { hasCommonWord = true; return acc + 2; }
               if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
               if (/[^aeiou]{4,}/.test(w)) return acc;
               const r = (w.match(/[aeiou]/g) || []).length / w.length;
@@ -354,8 +357,7 @@ function analyzeText(rawText, scanAll = false) {
             }, 0);
           }
 
-          const threshold = run1.length >= 3 ? 2 : 3;
-          if (strongSignal || engScore >= threshold) {
+          if (strongSignal || (engScore >= 3 && hasCommonWord)) {
             return {
               type:     'hebrew_as_english',
               message:  'Wrong layout? Looks like English:',
