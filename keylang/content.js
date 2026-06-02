@@ -294,7 +294,9 @@ function analyzeText(rawText, scanAll = false) {
   // exactly those final-form letters — so finding them in non-final position is
   // an unambiguous signal the user was in the wrong layout.
   if (textHasHebrew) {
-    const allWords = text.trim().split(/\s+/);
+    const allWords = text.trim().split(/\s+/).flatMap(w =>
+      w.split(/(?<=[a-z,;.'\d])(?=[֐-׿])|(?<=[֐-׿])(?=[a-z,;.'\d])/i).filter(Boolean)
+    );
     const run1 = [];
     for (let i = allWords.length - 1; i >= 0; i--) {
       const w = allWords[i];
