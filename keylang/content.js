@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.7 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.8 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.7 loaded');
+console.log('[Kiko] v3.3.8 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -338,11 +338,16 @@ function analyzeText(rawText, scanAll = false) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
-        // Fast single-word trigger: if the converted word is an obvious common
-        // English word (3+ chars) fire immediately without waiting for more words.
+        // After a fix we enter strict mode: common-word scoring is too noisy
+        // because short real Hebrew words (e.g. "בוא"→"cut", "אם"→"to") look
+        // identical to wrong-layout text. In strict mode we only fire on
+        // unambiguous final-form violations.
+        const inStrictMode = Date.now() < strictModeUntil;
+
+        // Fast single-word trigger: only outside strict mode (avoid "בוא"→"cut" false-pos)
         if (run1.length === 1) {
           const w = converted.trim().replace(/[^a-z]/gi, '').toLowerCase();
-          if (w.length >= 3 && COMMON_EN_WORDS.has(w)) {
+          if (w.length >= 3 && !inStrictMode && COMMON_EN_WORDS.has(w)) {
             return {
               type: 'hebrew_as_english',
               message: 'Wrong layout? Looks like English:',
@@ -362,9 +367,10 @@ function analyzeText(rawText, scanAll = false) {
           // Requires BOTH score ≥ 3 AND at least one COMMON_EN_WORDS hit — real Hebrew text
           // almost never converts to a recognisable common English word, so this prevents
           // false positives on legitimate Hebrew sentences.
+          // In strict mode (post-fix) skip word scoring — only strongSignal fires.
           let engScore = 0;
           let hasCommonWord = false;
-          if (!strongSignal) {
+          if (!strongSignal && !inStrictMode) {
             const convWords = converted.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
@@ -377,7 +383,7 @@ function analyzeText(rawText, scanAll = false) {
             }, 0);
           }
 
-          if (strongSignal || (engScore >= 3 && hasCommonWord)) {
+          if (strongSignal || (!inStrictMode && engScore >= 3 && hasCommonWord)) {
             return {
               type:     'hebrew_as_english',
               message:  'Wrong layout? Looks like English:',
@@ -676,6 +682,7 @@ let lastElement        = null;
 let hintEl             = null;
 let dismissedSignature = null;
 let fixCooldownUntil   = 0; // ms timestamp — skip analyze() briefly after a fix to avoid ghost re-detection
+let strictModeUntil    = 0; // after a fix, only use strong signal (final-form violations) for Case 1
 
 function getDefaultPos() {
   return { top: 16, left: window.innerWidth - 360 };
@@ -819,7 +826,11 @@ function showToast(element, detection, forceShow = false) {
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
-    if (ok) { fixTextDirection(element, detection.type); fixCooldownUntil = Date.now() + 900; }
+    if (ok) {
+      fixTextDirection(element, detection.type);
+      fixCooldownUntil = Date.now() + 900;
+      strictModeUntil  = Date.now() + 15000; // 15 s: only strong signals after a fix
+    }
     saveFeedback(detection.words, true);
     removeToast(false);
     if (ok) {
