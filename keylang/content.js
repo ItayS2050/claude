@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.5 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.7 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.5 loaded');
+console.log('[Kiko] v3.3.7 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -93,6 +93,19 @@ const COMMON_EN_WORDS = new Set([
 ]);
 
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
+
+const EN_BIGRAMS = new Set([
+  'th','he','in','er','an','re','on','en','at','nd','st','es',
+  'ed','to','it','is','hi','of','or','as','ha','ou','te','et',
+  'al','se','le','me','de','nt','ne','ea','io','ti','ar','ma',
+  'ng','ro','ll','si','ur','ce','ch','el','li','ri','sh','ss',
+  'wh','co','oo','no','pr','wi','la','ot','na','we','ly','ac',
+  'ic','tr','ca','ge','ve','pe','ty','fo','ee','om','id','fi',
+  'ut','be','un','so','lo','ad','mi','pl','sp','fr','di','wo',
+  'ni','ta','ki','fa','vi','bi','pu','mo','cu','bu','mu','su',
+  'ai','au','ay','ow','ew','ey','oa','ie','ue','ei',
+  'bl','cl','fl','gl','sl','br','cr','dr','gr','sk','sm','sn','sw','tw','qu'
+]);
 
 function englishScore(word) {
   const s = word.toLowerCase();
@@ -294,9 +307,14 @@ function analyzeText(rawText, scanAll = false) {
   // exactly those final-form letters — so finding them in non-final position is
   // an unambiguous signal the user was in the wrong layout.
   if (textHasHebrew) {
-    const allWords = text.trim().split(/\s+/).flatMap(w =>
-      w.split(/(?<=[a-z,;.'\d])(?=[֐-׿])|(?<=[֐-׿])(?=[a-z,;.'\d])/i).filter(Boolean)
-    );
+    let allWords;
+    try {
+      allWords = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-z,;.'\d])(?=[֐-׿])|(?<=[֐-׿])(?=[a-z,;.'\d])/i).filter(Boolean)
+      );
+    } catch {
+      allWords = text.trim().split(/\s+/);
+    }
     const run1 = [];
     for (let i = allWords.length - 1; i >= 0; i--) {
       const w = allWords[i];
@@ -481,8 +499,18 @@ function applyConversion(el, detection) {
   }
 
   // ── contenteditable ──────────────────────────────────────────
-  const doc    = el.ownerDocument || document;
-  const before = el.innerText || el.textContent || '';
+  const doc = el.ownerDocument || document;
+  // Walk text nodes directly — must match what selectTextRange does.
+  // innerText adds \n for <br>/block boundaries; text nodes don't have them,
+  // so using innerText causes off-by-N index mismatches in multi-line fields.
+  const walkText = () => {
+    let s = '';
+    const tw = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = tw.nextNode())) s += n.textContent;
+    return s;
+  };
+  const before = walkText();
   const idx    = before.lastIndexOf(original);
   if (idx === -1) return false;
 
@@ -508,7 +536,7 @@ function applyConversion(el, detection) {
   // For non-Lexical contenteditable: use synchronous DOM check to detect success
   // and fall through to the next strategy only if the previous one truly failed.
   function replaced() {
-    const after = el.innerText || el.textContent || '';
+    const after = walkText();
     return after !== before && after.slice(idx, idx + original.length) !== original;
   }
 
@@ -832,6 +860,12 @@ function showToast(element, detection, forceShow = false) {
   makeDraggable(toast);
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
+
+  // Auto-dismiss after 5 s if the user never touches the toast
+  const autoDismissId = setTimeout(() => {
+    if (activeToast === toast) removeToast(true);
+  }, 5000);
+  toast.addEventListener('mouseenter', () => clearTimeout(autoDismissId));
 }
 
 // Brief green confirmation flash
@@ -1059,7 +1093,11 @@ function attachTo(el) {
     if (!detectionEnabled) return;
     if (Date.now() < fixCooldownUntil) return;
     const detection = analyze(el);
-    if (detection) showToast(el, detection);
+    if (detection) {
+      showToast(el, detection);
+    } else if (activeToast && lastElement === el) {
+      removeToast(false); // user is now typing correctly — dismiss quietly
+    }
   }, 200, 1500);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          check);
