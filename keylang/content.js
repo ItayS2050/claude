@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.9 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.10 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.9 loaded');
+console.log('[Kiko] v3.3.10 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -493,11 +493,12 @@ function applyConversion(el, detection) {
 
   // ── input / textarea — direct value mutation always works ────
   if (!el.isContentEditable) {
-    const pos    = el.selectionStart ?? el.value.length;
-    const before = el.value.slice(0, pos);
-    const idx    = before.lastIndexOf(original);
+    const val = typeof el.value === 'string' ? el.value : null;
+    if (val === null) return false;
+    const pos  = el.selectionStart ?? val.length;
+    const idx  = val.slice(0, pos).lastIndexOf(original);
     if (idx === -1) return false;
-    el.value = el.value.slice(0, idx) + converted + el.value.slice(idx + original.length);
+    el.value = val.slice(0, idx) + converted + val.slice(idx + original.length);
     el.selectionStart = el.selectionEnd = idx + converted.length;
     el.dispatchEvent(new Event('input',  { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -507,8 +508,6 @@ function applyConversion(el, detection) {
   // ── contenteditable ──────────────────────────────────────────
   const doc = el.ownerDocument || document;
   // Walk text nodes directly — must match what selectTextRange does.
-  // innerText adds \n for <br>/block boundaries; text nodes don't have them,
-  // so using innerText causes off-by-N index mismatches in multi-line fields.
   const walkText = () => {
     let s = '';
     const tw = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -516,24 +515,11 @@ function applyConversion(el, detection) {
     while ((n = tw.nextNode())) s += n.textContent;
     return s;
   };
-  let before = walkText();
-  let idx    = before.lastIndexOf(original);
-  // Fallback: some editors use CSS spacing with no text-node spaces;
-  // innerText includes visual whitespace that walkText misses.
-  if (idx === -1) {
-    before = el.innerText || el.textContent || '';
-    idx    = before.lastIndexOf(original);
-  }
-  if (idx === -1) return false;
 
-  el.focus();
-
-  // ── Framework editor detection ────────────────────────────────
-  // Lexical, React-managed, and ProseMirror editors all process input
-  // events asynchronously. The synchronous replaced() check always
-  // returns false for them, falling through to clipboard fallback.
-  // Strategy: set selection + dispatch selectionchange + execCommand,
-  // then return true optimistically (same approach that works for Lexical).
+  // ── Framework editor detection (must come BEFORE idx check) ──
+  // Lexical/React/ProseMirror process execCommand asynchronously;
+  // the synchronous replaced() check always returns false for them.
+  // We return true optimistically even when idx is unknown.
   const isLexical = el.hasAttribute('data-lexical-editor') ||
                     !!el.closest?.('[data-lexical-editor]');
   const isReactManaged = Object.keys(el).some(k =>
@@ -541,31 +527,68 @@ function applyConversion(el, detection) {
   );
   const isProseMirror = el.classList?.contains('ProseMirror') ||
                         !!el.closest?.('.ProseMirror');
+  const isFramework = isLexical || isReactManaged || isProseMirror;
 
-  if (isLexical || isReactManaged || isProseMirror) {
-    if (selectTextRange(el, idx, original.length)) {
-      try { document.dispatchEvent(new Event('selectionchange')); } catch {}
+  // ── Find the text position ────────────────────────────────────
+  let before   = walkText();
+  let idx      = before.lastIndexOf(original);
+  let matchLen = original.length;
+
+  if (idx === -1) {
+    // CSS-spacing fallback: innerText includes visual gaps that text nodes miss
+    const altBefore = el.innerText || el.textContent || '';
+    const altIdx    = altBefore.lastIndexOf(original);
+    if (altIdx !== -1) { before = altBefore; idx = altIdx; }
+  }
+
+  if (idx === -1) {
+    // Flexible-whitespace fallback: handles ZWS / ZWNJ / double-spaces
+    // between words that were joined with single spaces in `original`.
+    try {
+      const escaped = original
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\s+/g, '[\\s\\u200b-\\u200f\\ufeff]+');
+      const re = new RegExp(escaped, 'g');
+      let lastMatch = null, m;
+      while ((m = re.exec(before)) !== null) lastMatch = m;
+      if (lastMatch) { idx = lastMatch.index; matchLen = lastMatch[0].length; }
+    } catch {}
+  }
+
+  el.focus();
+
+  if (isFramework) {
+    // For framework editors: select + insert, then return true regardless.
+    // If we couldn't locate the text (idx === -1), skip selection and just
+    // insert at cursor as a last resort — still better than clipboard fallback.
+    if (idx !== -1) {
+      if (selectTextRange(el, idx, matchLen)) {
+        try { document.dispatchEvent(new Event('selectionchange')); } catch {}
+        doc.execCommand('insertText', false, converted);
+      }
+    } else {
       doc.execCommand('insertText', false, converted);
     }
     return true;
   }
 
-  // For non-Lexical contenteditable: use synchronous DOM check to detect success
-  // and fall through to the next strategy only if the previous one truly failed.
+  if (idx === -1) return false;
+
+  // For non-framework contenteditable: synchronous DOM check.
   function replaced() {
     const after = walkText();
-    return after !== before && after.slice(idx, idx + original.length) !== original;
+    return after !== before && after.slice(idx, idx + matchLen) !== original.slice(0, matchLen);
   }
 
   // Strategy 1 — execCommand insertText (standard contenteditable, Gmail, Slack).
-  if (selectTextRange(el, idx, original.length)) {
+  if (selectTextRange(el, idx, matchLen)) {
     doc.execCommand('insertText', false, converted);
     if (replaced()) return true;
   }
 
   // Strategy 2 — synthetic ClipboardEvent (some older ProseMirror editors).
   try {
-    if (selectTextRange(el, idx, original.length)) {
+    if (selectTextRange(el, idx, matchLen)) {
       const dt = new DataTransfer();
       dt.setData('text/plain', converted);
       el.dispatchEvent(new ClipboardEvent('paste', {
@@ -577,7 +600,7 @@ function applyConversion(el, detection) {
 
   // Strategy 3 — beforeinput insertText (Slate and other non-Lexical editors).
   try {
-    if (selectTextRange(el, idx, original.length)) {
+    if (selectTextRange(el, idx, matchLen)) {
       el.dispatchEvent(new InputEvent('beforeinput', {
         bubbles: true, cancelable: true,
         inputType: 'insertText',
