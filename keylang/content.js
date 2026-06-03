@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.13 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.14 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.13 loaded');
+console.log('[Kiko] v3.3.14 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -263,6 +263,19 @@ function wordCouldBeHebrew(word) {
   return true;
 }
 
+function mapsToHebrew(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedHebrew.has(lower)) return true;
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
+  for (let i = 0; i < mapped.length - 1; i++) {
+    if (FINAL_FORMS.has(mapped[i])) return false;
+  }
+  return true;
+}
+
 function extractWords(text) {
   return text.trim().split(/\s+/)
     .map(w => w.replace(/^[?!()\[\]{}]+|[?!()\[\]{}]+$/g, ''))
@@ -403,27 +416,41 @@ function analyzeText(rawText, scanAll = false) {
   const minRun = textHasHebrew ? 1 : 2;
 
   // Collect ALL contiguous runs of Hebrew-candidate words (forward pass),
-  // then pick the LAST one (closest to cursor). This ensures words at the
-  // START of mixed Hebrew/Latin text are not silently skipped.
+  // tracking start index so we can extend backwards for context.
   const allRuns = [];
-  let curRun = [], curGap = [];
-  for (const w of words) {
+  let curRun = [], curGap = [], curStartIdx = -1;
+  for (let wi = 0; wi < words.length; wi++) {
+    const w = words[wi];
     if (wordCouldBeHebrew(w)) {
       if (curGap.length > 0) curRun.push(...curGap);
       curGap = [];
+      if (curRun.length === 0) curStartIdx = wi;
       curRun.push(w);
     } else if (PASSTHROUGH.has(w.toLowerCase()) && curGap.length < 2 && curRun.length > 0) {
       curGap.push(w);
     } else {
-      if (curRun.length > 0) allRuns.push([...curRun]);
-      curRun = []; curGap = [];
+      if (curRun.length > 0) allRuns.push({ words: [...curRun], startIdx: curStartIdx });
+      curRun = []; curGap = []; curStartIdx = -1;
     }
   }
-  if (curRun.length > 0) allRuns.push(curRun);
+  if (curRun.length > 0) allRuns.push({ words: curRun, startIdx: curStartIdx });
 
   // Use the last (most recent) run that meets the minimum threshold
-  const run = [...allRuns].reverse().find(r => r.filter(w => wordCouldBeHebrew(w)).length >= minRun) || [];
+  const runEntry = [...allRuns].reverse().find(r => r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun);
+  let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
+
+  // Context extension: if a strong run was found, scan backwards for words that
+  // physically map to Hebrew keys (skipping EN_WORDS/englishScore filters), so
+  // that phrases like "cut brtv to zv gucs?" are detected in full.
+  if (hebrewCount >= minRun && runEntry && runEntry.startIdx > 0) {
+    const ext = [];
+    for (let i = runEntry.startIdx - 1; i >= 0; i--) {
+      if (mapsToHebrew(words[i])) ext.unshift(words[i]);
+      else break;
+    }
+    if (ext.length > 0) run = [...ext, ...run];
+  }
 
   if (hebrewCount >= minRun) {
     const runText  = run.join(' ');
@@ -439,7 +466,7 @@ function analyzeText(rawText, scanAll = false) {
         original, converted,
         btnLabel:  'Fix → Hebrew',
         rejectLabel: 'Not Hebrew',
-        words:     run.filter(w => wordCouldBeHebrew(w)),
+        words:     run.filter(w => wordCouldBeHebrew(w) || mapsToHebrew(w)),
         moreRuns:  allRuns.length > 1  // flag: there may be other mismatched runs
       };
     }
