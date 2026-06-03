@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.10 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.11 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.10 loaded');
+console.log('[Kiko] v3.3.11 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -558,16 +558,32 @@ function applyConversion(el, detection) {
   el.focus();
 
   if (isFramework) {
-    // For framework editors: select + insert, then return true regardless.
-    // If we couldn't locate the text (idx === -1), skip selection and just
-    // insert at cursor as a last resort — still better than clipboard fallback.
-    if (idx !== -1) {
-      if (selectTextRange(el, idx, matchLen)) {
-        try { document.dispatchEvent(new Event('selectionchange')); } catch {}
-        doc.execCommand('insertText', false, converted);
+    // For framework editors: select + insert, return true optimistically.
+    // Try execCommand first; if it returns false (not accepted), fall back to
+    // a direct beforeinput dispatch which Lexical/React editors prefer.
+    if (idx !== -1 && selectTextRange(el, idx, matchLen)) {
+      try { document.dispatchEvent(new Event('selectionchange')); } catch {}
+      const execOk = doc.execCommand('insertText', false, converted);
+      if (!execOk) {
+        try {
+          el.dispatchEvent(new InputEvent('beforeinput', {
+            bubbles: true, cancelable: true,
+            inputType: 'insertText',
+            data: converted
+          }));
+        } catch {}
       }
     } else {
-      doc.execCommand('insertText', false, converted);
+      // Can't locate text — insert at current cursor position
+      if (!doc.execCommand('insertText', false, converted)) {
+        try {
+          el.dispatchEvent(new InputEvent('beforeinput', {
+            bubbles: true, cancelable: true,
+            inputType: 'insertText',
+            data: converted
+          }));
+        } catch {}
+      }
     }
     return true;
   }
