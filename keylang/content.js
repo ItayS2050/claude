@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.12 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.13 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.12 loaded');
+console.log('[Kiko] v3.3.13 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -557,32 +557,46 @@ function applyConversion(el, detection) {
 
   el.focus();
 
+  // Helper: dispatch deleteContentBackward N times then insert converted text.
+  // Works for React/Lexical editors where select-replace via execCommand fails
+  // but cursor-relative beforeinput events are processed.
+  // Returns true if at least one delete event was acknowledged (defaultPrevented).
+  function tryDeleteInsert() {
+    try {
+      const chars = [...original]; // Unicode code-point aware
+      let anyHandled = false;
+      for (const _ of chars) {
+        const evt = new InputEvent('beforeinput', {
+          inputType: 'deleteContentBackward', bubbles: true, cancelable: true
+        });
+        el.dispatchEvent(evt);
+        if (evt.defaultPrevented) anyHandled = true;
+      }
+      if (!doc.execCommand('insertText', false, converted)) {
+        el.dispatchEvent(new InputEvent('beforeinput', {
+          inputType: 'insertText', data: converted, bubbles: true, cancelable: true
+        }));
+      }
+      return anyHandled;
+    } catch { return false; }
+  }
+
   if (isFramework) {
-    // For framework editors: select + insert, return true optimistically.
-    // Try execCommand first; if it returns false (not accepted), fall back to
-    // a direct beforeinput dispatch which Lexical/React editors prefer.
+    // Framework editors (Lexical/React/ProseMirror): return true optimistically.
     if (idx !== -1 && selectTextRange(el, idx, matchLen)) {
       try { document.dispatchEvent(new Event('selectionchange')); } catch {}
-      const execOk = doc.execCommand('insertText', false, converted);
-      if (!execOk) {
-        try {
-          el.dispatchEvent(new InputEvent('beforeinput', {
-            bubbles: true, cancelable: true,
-            inputType: 'insertText',
-            data: converted
-          }));
-        } catch {}
+      if (!doc.execCommand('insertText', false, converted)) {
+        const bEvt = new InputEvent('beforeinput', {
+          bubbles: true, cancelable: true, inputType: 'insertText', data: converted
+        });
+        el.dispatchEvent(bEvt);
+        // If neither execCommand nor beforeinput were accepted, try delete-insert
+        if (!bEvt.defaultPrevented) tryDeleteInsert();
       }
     } else {
-      // Can't locate text — insert at current cursor position
-      if (!doc.execCommand('insertText', false, converted)) {
-        try {
-          el.dispatchEvent(new InputEvent('beforeinput', {
-            bubbles: true, cancelable: true,
-            inputType: 'insertText',
-            data: converted
-          }));
-        } catch {}
+      // Can't locate text — try delete-insert at current cursor
+      if (!tryDeleteInsert()) {
+        doc.execCommand('insertText', false, converted);
       }
     }
     return true;
@@ -617,14 +631,17 @@ function applyConversion(el, detection) {
   // Strategy 3 — beforeinput insertText (Slate and other non-Lexical editors).
   try {
     if (selectTextRange(el, idx, matchLen)) {
-      el.dispatchEvent(new InputEvent('beforeinput', {
-        bubbles: true, cancelable: true,
-        inputType: 'insertText',
-        data: converted
-      }));
+      const evt = new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true, inputType: 'insertText', data: converted
+      });
+      el.dispatchEvent(evt);
       if (replaced()) return true;
     }
   } catch {}
+
+  // Strategy 4 — delete-backward N times + insert (editors where select-replace fails
+  // but cursor-relative beforeinput events work, e.g. some React-managed inputs).
+  if (tryDeleteInsert()) return true;
 
   return false;
 }
@@ -908,8 +925,15 @@ function showToast(element, detection, forceShow = false) {
         }
       }, 500);
     } else {
+      // Inline fix failed — select the wrong text so the user can just press Ctrl+V
+      try {
+        const fb = element.isContentEditable
+          ? (element.innerText || element.textContent || '') : (element.value || '');
+        const fi = fb.lastIndexOf(detection.original);
+        if (fi !== -1) selectTextRange(element, fi, detection.original.length);
+      } catch {}
       await navigator.clipboard.writeText(detection.converted).catch(() => {});
-      showConfirm('✓ Copied — select your text then paste (Ctrl+V)');
+      showConfirm('✓ Fix ready — text selected, press Ctrl+V to apply');
     }
   });
 
