@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.14 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.15 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.14 loaded');
+console.log('[Kiko] v3.3.15 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -351,6 +351,10 @@ function analyzeText(rawText, scanAll = false) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
+        // Suppress if this is just the reverse of a recent Case 2 fix — we converted
+        // "cut brtv to zv gucs" → "בוא נראה אם זה עובד" and now Case 1 wants to undo it.
+        if (lastCase2Original && converted.trim().toLowerCase() === lastCase2Original) return null;
+
         // After a fix we enter strict mode: common-word scoring is too noisy
         // because short real Hebrew words (e.g. "בוא"→"cut", "אם"→"to") look
         // identical to wrong-layout text. In strict mode we only fire on
@@ -784,6 +788,7 @@ let hintEl             = null;
 let dismissedSignature = null;
 let fixCooldownUntil   = 0; // ms timestamp — skip analyze() briefly after a fix to avoid ghost re-detection
 let strictModeUntil    = 0; // after a fix, only use strong signal (final-form violations) for Case 1
+let lastCase2Original  = null; // after Case 2 fix, suppress Case 1 re-detecting the same text in reverse
 
 function getDefaultPos() {
   return { top: 16, left: window.innerWidth - 360 };
@@ -934,6 +939,9 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
+      if (detection.type === 'english_as_hebrew') {
+        lastCase2Original = detection.original.trim().toLowerCase();
+      }
     }
     saveFeedback(detection.words, true);
     removeToast(false);
