@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.11 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.12 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.11 loaded');
+console.log('[Kiko] v3.3.12 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -671,10 +671,17 @@ const STYLES = `
   }
   .kld-preview {
     background: #0f172a; border-radius: 7px; padding: 8px 12px;
-    font-size: 15px; unicode-bidi: plaintext; direction: auto;
+    font-size: 14px; unicode-bidi: plaintext;
     color: #7dd3fc; word-break: break-word; line-height: 1.5;
     cursor: text; user-select: text;
   }
+  .kld-preview-orig {
+    color: #f87171; text-decoration: line-through; font-size: 12px;
+    margin-bottom: 2px; word-break: break-word;
+    unicode-bidi: plaintext; direction: auto;
+  }
+  .kld-preview-arrow { color: #475569; font-size: 11px; margin: 0 2px; }
+  .kld-preview-new { direction: auto; }
   .kld-actions { display: flex; gap: 6px; align-items: center; }
   .kld-btn {
     border: none; border-radius: 7px; padding: 7px 11px;
@@ -839,7 +846,10 @@ function showToast(element, detection, forceShow = false) {
       <button class="kld-btn kld-sound-btn" title="Toggle sound">${soundEnabled ? '🔔' : '🔕'}</button>
       <button class="kld-btn kld-dismiss" title="Dismiss (Esc)">✕</button>
     </div>
-    <div class="kld-preview">${escapeHtml(truncatePreview(detection.converted))}</div>
+    <div class="kld-preview">
+      <div class="kld-preview-orig">${escapeHtml(truncatePreview(detection.original))}</div>
+      <span class="kld-preview-arrow">→</span><span class="kld-preview-new">${escapeHtml(truncatePreview(detection.converted))}</span>
+    </div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
       <button class="kld-btn kld-reject">${escapeHtml(detection.rejectLabel)}</button>
