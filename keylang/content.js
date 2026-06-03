@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.15 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.16 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.15 loaded');
+console.log('[Kiko] v3.3.16 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -351,6 +351,19 @@ function analyzeText(rawText, scanAll = false) {
       const original  = run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
+        // Suppress if user previously clicked "Not English" for these Hebrew words
+        if (run1.some(w => HEBREW_RE.test(w) && learnedEnglish.has(w.toLowerCase()))) return null;
+
+        // Suppress if user already manually retyped the English right after the Hebrew mis-type
+        const origIdx = text.indexOf(original);
+        if (origIdx !== -1) {
+          const afterOrig = text.slice(origIdx + original.length).trimStart();
+          const convStripped = converted.trim().toLowerCase().replace(/\s/g, '');
+          if (convStripped.length >= 8 && afterOrig.toLowerCase().replace(/\s/g, '').startsWith(convStripped)) {
+            return null;
+          }
+        }
+
         // Suppress if this is just the reverse of a recent Case 2 fix — we converted
         // "cut brtv to zv gucs" → "בוא נראה אם זה עובד" and now Case 1 wants to undo it.
         if (lastCase2Original && converted.trim().toLowerCase() === lastCase2Original) return null;
@@ -786,6 +799,7 @@ let lastDetection      = null;
 let lastElement        = null;
 let hintEl             = null;
 let dismissedSignature = null;
+let dismissedWordSet   = new Set(); // for subset-based dismissal across continued typing
 let fixCooldownUntil   = 0; // ms timestamp — skip analyze() briefly after a fix to avoid ghost re-detection
 let strictModeUntil    = 0; // after a fix, only use strong signal (final-form violations) for Case 1
 let lastCase2Original  = null; // after Case 2 fix, suppress Case 1 re-detecting the same text in reverse
@@ -851,12 +865,17 @@ function showToast(element, detection, forceShow = false) {
 
   const sig = detection.words.join('|');
 
-  // Don't re-show a detection the user explicitly dismissed
-  if (!forceShow && sig && sig === dismissedSignature) {
-    lastDetection = detection;
-    lastElement   = element;
-    if (!hintEl) showHint();
-    return;
+  // Don't re-show a detection the user explicitly dismissed (exact sig or subset of dismissed words)
+  if (!forceShow && sig) {
+    const isExact   = sig === dismissedSignature;
+    const isSubset  = dismissedWordSet.size >= 2 &&
+      [...dismissedWordSet].every(w => detection.words.includes(w));
+    if (isExact || isSubset) {
+      lastDetection = detection;
+      lastElement   = element;
+      if (!hintEl) showHint();
+      return;
+    }
   }
 
   // Very long runs (≥10 words) just pulse the hint bubble — don't cover the screen.
@@ -878,6 +897,7 @@ function showToast(element, detection, forceShow = false) {
   lastDetection      = detection;
   lastElement        = element;
   dismissedSignature = null;
+  dismissedWordSet   = new Set();
   hideHint();
   if (activeToast) { activeToast.remove(); activeToast = null; }
   injectStyles();
@@ -955,7 +975,7 @@ function showToast(element, detection, forceShow = false) {
         const next = analyzeFullField(element);
         if (next && next.words.join('|') !== sig) {
           lastDetection = next; lastElement = element;
-          dismissedSignature = null;
+          dismissedSignature = null; dismissedWordSet = new Set();
           showToast(element, next);
         }
       }, 500);
@@ -983,6 +1003,7 @@ function showToast(element, detection, forceShow = false) {
   // Dismiss (✕) — hide without teaching anything, show recall hint
   toast.querySelector('.kld-dismiss').addEventListener('click', () => {
     dismissedSignature = sig;
+    dismissedWordSet   = new Set(detection.words);
     removeToast(true);
   });
 
@@ -1037,6 +1058,7 @@ function showHint() {
     if (e.target.closest('.kld-hint-close')) return;
     if (lastDetection && lastElement) {
       dismissedSignature = null;
+      dismissedWordSet   = new Set();
       hideHint();
       showToast(lastElement, lastDetection, true); // forceShow bypasses word-count guard
     }
@@ -1062,7 +1084,7 @@ document.addEventListener('keydown', e => {
   // Escape — dismiss active toast
   if (e.key === 'Escape' && activeToast) {
     const sig = lastDetection ? lastDetection.words.join('|') : null;
-    if (sig) dismissedSignature = sig;
+    if (sig) { dismissedSignature = sig; dismissedWordSet = new Set(lastDetection.words); }
     removeToast(true);
     return;
   }
@@ -1084,7 +1106,7 @@ document.addEventListener('keydown', e => {
   // 2. Remembered detection on same element → re-show toast
   const focusedEl = document.activeElement;
   if (lastDetection && lastElement && focusedEl === lastElement) {
-    dismissedSignature = null;
+    dismissedSignature = null; dismissedWordSet = new Set();
     showToast(lastElement, lastDetection);
     return;
   }
@@ -1256,7 +1278,7 @@ document.querySelectorAll(SELECTOR).forEach(attachTo);
 document.addEventListener('focusin', e => {
   const el = e.target;
   // Moving to a different input: old dismissal is no longer relevant
-  if (el !== lastElement) dismissedSignature = null;
+  if (el !== lastElement) { dismissedSignature = null; dismissedWordSet = new Set(); }
   if (!el || el._kld) return;
   if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
 }, true);
