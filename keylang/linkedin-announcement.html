@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px;
+    height: 628px;
+    background: #0b1220;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* background grid glow */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 700px 400px at 20% 50%, #1e3a5f33 0%, transparent 70%),
+      radial-gradient(ellipse 500px 300px at 80% 50%, #1a3a2a33 0%, transparent 70%);
+  }
+
+  .card {
+    position: relative;
+    width: 1140px;
+    height: 580px;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    padding: 0 60px;
+  }
+
+  /* LEFT — branding */
+  .left {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+  }
+
+  .badge {
+    background: #1e3a5f;
+    border: 1px solid #3b82f680;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: #7dd3fc;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .parrot {
+    font-size: 88px;
+    line-height: 1;
+    filter: drop-shadow(0 0 30px #7dd3fc60);
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand-name {
+    font-size: 80px;
+    font-weight: 800;
+    color: #f1f5f9;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+
+  .brand-sub {
+    font-size: 18px;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 4px;
+    letter-spacing: 0.2px;
+  }
+
+  .tagline {
+    font-size: 22px;
+    color: #94a3b8;
+    line-height: 1.5;
+    max-width: 420px;
+    font-weight: 400;
+  }
+
+  .tagline strong {
+    color: #e2e8f0;
+    font-weight: 700;
+  }
+
+  .langs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .lang-pill {
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #7dd3fc;
+    border: 1px solid #334155;
+  }
+
+  .arrow-pill {
+    color: #475569;
+    font-size: 20px;
+  }
+
+  .cta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #3b82f6;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 6px;
+  }
+
+  .cta span { font-size: 18px; }
+
+  /* RIGHT — toast mockup */
+  .right {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .mockup-wrap {
+    position: relative;
+    width: 480px;
+  }
+
+  .field-bg {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 18px 20px;
+    font-size: 17px;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-top: 10px;
+  }
+
+  .field-wrong {
+    color: #f87171;
+    font-weight: 600;
+  }
+
+  .toast {
+    background: #0f1c30;
+    border: 2px solid #3b82f6;
+    border-radius: 16px;
+    padding: 16px 20px;
+    width: 100%;
+    box-shadow: 0 20px 60px #000a, 0 0 40px #3b82f620;
+  }
+
+  .toast-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+
+  .toast-header .dot { font-size: 16px; }
+
+  .toast-preview {
+    background: #1e293b;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+  }
+
+  .preview-orig {
+    color: #f87171;
+    text-decoration: line-through;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .preview-new {
+    color: #86efac;
+    font-size: 17px;
+    font-weight: 700;
+    direction: rtl;
+  }
+
+  .preview-arrow {
+    color: #475569;
+    font-size: 12px;
+    margin-right: 6px;
+  }
+
+  .toast-btns {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-fix {
+    flex: 2;
+    background: #3b82f6;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .btn-not {
+    flex: 1;
+    background: transparent;
+    border: 1px solid #f8717140;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #f87171;
+  }
+
+  /* decorative dots */
+  .dots {
+    position: absolute;
+    top: 30px; right: 30px;
+    display: flex; gap: 8px;
+  }
+  .dot-sm { width: 8px; height: 8px; border-radius: 50%; background: #1e293b; }
+
+  .free-tag {
+    position: absolute;
+    bottom: 22px;
+    right: 24px;
+    background: #14532d;
+    border: 1px solid #22c55e60;
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #86efac;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="card">
+  <div class="left">
+    <div class="badge">🎉 Now live on Chrome Web Store</div>
+
+    <div class="logo-row">
+      <div class="parrot">🦜</div>
+      <div class="brand">
+        <div class="brand-name">Kiko</div>
+        <div class="brand-sub">v3.3 · Free Chrome Extension</div>
+      </div>
+    </div>
+
+    <div class="tagline">
+      <strong>Typed in the wrong keyboard layout?</strong><br>
+      Kiko detects it instantly and fixes it with one click.
+    </div>
+
+    <div class="langs">
+      <div class="lang-pill">עברית</div>
+      <div class="arrow-pill">⇄</div>
+      <div class="lang-pill">English</div>
+    </div>
+
+    <div class="cta">
+      <span>🌐</span> Free on Chrome Web Store
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="mockup-wrap">
+      <div class="toast">
+        <div class="toast-header">
+          <span>⌨️</span>
+          <span style="color:#e2e8f0;font-weight:600;font-size:14px">Wrong layout? Looks like Hebrew:</span>
+        </div>
+        <div class="toast-preview">
+          <div class="preview-orig">tueh t,v gucs gfahyu?</div>
+          <div>
+            <span class="preview-arrow">→</span>
+            <span class="preview-new">אוקי אתה עובד עכשיו?</span>
+          </div>
+        </div>
+        <div class="toast-btns">
+          <div class="btn-fix">Fix → Hebrew</div>
+          <div class="btn-not">Not Hebrew</div>
+        </div>
+      </div>
+      <div class="field-bg">
+        <span class="field-wrong">tueh t,v gucs gfahyu?</span><br>
+        <span style="color:#64748b;font-size:14px">← typed while Hebrew layout was active</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="free-tag">100% Free</div>
+</div>
+</body>
+</html>
