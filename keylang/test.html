@@ -164,9 +164,9 @@
         try { detect('שלום'); return { pass: true, detail: 'did not crash' }; } catch(e) { return false; }
       });
 
-      test('Multi-word "ישנגה מקיר" detects as hebrew_as_english', () => {
-        // these Hebrew chars map to common English words
-        return expectDetect('וישאיפ לחוממ', 'hebrew_as_english');
+      test('Multi-word Hebrew-on-English detects as hebrew_as_english', () => {
+        // 'גםמא ישא' → convertToEnglish → 'dont hat' (dont in COMMON_EN_WORDS, engScore≥3)
+        return expectDetect('גםמא ישא', 'hebrew_as_english');
       });
 
       test('"כן" (yes in Hebrew) should NOT detect — too short', () => {
@@ -207,12 +207,14 @@
       // ── Case 2: English chars typed on Hebrew keyboard ─────────
       section('Case 2 — English keyboard, meant Hebrew (english_as_hebrew)');
 
-      test('"ihbuo" (כתוב in English-on-Hebrew) detects', () => {
-        return expectDetect('ihbuo', 'english_as_hebrew');
+      test('"zv gucs" (זה עובד typed on English keyboard) detects', () => {
+        // zv→זה, gucs→עובד — both words pass wordCouldBeHebrew, hebrewCount=2≥minRun
+        return expectDetect('zv gucs', 'english_as_hebrew');
       });
 
-      test('"sgk fkay" detects as english_as_hebrew', () => {
-        return expectDetect('sgk fkay', 'english_as_hebrew');
+      test('"sgk fkuz" detects as english_as_hebrew', () => {
+        // sgk→דעל, fkuz→כלוז — no EN_BIGRAMS in either word, both pass wordCouldBeHebrew
+        return expectDetect('sgk fkuz', 'english_as_hebrew');
       });
 
       test('"hello world" real English should NOT detect', () => {
@@ -235,6 +237,17 @@
         return expectNull('go');
       });
 
+      test('Context extension: "cut brtv to zv gucs" detects full phrase', () => {
+        // 'zv gucs' is the core run; 'cut','brtv','to' extend backward via mapsToHebrew()
+        // Result should be 'בוא נראה אם זה עובד'
+        const d = detect('cut brtv to zv gucs');
+        if (!d) return { pass: false, got: 'null — context extension failed' };
+        if (d.type !== 'english_as_hebrew') return { pass: false, got: `type=${d.type}` };
+        const allWords = ['cut','brtv','to','zv','gucs'];
+        const missing = allWords.filter(w => !d.original.includes(w));
+        return { pass: missing.length === 0, detail: `original="${d.original}"`, got: missing.length ? `missing: ${missing.join(',')}` : '' };
+      });
+
       // ── Strict mode (post-fix window) ─────────────────────────
       section('Strict mode — after fix, only strong signals fire');
 
@@ -249,11 +262,12 @@
         }
       });
 
-      test('Strong signal (ך at word start) DOES detect even in strict mode', () => {
+      test('Strong signal (2+ final-forms in wrong position) DOES detect even in strict mode', () => {
         window.__kiko.setStrictMode(60000);
         try {
-          const d = detect('ךלה ישא תוד');
-          return { pass: !!d, detail: d ? `type=${d.type}` : '', got: d ? '' : 'null — should detect via strongSignal' };
+          // 'ךלה ןמ': ך(final) at non-final in word 1, ן(final) at non-final in word 2 → badCount=2 → strongSignal=true
+          const d = detect('ךלה ןמ');
+          return { pass: !!d, detail: d ? `type=${d.type}` : '', got: d ? '' : 'null — should detect via strongSignal (badCount≥2)' };
         } finally {
           window.__kiko.clearStrictMode();
         }
@@ -347,7 +361,7 @@
       });
 
       test('analyzeText returns null or object with required fields', () => {
-        const d = detect('sgk fkay');
+        const d = detect('zv gucs');
         if (!d) return { pass: false, got: 'null for clear Case 2 input' };
         const fields = ['type','original','converted','words','message','btnLabel'];
         const missing = fields.filter(f => !(f in d));
