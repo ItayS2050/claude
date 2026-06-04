@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.16 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.17 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.16 loaded');
+console.log('[Kiko] v3.3.17 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -457,16 +457,29 @@ function analyzeText(rawText, scanAll = false) {
   let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
 
-  // Context extension: if a strong run was found, scan backwards for words that
-  // physically map to Hebrew keys (skipping EN_WORDS/englishScore filters), so
-  // that phrases like "cut brtv to zv gucs?" are detected in full.
-  if (hebrewCount >= minRun && runEntry && runEntry.startIdx > 0) {
-    const ext = [];
-    for (let i = runEntry.startIdx - 1; i >= 0; i--) {
-      if (mapsToHebrew(words[i])) ext.unshift(words[i]);
-      else break;
+  // Context extension: if a strong run was found, scan backwards AND forwards for
+  // words that physically map to Hebrew keys (skipping EN_WORDS/englishScore filters),
+  // so that phrases like "cut brtv to zv gucs gfahyu?" are detected in full.
+  if (hebrewCount >= minRun && runEntry) {
+    // Backwards — words before the run start
+    if (runEntry.startIdx > 0) {
+      const ext = [];
+      for (let i = runEntry.startIdx - 1; i >= 0; i--) {
+        if (mapsToHebrew(words[i])) ext.unshift(words[i]);
+        else break;
+      }
+      if (ext.length > 0) run = [...ext, ...run];
     }
-    if (ext.length > 0) run = [...ext, ...run];
+    // Forwards — words after the run end
+    const runLastIdx = runEntry.startIdx + runEntry.words.length - 1;
+    if (runLastIdx < words.length - 1) {
+      const ext = [];
+      for (let i = runLastIdx + 1; i < words.length; i++) {
+        if (mapsToHebrew(words[i])) ext.push(words[i]);
+        else break;
+      }
+      if (ext.length > 0) run = [...run, ...ext];
+    }
   }
 
   if (hebrewCount >= minRun) {
