@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.17 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.18 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.17 loaded');
+console.log('[Kiko] v3.3.18 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -1257,7 +1257,10 @@ function attachTo(el) {
   const check = debounce(() => {
     if (!detectionEnabled) return;
     if (Date.now() < fixCooldownUntil) return;
-    const detection = analyze(el);
+    // Analyze the full field so long sentences aren't split when the debounce
+    // fires mid-typing. Fall back to cursor-position analysis if full-field
+    // returns nothing (catches the word currently being typed).
+    const detection = analyzeFullField(el) || analyze(el);
     if (detection) {
       showToast(el, detection);
     } else if (activeToast && lastElement === el) {
