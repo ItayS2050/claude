@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.19 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.20 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.19 loaded');
+console.log('[Kiko] v3.3.20 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -371,7 +371,13 @@ function analyzeText(rawText, scanAll = false) {
     }).length;
 
     if (run1.length >= 1) {
-      const original  = run1.join(' ');
+      // Use actual text span between first and last Hebrew word — preserves the true
+      // spacing around bridge chars (e.g. 'ישאד vs ' ישאד) so applyConversion can
+      // find and replace the text, and the already-fixed suppression check works.
+      const hebrewInRun = run1.filter(w => HEBREW_RE.test(w));
+      const original = hebrewInRun.length >= 1
+        ? (findRunSpan(text, hebrewInRun[0], hebrewInRun[hebrewInRun.length - 1]) || run1.join(' '))
+        : run1.join(' ');
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
         // Suppress if user previously clicked "Not English" for these Hebrew words
