@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.18 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.19 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.18 loaded');
+console.log('[Kiko] v3.3.19 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -276,6 +276,29 @@ function mapsToHebrew(word) {
   return true;
 }
 
+// Looser version for mixed-text extension: only checks that every char has a Hebrew
+// keyboard mapping. Final-form at non-final position is actually EVIDENCE of wrong
+// layout here, not a reason to exclude. EN_WORDS/englishScore filters are also skipped
+// because in a mixed Hebrew+Latin sentence we want the whole Latin segment.
+function physicallyMapsToHebrew(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  return mapped.every(c => c !== undefined && HEBREW_RE.test(c));
+}
+
+// Returns the actual text substring spanning from firstWord to lastWord (inclusive),
+// preserving any intermediate characters (spaces, short bridge words like 'w').
+function findRunSpan(text, firstWord, lastWord) {
+  const lt = text.toLowerCase();
+  const fi = lt.indexOf(firstWord.toLowerCase());
+  if (fi === -1) return null;
+  const li = lt.lastIndexOf(lastWord.toLowerCase());
+  if (li === -1 || li < fi) return null;
+  return text.slice(fi, li + lastWord.length);
+}
+
 function extractWords(text) {
   return text.trim().split(/\s+/)
     .map(w => w.replace(/^[?!()\[\]{}]+|[?!()\[\]{}]+$/g, ''))
@@ -457,15 +480,20 @@ function analyzeText(rawText, scanAll = false) {
   let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
 
-  // Context extension: if a strong run was found, scan backwards AND forwards for
-  // words that physically map to Hebrew keys (skipping EN_WORDS/englishScore filters),
-  // so that phrases like "cut brtv to zv gucs gfahyu?" are detected in full.
+  // Context extension: scan backwards AND forwards from the confirmed run.
+  // In pure-English text (textHasHebrew=false) use mapsToHebrew (strict: valid Hebrew mapping
+  // + no final-form at non-final position). In mixed text (textHasHebrew=true) use the looser
+  // physicallyMapsToHebrew — final-form at non-final is actually evidence of wrong layout,
+  // and common English words (you/are/can…) that happen to map to Hebrew chars ARE wrong-layout
+  // in a sentence that already contains real Hebrew.
+  const extCheck = textHasHebrew ? physicallyMapsToHebrew : mapsToHebrew;
+
   if (hebrewCount >= minRun && runEntry) {
     // Backwards — words before the run start
     if (runEntry.startIdx > 0) {
       const ext = [];
       for (let i = runEntry.startIdx - 1; i >= 0; i--) {
-        if (mapsToHebrew(words[i])) ext.unshift(words[i]);
+        if (extCheck(words[i])) ext.unshift(words[i]);
         else break;
       }
       if (ext.length > 0) run = [...ext, ...run];
@@ -475,7 +503,7 @@ function analyzeText(rawText, scanAll = false) {
     if (runLastIdx < words.length - 1) {
       const ext = [];
       for (let i = runLastIdx + 1; i < words.length; i++) {
-        if (mapsToHebrew(words[i])) ext.push(words[i]);
+        if (extCheck(words[i])) ext.push(words[i]);
         else break;
       }
       if (ext.length > 0) run = [...run, ...ext];
@@ -483,12 +511,14 @@ function analyzeText(rawText, scanAll = false) {
   }
 
   if (hebrewCount >= minRun) {
-    const runText  = run.join(' ');
+    // Use the actual text span from first→last run word so intermediate single-char
+    // words (e.g. 'w' → Hebrew apostrophe/geresh) are preserved in original/converted.
+    const spanText = findRunSpan(text, run[0], run[run.length - 1]) || run.join(' ');
     const lastWord = run[run.length - 1];
     const escaped  = lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const punct    = (text.match(new RegExp(escaped + '([?!]+)', 'i')) || [])[1] || '';
-    const original  = runText + punct;
-    const converted = convertToHebrew(runText.toLowerCase()) + punct;
+    const original  = spanText + punct;
+    const converted = convertToHebrew(spanText.toLowerCase()) + punct;
     if (hasHebrew(converted)) {
       return {
         type:      'english_as_hebrew',

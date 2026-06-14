@@ -237,6 +237,17 @@
         return expectNull('go');
       });
 
+      test('Mixed Hebrew+Latin: "ho w sre you" in Hebrew context detected fully', () => {
+        // textHasHebrew=true → minRun=1, physicallyMapsToHebrew extension
+        // 'ho' passes wordCouldBeHebrew; 'sre' and 'you' extended via physicallyMapsToHebrew
+        // findRunSpan preserves intermediate 'w' → original='ho w sre you'
+        const d = detect('ho w sre you כן');
+        if (!d) return { pass: false, got: 'null — mixed detection failed' };
+        if (d.type !== 'english_as_hebrew') return { pass: false, got: `type=${d.type}` };
+        const hasAll = d.original.includes('sre') && d.original.includes('you');
+        return { pass: hasAll, detail: `original="${d.original}"`, got: hasAll ? '' : 'missing sre or you' };
+      });
+
       test('Context extension: "cut brtv to zv gucs" detects full phrase', () => {
         // 'zv gucs' is the core run; 'cut','brtv','to' extend backward via mapsToHebrew()
         // Result should be 'בוא נראה אם זה עובד'
