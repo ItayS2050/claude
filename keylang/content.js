@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.20 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.21 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.20 loaded');
+console.log('[Kiko] v3.3.21 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -541,15 +541,28 @@ function analyzeText(rawText, scanAll = false) {
   return null;
 }
 
+// Analyze each line independently (last → first) so a correctly-typed line
+// on one row can't bleed into a wrong-layout run on another row.
+function analyzeByLines(text, scanAll = false) {
+  const lines = text.split('\n');
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line.trim().length < 3) continue;
+    const result = analyzeText(line, scanAll);
+    if (result) return result;
+  }
+  return null;
+}
+
 function analyze(el) {
-  return analyzeText(getTextBeforeCursor(el));
+  return analyzeByLines(getTextBeforeCursor(el));
 }
 
 function analyzeFullField(el) {
   const fullText = el.isContentEditable
     ? (el.innerText || el.textContent || '')
     : (el.value || '');
-  return analyzeText(fullText, true);
+  return analyzeByLines(fullText, true);
 }
 
 // ── Text replacement ──────────────────────────────────────────
