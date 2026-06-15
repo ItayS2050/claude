@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.23 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.24 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.23 loaded');
+console.log('[Kiko] v3.3.24 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -25,7 +25,7 @@ const FINAL_FORMS = new Set(['ך','ם','ן','ף','ץ']);
 // ── Feedback telemetry (anonymous, fire-and-forget) ──────────
 // Set to your Apps Script web app URL to enable cross-user learning.
 // Leave empty to disable — no data is sent.
-const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbx0tweJXM77k8lG_7C2CzoDorSaRlEeZ0vqZah9NOIKG8iDBSXOzeIT4Ro_dQdpzSwi/exec';
+const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbxNmj5i4hyJFxLpup2yQdcMrCUo_sILioTREIuaXLjjqgYtBCCn58MN60dG_BolnMt7/exec';
 
 function sendFeedback(words, action, type) {
   if (!FEEDBACK_URL) return;
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.23'
+        version: '3.3.24'
       })
     }).catch(() => {});
   } catch {}
