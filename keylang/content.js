@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.26 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.27 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.26 loaded');
+console.log('[Kiko] v3.3.27 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.26'
+        version: '3.3.27'
       })
     });
   } catch {}
@@ -1363,10 +1363,14 @@ const SELECTOR = [
 document.querySelectorAll(SELECTOR).forEach(attachTo);
 
 function resolveEditor(el) {
-  if (!el) return null;
-  if (el.matches?.(SELECTOR) || el.isContentEditable) return el;
-  // Walk up: target might be a <p>/<span> child inside a contenteditable
-  return el.closest?.('[contenteditable]:not([contenteditable="false"]), ' + SELECTOR) || null;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  // Always walk up to the actual element with the contenteditable attribute,
+  // not a child <p>/<span> that inherits isContentEditable from its parent.
+  const ce = el.closest?.('[contenteditable]:not([contenteditable="false"])');
+  if (ce) return ce;
+  // Inputs/textareas don't have contenteditable but are in SELECTOR
+  if (el.matches?.(SELECTOR)) return el;
+  return null;
 }
 
 document.addEventListener('focusin', e => {
@@ -1399,6 +1403,15 @@ new MutationObserver(mutations => {
   childList: true, subtree: true,
   attributes: true, attributeFilter: ['contenteditable']
 });
+
+// ── Periodic scan — catches editors missed by MutationObserver ─
+// Sites like LinkedIn batch-render modals in ways that can slip past the
+// observer. Scanning every 800ms catches any newly visible editor.
+setInterval(() => {
+  document.querySelectorAll(SELECTOR).forEach(el => { if (!el._kld) attachTo(el); });
+  const focused = resolveEditor(document.activeElement);
+  if (focused && !focused._kld) attachTo(focused);
+}, 800);
 
 // ── Right-click context menu ──────────────────────────────────
 chrome.runtime.onMessage.addListener(msg => {
