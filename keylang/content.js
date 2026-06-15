@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.25 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.26 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.25 loaded');
+console.log('[Kiko] v3.3.26 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.25'
+        version: '3.3.26'
       })
     });
   } catch {}
@@ -1349,7 +1349,7 @@ const SELECTOR = [
   'input[type="text"]','input[type="search"]','input[type="email"]',
   'input[type="url"]','input:not([type])',
   'textarea',
-  '[contenteditable="true"]','[contenteditable=""]',
+  '[contenteditable="true"]','[contenteditable=""]','[contenteditable="plaintext-only"]',
   '[role="textbox"]',
   '[role="combobox"]',
   '[role="searchbox"]',
@@ -1362,18 +1362,25 @@ const SELECTOR = [
 
 document.querySelectorAll(SELECTOR).forEach(attachTo);
 
+function resolveEditor(el) {
+  if (!el) return null;
+  if (el.matches?.(SELECTOR) || el.isContentEditable) return el;
+  // Walk up: target might be a <p>/<span> child inside a contenteditable
+  return el.closest?.('[contenteditable]:not([contenteditable="false"]), ' + SELECTOR) || null;
+}
+
 document.addEventListener('focusin', e => {
-  const el = e.target;
+  const el = resolveEditor(e.target);
   // Moving to a different input: old dismissal is no longer relevant
   if (el !== lastElement) { dismissedSignature = null; dismissedWordSet = new Set(); }
   if (!el || el._kld) return;
-  if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
+  attachTo(el);
 }, true);
 
-document.addEventListener('keyup', () => {
-  const el = document.activeElement;
+document.addEventListener('keyup', e => {
+  const el = resolveEditor(e.target) || resolveEditor(document.activeElement);
   if (!el || el._kld) return;
-  if (el.isContentEditable || el.matches?.(SELECTOR)) attachTo(el);
+  attachTo(el);
 }, true);
 
 new MutationObserver(mutations => {
