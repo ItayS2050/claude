@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.21 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.22 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.21 loaded');
+console.log('[Kiko] v3.3.22 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -21,6 +21,26 @@ HE_TO_EN["'"] = 'w'; // w-key on Hebrew keyboard produces apostrophe
 
 const HEBREW_RE  = /[֐-׿]/;
 const FINAL_FORMS = new Set(['ך','ם','ן','ף','ץ']);
+
+// ── Feedback telemetry (anonymous, fire-and-forget) ──────────
+// Set to your Apps Script web app URL to enable cross-user learning.
+// Leave empty to disable — no data is sent.
+const FEEDBACK_URL = '';
+
+function sendFeedback(words, action, type) {
+  if (!FEEDBACK_URL) return;
+  try {
+    fetch(FEEDBACK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({
+        words: words.slice(0, 15).map(w => w.toLowerCase()),
+        action, type,
+        version: '3.3.22'
+      })
+    }).catch(() => {});
+  } catch {}
+}
 
 // ── Storage & learned data ────────────────────────────────────
 let learnedHebrew   = new Set();
@@ -1026,6 +1046,7 @@ function showToast(element, detection, forceShow = false) {
       }
     }
     saveFeedback(detection.words, true);
+    sendFeedback(detection.words, 'fix', detection.type);
     removeToast(false);
     if (ok) {
       const kb = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
@@ -1057,6 +1078,7 @@ function showToast(element, detection, forceShow = false) {
   // Reject — teach Kiko this is not a layout mistake
   toast.querySelector('.kld-reject').addEventListener('click', () => {
     saveFeedback(detection.words, false);
+    sendFeedback(detection.words, 'reject', detection.type);
     const sample = detection.words.slice(0, 3).join(', ');
     showConfirm(`✓ Got it — "${sample}${detection.words.length > 3 ? '…' : ''}" noted`);
     removeToast(false);
