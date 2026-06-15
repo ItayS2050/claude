@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.24 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.25 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.24 loaded');
+console.log('[Kiko] v3.3.25 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -30,15 +30,15 @@ const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbxNmj5i4hyJFxLpup2
 function sendFeedback(words, action, type) {
   if (!FEEDBACK_URL) return;
   try {
-    fetch(FEEDBACK_URL, {
-      method: 'POST',
-      mode: 'no-cors',
+    chrome.runtime.sendMessage({
+      type: 'kiko-feedback',
+      url: FEEDBACK_URL,
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.24'
+        version: '3.3.25'
       })
-    }).catch(() => {});
+    });
   } catch {}
 }
 

@@ -35,6 +35,11 @@ async function ensureOffscreen() {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === 'kiko-feedback') {
+    fetch(msg.url, { method: 'POST', body: msg.body }).catch(() => {});
+    sendResponse();
+    return;
+  }
   if (msg.type !== 'kiko-play-sound') return;
   ensureOffscreen().then(() => {
     chrome.runtime.sendMessage({ type: 'kiko-play-sound' }).catch(() => {});
