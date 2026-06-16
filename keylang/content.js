@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.27 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.28 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.27 loaded');
+console.log('[Kiko] v3.3.28 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.27'
+        version: '3.3.28'
       })
     });
   } catch {}
@@ -1188,22 +1188,30 @@ document.addEventListener('keydown', e => {
   // 1. Active toast → dismiss it
   if (activeToast) { removeToast(); return; }
   // 2. Remembered detection on same element → re-show toast
-  const focusedEl = document.activeElement;
-  if (lastDetection && lastElement && focusedEl === lastElement) {
+  // Resolve active element — walk into shadow roots if needed
+  let focusedEl = document.activeElement;
+  while (focusedEl && focusedEl.shadowRoot && focusedEl.shadowRoot.activeElement) {
+    focusedEl = focusedEl.shadowRoot.activeElement;
+  }
+  const editorEl = resolveEditor(focusedEl);
+  if (lastDetection && lastElement && editorEl === lastElement) {
     dismissedSignature = null; dismissedWordSet = new Set();
     showToast(lastElement, lastDetection);
     return;
   }
   // 3. Scan the FULL text of the currently focused field
-  if (focusedEl && (focusedEl.isContentEditable || focusedEl.matches?.(SELECTOR))) {
-    const det = analyzeFullField(focusedEl);
+  if (editorEl) {
+    if (!editorEl._kld) attachTo(editorEl);
+    const det = analyzeFullField(editorEl);
     if (det) {
       lastDetection = det;
-      lastElement   = focusedEl;
-      showToast(focusedEl, det);
+      lastElement   = editorEl;
+      showToast(editorEl, det);
     } else {
-      showConfirm('✓ No layout issues found in this field');
+      showConfirm('✓ No layout issues found — try selecting specific text first');
     }
+  } else {
+    showConfirm('Click inside a text field first, then press Alt+Shift+K');
   }
 });
 
@@ -1339,7 +1347,12 @@ function attachTo(el) {
     }
   }, 200, 1500);
   el.addEventListener('input',          check);
-  el.addEventListener('keyup',          check);
+  el.addEventListener('keyup',          e => {
+    // Don't fire check on shortcut keys (Alt+Shift+K etc.) — the toast shown by
+    // the shortcut keydown handler would be dismissed 200ms later by this debounce.
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    check();
+  });
   el.addEventListener('compositionend', check);
 }
 
