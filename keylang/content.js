@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.29 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.30 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.29 loaded');
+console.log('[Kiko] v3.3.30 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.29'
+        version: '3.3.30'
       })
     });
   } catch {}
@@ -1361,9 +1361,13 @@ function attachTo(el) {
   }, 200, 1500);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          e => {
-    // Don't fire check on shortcut keys (Alt+Shift+K etc.) — the toast shown by
-    // the shortcut keydown handler would be dismissed 200ms later by this debounce.
+    // Don't fire check on shortcut keys (Alt+Shift+K etc.).
+    // Two cases to catch:
+    //   1. Still holding Alt/Ctrl/Meta when K is released → e.altKey/ctrlKey/metaKey true
+    //   2. Releasing the modifier key itself LAST (e.g. Alt keyup after K was already up)
+    //      → e.altKey is now false, but e.key IS the modifier
     if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (['Alt','Control','Meta','Shift'].includes(e.key)) return;
     check();
   });
   el.addEventListener('compositionend', check);
