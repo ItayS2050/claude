@@ -127,6 +127,11 @@
       return window.__kiko.analyzeText(text);
     }
 
+    function detectLines(text) {
+      if (!window.__kiko) throw new Error('__kiko API not available');
+      return window.__kiko.analyzeByLines(text);
+    }
+
     function expectDetect(text, type) {
       const d = detect(text);
       if (!d) return { pass: false, detail: `"${text.slice(0, 40)}"`, got: 'null (no detection)' };
@@ -361,12 +366,84 @@
         return expectNull("don't worry about it");
       });
 
+      // ── Apostrophe (w-key) backward extension ─────────────────
+      section('Apostrophe w-key — backward span extension (v3.3.29)');
+
+      test('"\'ישא ןד" detects and original includes leading apostrophe', () => {
+        // "'ישא ןד" = w-key (apostrophe) + "hat" + "is" → should convert to "what is"
+        // The apostrophe at the START must be included in d.original
+        const d = detect("'ישא ןד");
+        if (!d) return { pass: false, got: 'null — no detection' };
+        if (d.type !== 'hebrew_as_english') return { pass: false, got: `type=${d.type}` };
+        const hasApostrophe = d.original.startsWith("'");
+        const startsWithW   = d.converted.trimStart().startsWith('w');
+        return {
+          pass: hasApostrophe && startsWithW,
+          detail: `original="${d.original}" converted="${d.converted}"`,
+          got: !hasApostrophe ? 'original missing apostrophe' : !startsWithW ? 'converted missing w' : ''
+        };
+      });
+
+      test('Apostrophe mid-word ("it\'s") does NOT bleed into preceding Hebrew span', () => {
+        // "it's" ends in apostrophe but a space separates it from Hebrew → space stops backward walk
+        const d = detect("it's ישא ןד");
+        // Should detect (ישא ןד has ן at non-final) but original must NOT contain "it"
+        if (d && d.original.includes("it")) {
+          return { pass: false, detail: `original="${d.original}"`, got: 'original includes "it" from preceding word' };
+        }
+        return { pass: true, detail: d ? `original="${d.original}"` : 'no detection (also ok)' };
+      });
+
+      // ── Per-line analysis (v3.3.21) ───────────────────────────
+      section('Per-line analysis — each row independent');
+
+      test('Wrong layout on line 2 detected when line 1 is real Hebrew', () => {
+        // Line 1: real Hebrew "אני בסדר" — should NOT detect by itself
+        // Line 2: wrong-layout "zv gucs" — should detect
+        const d = detect("אני בסדר\nzv gucs");
+        return { pass: !!d && d.type === 'english_as_hebrew',
+          detail: d ? `type=${d.type} original="${d.original}"` : '',
+          got: d ? '' : 'null — per-line failed to detect line 2' };
+      });
+
+      test('Wrong layout on line 1 detected when line 2 is real Hebrew', () => {
+        const d = detect("zv gucs\nאני בסדר");
+        return { pass: !!d && d.type === 'english_as_hebrew',
+          detail: d ? `type=${d.type} original="${d.original}"` : '',
+          got: d ? '' : 'null — per-line failed to detect line 1' };
+      });
+
+      test('Multi-line: correct Hebrew on both lines — no detection', () => {
+        return expectNull("שלום עולם\nאיך הולך");
+      });
+
+      test('Multi-line: wrong layout + real Hebrew same line = Case 2 detected', () => {
+        // Mixed line: Hebrew context + latin wrong-layout words
+        const d = detect("ho w sre you כן\nאני בסדר");
+        return { pass: !!d && d.type === 'english_as_hebrew',
+          detail: d ? `original="${d.original}"` : '', got: d ? '' : 'null' };
+      });
+
+      test('Per-line original is scoped to wrong-layout line only (not both lines)', () => {
+        // analyzeByLines should only include line 2 in the original, NOT line 1
+        // Without per-line, original would span both lines: "אני אוהב\nגםמא ישא"
+        // With per-line, original = "גםמא ישא" only
+        const d = detectLines("אני אוהב\nגםמא ישא");
+        if (!d) return { pass: false, got: 'null — detection failed' };
+        const includesLine1 = d.original.includes('אני') || d.original.includes('אוהב');
+        return {
+          pass: !includesLine1,
+          detail: `original="${d.original}"`,
+          got: includesLine1 ? 'original includes line-1 Hebrew — lines not isolated' : ''
+        };
+      });
+
       // ── API surface ───────────────────────────────────────────
       section('API surface');
 
       test('window.__kiko exists and has all methods', () => {
         const api = window.__kiko;
-        const needed = ['analyzeText','setStrictMode','clearStrictMode','setLearnedHebrew','clearLearned'];
+        const needed = ['analyzeText','analyzeByLines','setStrictMode','clearStrictMode','setLearnedHebrew','clearLearned'];
         const missing = needed.filter(m => typeof api[m] !== 'function');
         return { pass: missing.length === 0, got: missing.length ? `missing: ${missing.join(', ')}` : '' };
       });

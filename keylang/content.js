@@ -1451,6 +1451,7 @@ chrome.runtime.onMessage.addListener(msg => {
 if (typeof window !== 'undefined' && window.__kikoTestMode) {
   window.__kiko = {
     analyzeText,
+    analyzeByLines,
     setStrictMode:   (ms) => { strictModeUntil = Date.now() + ms; },
     clearStrictMode: ()   => { strictModeUntil = 0; },
     setLearnedHebrew: (arr) => { arr.forEach(w => learnedHebrew.add(w)); },
