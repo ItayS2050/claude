@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.28 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.29 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.28 loaded');
+console.log('[Kiko] v3.3.29 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.28'
+        version: '3.3.29'
       })
     });
   } catch {}
@@ -395,9 +395,22 @@ function analyzeText(rawText, scanAll = false) {
       // spacing around bridge chars (e.g. 'ישאד vs ' ישאד) so applyConversion can
       // find and replace the text, and the already-fixed suppression check works.
       const hebrewInRun = run1.filter(w => HEBREW_RE.test(w));
-      const original = hebrewInRun.length >= 1
-        ? (findRunSpan(text, hebrewInRun[0], hebrewInRun[hebrewInRun.length - 1]) || run1.join(' '))
-        : run1.join(' ');
+      let original;
+      if (hebrewInRun.length >= 1) {
+        const spanText = findRunSpan(text, hebrewInRun[0], hebrewInRun[hebrewInRun.length - 1]);
+        if (spanText) {
+          // Extend backward over adjacent HE_TO_EN chars (e.g. apostrophe = 'w' key)
+          // so "' + Hebrew" captures the full word like "what" not just "hat".
+          const spanStart = text.toLowerCase().indexOf(hebrewInRun[0].toLowerCase());
+          let extStart = spanStart;
+          while (extStart > 0 && text[extStart - 1] !== ' ' && HE_TO_EN[text[extStart - 1]] !== undefined) extStart--;
+          original = text.slice(extStart, spanStart + spanText.length);
+        } else {
+          original = run1.join(' ');
+        }
+      } else {
+        original = run1.join(' ');
+      }
       const converted = convertToEnglish(original);
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
         // Suppress if user previously clicked "Not English" for these Hebrew words
