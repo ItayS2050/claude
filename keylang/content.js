@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.30 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.31 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.30 loaded');
+console.log('[Kiko] v3.3.31 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +36,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.30'
+        version: '3.3.31'
       })
     });
   } catch {}
