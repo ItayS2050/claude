@@ -1,8 +1,20 @@
 // ============================================================
-// Kiko v3.3.31 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.32 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-console.log('[Kiko] v3.3.31 loaded');
+const KIKO_VERSION = '3.3.32';
+
+// Guard against duplicate injection (e.g. after extension update).
+// Old orphaned script set window.__kikoActive to its own version; new script
+// overwrites the guard so it wins, then re-attaches all editors.
+if (window.__kikoActive === KIKO_VERSION) { throw new Error('kiko:already-active'); }
+window.__kikoActive = KIKO_VERSION;
+
+// Detect orphaned state: chrome.runtime.id throws when the extension context
+// has been invalidated (i.e. this script belongs to an old extension version).
+const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
+
+console.log('[Kiko] v3.3.32 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -36,7 +48,7 @@ function sendFeedback(words, action, type) {
       body: JSON.stringify({
         words: words.slice(0, 15).map(w => w.toLowerCase()),
         action, type,
-        version: '3.3.31'
+        version: KIKO_VERSION
       })
     });
   } catch {}
@@ -1214,7 +1226,7 @@ document.addEventListener('keydown', e => {
   }
   // 3. Scan the FULL text of the currently focused field
   if (editorEl) {
-    if (!editorEl._kld) attachTo(editorEl);
+    if (editorEl._kldVer !== KIKO_VERSION) attachTo(editorEl);
     const det = analyzeFullField(editorEl);
     if (det) {
       lastDetection = det;
@@ -1344,9 +1356,10 @@ function debounce(fn, ms, maxWait = 0) {
 }
 
 function attachTo(el) {
-  if (el._kld) return;
-  el._kld = true;
+  if (el._kldVer === KIKO_VERSION) return;
+  el._kldVer = KIKO_VERSION;
   const check = debounce(() => {
+    if (!isLive()) return;
     if (!detectionEnabled) return;
     if (Date.now() < fixCooldownUntil) return;
     // Analyze the full field so long sentences aren't split when the debounce
@@ -1361,6 +1374,7 @@ function attachTo(el) {
   }, 200, 1500);
   el.addEventListener('input',          check);
   el.addEventListener('keyup',          e => {
+    if (!isLive()) return;
     // Don't fire check on shortcut keys (Alt+Shift+K etc.).
     // Two cases to catch:
     //   1. Still holding Alt/Ctrl/Meta when K is released → e.altKey/ctrlKey/metaKey true
@@ -1407,13 +1421,13 @@ document.addEventListener('focusin', e => {
   const el = resolveEditor(e.target);
   // Moving to a different input: old dismissal is no longer relevant
   if (el !== lastElement) { dismissedSignature = null; dismissedWordSet = new Set(); }
-  if (!el || el._kld) return;
+  if (!el || el._kldVer === KIKO_VERSION) return;
   attachTo(el);
 }, true);
 
 document.addEventListener('keyup', e => {
   const el = resolveEditor(e.target) || resolveEditor(document.activeElement);
-  if (!el || el._kld) return;
+  if (!el || el._kldVer === KIKO_VERSION) return;
   attachTo(el);
 }, true);
 
@@ -1438,9 +1452,10 @@ new MutationObserver(mutations => {
 // Sites like LinkedIn batch-render modals in ways that can slip past the
 // observer. Scanning every 800ms catches any newly visible editor.
 setInterval(() => {
-  document.querySelectorAll(SELECTOR).forEach(el => { if (!el._kld) attachTo(el); });
+  if (!isLive()) return;
+  document.querySelectorAll(SELECTOR).forEach(el => { if (el._kldVer !== KIKO_VERSION) attachTo(el); });
   const focused = resolveEditor(document.activeElement);
-  if (focused && !focused._kld) attachTo(focused);
+  if (focused && focused._kldVer !== KIKO_VERSION) attachTo(focused);
 }, 800);
 
 // ── Right-click context menu ──────────────────────────────────

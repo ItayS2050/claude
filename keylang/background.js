@@ -1,9 +1,21 @@
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.contextMenus.create({
     id: 'kiko-fix',
     title: '🦜 Fix with Kiko',
     contexts: ['selection']
   });
+
+  // Re-inject content.js into all existing tabs so users don't need to refresh
+  // after an extension update. The new content.js version-guards itself via
+  // window.__kikoActive so it safely overwrites the old orphaned script.
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) continue;
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      files: ['content.js']
+    }).catch(() => {});
+  }
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
