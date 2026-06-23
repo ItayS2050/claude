@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.32 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.33 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '3.3.32';
+const KIKO_VERSION = '3.3.33';
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -14,7 +14,7 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
 
-console.log('[Kiko] v3.3.32 loaded');
+console.log('[Kiko] v3.3.33 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -411,12 +411,17 @@ function analyzeText(rawText, scanAll = false) {
       if (hebrewInRun.length >= 1) {
         const spanText = findRunSpan(text, hebrewInRun[0], hebrewInRun[hebrewInRun.length - 1]);
         if (spanText) {
-          // Extend backward over adjacent HE_TO_EN chars (e.g. apostrophe = 'w' key)
+          // Extend backward over adjacent HE_TO_EN chars (e.g. leading apostrophe = 'w' key)
           // so "' + Hebrew" captures the full word like "what" not just "hat".
           const spanStart = text.toLowerCase().indexOf(hebrewInRun[0].toLowerCase());
           let extStart = spanStart;
           while (extStart > 0 && text[extStart - 1] !== ' ' && HE_TO_EN[text[extStart - 1]] !== undefined) extStart--;
-          original = text.slice(extStart, spanStart + spanText.length);
+          // Extend forward over trailing HE_TO_EN chars (e.g. trailing apostrophe = 'w' key)
+          // so "Hebrew + '" captures the full word like "now" not just "no".
+          const spanEnd = spanStart + spanText.length;
+          let extEnd = spanEnd;
+          while (extEnd < text.length && text[extEnd] !== ' ' && HE_TO_EN[text[extEnd]] !== undefined) extEnd++;
+          original = text.slice(extStart, extEnd);
         } else {
           original = run1.join(' ');
         }
