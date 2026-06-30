@@ -68,6 +68,34 @@
       transition: background 0.15s;
     }
     .reset-btn:hover { background: #334155; color: #e2e8f0; }
+    .review-nudge {
+      display: none;
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+      border: 1px solid #3b82f6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 14px 0 0;
+    }
+    .review-nudge-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .review-nudge-text { font-size: 12px; color: #e2e8f0; line-height: 1.4; }
+    .review-nudge-text strong { color: #7dd3fc; }
+    .review-nudge-close {
+      background: none; border: none; color: #475569;
+      cursor: pointer; font-size: 14px; padding: 0; flex-shrink: 0; line-height: 1;
+    }
+    .review-nudge-close:hover { color: #94a3b8; }
+    .review-nudge-actions { display: flex; gap: 6px; margin-top: 10px; }
+    .review-nudge-btn {
+      flex: 1; background: #3b82f6; border: none; color: #fff;
+      border-radius: 6px; padding: 6px 10px; font-size: 12px;
+      font-weight: 600; cursor: pointer;
+    }
+    .review-nudge-btn:hover { opacity: 0.85; }
+    .review-nudge-later {
+      flex: 1; background: #1e293b; border: 1px solid #334155; color: #94a3b8;
+      border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+    }
+    .review-nudge-later:hover { background: #334155; color: #e2e8f0; }
     .shortcut { color: #475569; font-size: 11px; margin-top: 10px; text-align: center; }
     .paused-banner {
       display: none;
@@ -122,7 +150,7 @@
 </head>
 <body>
   <h1>🦜 Kiko</h1>
-  <div class="version">v3.3.33 · Hebrew ↔ English detector</div>
+  <div class="version">v3.3.34 · Hebrew ↔ English detector</div>
 
   <div class="stats">
     <div class="stat">
@@ -185,10 +213,24 @@
     </div>
   </div>
 
+  <div class="review-nudge" id="review-nudge">
+    <div class="review-nudge-top">
+      <div class="review-nudge-text">
+        <strong>Enjoying Kiko? ⭐</strong><br>
+        A quick review helps others find it and keeps us motivated to improve!
+      </div>
+      <button class="review-nudge-close" id="review-nudge-close" title="Dismiss">✕</button>
+    </div>
+    <div class="review-nudge-actions">
+      <button class="review-nudge-btn" id="review-nudge-rate">Rate Kiko ⭐</button>
+      <button class="review-nudge-later" id="review-nudge-later">Maybe later</button>
+    </div>
+  </div>
+
   <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
   <div class="shortcut">Alt + Shift + K · Select text to convert on any page</div>
-  <div class="shortcut" style="margin-top:6px">🦜 Kiko v3.3.33</div>
+  <div class="shortcut" style="margin-top:6px">🦜 Kiko v3.3.34</div>
 
   <script src="popup.js"></script>
 </body>

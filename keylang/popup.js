@@ -125,5 +125,41 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   });
 });
 
+// ── Review nudge ──────────────────────────────────────────────
+// State machine stored in chrome.storage.local as `reviewNudge`:
+//   null / missing  → never shown; show after 3 conversions
+//   { state: 'snoozed', snoozeUntil: <ms> } → dismissed; show again after 30 days
+//   { state: 'done' }                        → clicked review; never show again
+
+const REVIEW_URL = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+const SNOOZE_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function maybeShowNudge(stats, nudge) {
+  if (stats.converted < 3) return;
+  if (nudge && nudge.state === 'done') return;
+  if (nudge && nudge.state === 'snoozed' && Date.now() < nudge.snoozeUntil) return;
+  document.getElementById('review-nudge').style.display = 'block';
+}
+
+document.getElementById('review-nudge-rate').addEventListener('click', () => {
+  chrome.storage.local.set({ reviewNudge: { state: 'done' } });
+  document.getElementById('review-nudge').style.display = 'none';
+  window.open(REVIEW_URL, '_blank');
+});
+
+function snoozeNudge() {
+  chrome.storage.local.set({ reviewNudge: { state: 'snoozed', snoozeUntil: Date.now() + SNOOZE_MS } });
+  document.getElementById('review-nudge').style.display = 'none';
+}
+
+document.getElementById('review-nudge-close').addEventListener('click', snoozeNudge);
+document.getElementById('review-nudge-later').addEventListener('click', snoozeNudge);
+
 // Load on open
-chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
+chrome.storage.local.get(
+  ['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled', 'reviewNudge'],
+  (data) => {
+    render(data);
+    maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
+  }
+);

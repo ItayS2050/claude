@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.33 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.34 – Hebrew ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '3.3.33';
+const KIKO_VERSION = '3.3.34';
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -14,7 +14,7 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
 
-console.log('[Kiko] v3.3.33 loaded');
+console.log('[Kiko] v3.3.34 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
