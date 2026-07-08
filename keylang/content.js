@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.34 – Hebrew ↔ English Layout Fixer
+// Kiko v3.3.35 – Hebrew & Russian ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '3.3.34';
+const KIKO_VERSION = '3.3.35';
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -14,7 +14,7 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
 
-console.log('[Kiko] v3.3.34 loaded');
+console.log('[Kiko] v3.3.35 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -32,7 +32,22 @@ for (const [en, he] of Object.entries(EN_TO_HE)) {
 HE_TO_EN["'"] = 'w'; // w-key on Hebrew keyboard produces apostrophe
 
 const HEBREW_RE  = /[֐-׿]/;
+const RUSSIAN_RE = /[а-яёА-ЯЁ]/;
 const FINAL_FORMS = new Set(['ך','ם','ן','ף','ץ']);
+
+// ── Russian keyboard mapping (ЙЦУКЕН ↔ QWERTY) ───────────────
+const EN_TO_RU = {
+  'q':'й','w':'ц','e':'у','r':'к','t':'е','y':'н','u':'г','i':'ш','o':'щ','p':'з',
+  '[':'х',']':'ъ',
+  'a':'ф','s':'ы','d':'в','f':'а','g':'п','h':'р','j':'о','k':'л','l':'д',
+  ';':'ж',"'":'э',
+  'z':'я','x':'ч','c':'с','v':'м','b':'и','n':'т','m':'ь',
+  ',':'б','.':'ю'
+};
+const RU_TO_EN = {};
+for (const [en, ru] of Object.entries(EN_TO_RU)) {
+  if (RUSSIAN_RE.test(ru)) RU_TO_EN[ru] = en;
+}
 
 // ── Feedback telemetry (anonymous, fire-and-forget) ──────────
 // Set to your Apps Script web app URL to enable cross-user learning.
@@ -57,6 +72,7 @@ function sendFeedback(words, action, type) {
 // ── Storage & learned data ────────────────────────────────────
 let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
+let learnedRussian  = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
@@ -65,10 +81,11 @@ let toastPos        = null;
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','stats','detectionEnabled','soundEnabled','toastPos']
+      ['learnedHebrew','learnedEnglish','learnedRussian','stats','detectionEnabled','soundEnabled','toastPos']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
+    learnedRussian  = new Set(d.learnedRussian || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
     soundEnabled     = d.soundEnabled !== false;
@@ -87,22 +104,36 @@ try {
   });
 } catch {}
 
-async function saveFeedback(words, isHebrew) {
+async function saveFeedback(words, isWrongLayout, lang = 'he') {
   try {
-    // Always normalise to lowercase so lookups in wordCouldBeHebrew() match
     const normalised = words.map(w => w.toLowerCase()).filter(Boolean);
-    if (isHebrew) {
-      normalised.forEach(w => { learnedHebrew.add(w); learnedEnglish.delete(w); });
-      stats.converted++;
+    if (lang === 'ru') {
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedRussian.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedRussian.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedRussian: [...learnedRussian],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
     } else {
-      normalised.forEach(w => { learnedEnglish.add(w); learnedHebrew.delete(w); });
-      stats.rejected++;
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedHebrew.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedHebrew.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedHebrew:  [...learnedHebrew],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
     }
-    await chrome.storage.local.set({
-      learnedHebrew:  [...learnedHebrew],
-      learnedEnglish: [...learnedEnglish],
-      stats
-    });
   } catch {}
 }
 
@@ -264,10 +295,72 @@ const PASSTHROUGH = new Set([
   'he','me','we','us','it','to','on','am','is','do','go','of','my'
 ]);
 
+// ── Russian scoring data ──────────────────────────────────────
+const RU_BIGRAMS = new Set([
+  'ст','то','но','ен','ко','от','ро','ни','ра','во',
+  'на','ли','ан','ти','та','ло','ка','се','ма','ла',
+  'по','за','де','ве','ле','ер','ос','ел','ри','ес',
+  'ит','те','ме','ре','со','ак','ал','ар','ас','ат',
+  'ов','ол','ор','ну','бо','бу','ди','до','же','жи',
+  'зн','ив','ил','им','ин','ис','кл','лу','ми','мо',
+  'не','об','он','оп','оч','пе','пл','пр','пу','ры',
+  'са','си','сл','сн','сп','ср','су','тв','тр','ту',
+  'ты','уж','ул','ум','ур','ут','уч','хо','чт','ча',
+  'чи','шт','ых','ью','ая','ие','ой','ую'
+]);
+
+const COMMON_RU_WORDS = new Set([
+  'я','ты','он','она','мы','вы','они','это','так','что',
+  'как','где','кто','нет','да','все','уже','еще','очень','тут',
+  'там','нам','вам','ему','ей','им','нас','вас','его',
+  'если','когда','почему','зачем','который','которая',
+  'привет','пока','спасибо','пожалуйста','хорошо','ладно','окей',
+  'буду','будет','надо','нужно','можно','нельзя',
+  'знаю','думаю','хочу','могу','иду','жду',
+  'время','день','ночь','утро','вечер','год','раз',
+  'дело','слово','место','друг','мир','работа','дом',
+  'идти','быть','знать','думать','говорить','делать',
+  'видеть','понять','сказать','дать','взять',
+  'ничего','немного','много','мало','только','просто',
+  'сейчас','потом','поэтому',
+  'не','ни','но','или','при','без','для','над','под',
+  'меня','тебя','него','неё','нас','вас','них',
+  'мне','тебе','ему','ей','нам','вам','им',
+  'меня','тебя','его','её','нас','вас','их',
+  'себя','себе','сам','сама','само','сами',
+  'один','два','три','один','первый',
+]);
+
+function russianScore(word) {
+  const s = word.toLowerCase();
+  if (s.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    if (RU_BIGRAMS.has(s.slice(i, i + 2))) hits++;
+  }
+  return hits / (s.length - 1);
+}
+
+function wordCouldBeRussian(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedRussian.has(lower)) return true;
+  if (EN_WORDS.has(lower)) return false;
+  if (englishScore(lower) >= 0.35) return false;
+  const mapped = [...lower].map(c => EN_TO_RU[c]);
+  if (!mapped.every(c => c !== undefined)) return false;
+  const ruWord = mapped.join('');
+  if (COMMON_RU_WORDS.has(ruWord)) return true;
+  return russianScore(ruWord) >= 0.25;
+}
+
 // ── Helper functions ──────────────────────────────────────────
-function hasHebrew(t)        { return HEBREW_RE.test(t); }
-function convertToHebrew(t)  { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
-function convertToEnglish(t) { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
+function hasHebrew(t)          { return HEBREW_RE.test(t); }
+function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
+function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
+function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
+function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
 function truncatePreview(text, maxWords = 9) {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
@@ -507,6 +600,63 @@ function analyzeText(rawText, scanAll = false) {
     }
   }
 
+  // ── Case R1: Russian Cyrillic typed while English keyboard was expected
+  if (!textHasHebrew && RUSSIAN_RE.test(text)) {
+    let allRuTokens;
+    try {
+      allRuTokens = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-zA-Z])(?=[а-яёА-ЯЁ])|(?<=[а-яёА-ЯЁ])(?=[a-zA-Z])/).filter(Boolean)
+      );
+    } catch {
+      allRuTokens = text.trim().split(/\s+/);
+    }
+    const runR1 = [];
+    for (let i = allRuTokens.length - 1; i >= 0; i--) {
+      const w = allRuTokens[i];
+      if (RUSSIAN_RE.test(w)) {
+        runR1.unshift(w);
+      } else if (runR1.length > 0 && w.length <= 2) {
+        runR1.unshift(w);
+      } else if (runR1.length === 0) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    if (runR1.length >= 1) {
+      const ruInRun = runR1.filter(w => RUSSIAN_RE.test(w));
+      // Suppress if user confirmed these Cyrillic chars are real Russian
+      if (!ruInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        const allMap = ruInRun.every(w => [...w].every(c => RU_TO_EN[c] !== undefined));
+        if (allMap) {
+          const originalR1 = ruInRun.join(' ');
+          const convertedR1 = convertFromRussian(originalR1);
+          if (convertedR1.trim().length >= 2 && !RUSSIAN_RE.test(convertedR1)) {
+            const convWordsR1 = convertedR1.split(/\s+/)
+              .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+              .filter(w => w.length >= 2);
+            const hasCommonR1 = convWordsR1.some(w => COMMON_EN_WORDS.has(w));
+            const avgScoreR1 = convWordsR1.length
+              ? convWordsR1.reduce((a, w) => a + englishScore(w), 0) / convWordsR1.length
+              : 0;
+            const fire = runR1.length === 1
+              ? (convWordsR1.length >= 1 && convWordsR1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsR1[0]))
+              : (hasCommonR1 && avgScoreR1 >= 0.15);
+            if (fire) {
+              return {
+                type: 'russian_as_english', lang: 'ru',
+                message: 'Wrong layout? Looks like English:',
+                original: originalR1, converted: convertedR1,
+                btnLabel: 'Fix → English', rejectLabel: 'Not English',
+                words: ruInRun
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ── Case 2: English characters typed while Hebrew keyboard layout was expected
   const words = extractWords(text);
   const minRun = textHasHebrew ? 1 : 2;
@@ -585,6 +735,41 @@ function analyzeText(rawText, scanAll = false) {
         words:     run.filter(w => wordCouldBeHebrew(w) || mapsToHebrew(w)),
         moreRuns:  allRuns.length > 1  // flag: there may be other mismatched runs
       };
+    }
+  }
+
+  // ── Case R2: English characters typed while Russian keyboard was expected
+  if (!textHasHebrew) {
+    const ruCandWords = extractWords(text);
+    const ruMinRun = RUSSIAN_RE.test(text) ? 1 : 2;
+    const allRuRuns = [];
+    let curRuRun = [], curRuStartIdx = -1;
+    for (let wi = 0; wi < ruCandWords.length; wi++) {
+      const w = ruCandWords[wi];
+      if (wordCouldBeRussian(w)) {
+        if (curRuRun.length === 0) curRuStartIdx = wi;
+        curRuRun.push(w);
+      } else {
+        if (curRuRun.length > 0) allRuRuns.push({ words: [...curRuRun], startIdx: curRuStartIdx });
+        curRuRun = []; curRuStartIdx = -1;
+      }
+    }
+    if (curRuRun.length > 0) allRuRuns.push({ words: curRuRun, startIdx: curRuStartIdx });
+
+    const ruRunEntry = [...allRuRuns].reverse().find(r => r.words.length >= ruMinRun);
+    if (ruRunEntry) {
+      const runRu2 = ruRunEntry.words;
+      const spanRu2 = findRunSpan(text, runRu2[0], runRu2[runRu2.length - 1]) || runRu2.join(' ');
+      const convertedRu2 = convertToRussian(spanRu2.toLowerCase());
+      if (RUSSIAN_RE.test(convertedRu2)) {
+        return {
+          type: 'english_as_russian', lang: 'ru',
+          message: 'Wrong layout? Looks like Russian:',
+          original: spanRu2, converted: convertedRu2,
+          btnLabel: 'Fix → Russian', rejectLabel: 'Not Russian',
+          words: runRu2
+        };
+      }
     }
   }
 
@@ -804,7 +989,8 @@ function applyConversion(el, detection) {
 
 function fixTextDirection(el, type) {
   if (!el || !el.isContentEditable) return;
-  const targetDir = type === 'hebrew_as_english' ? 'ltr' : 'rtl';
+  // Only Hebrew (RTL) as target needs rtl; everything else (English or Russian) is ltr
+  const targetDir = type === 'english_as_hebrew' ? 'rtl' : 'ltr';
   el.dir = targetDir;
   // Also fix any block children that carry the opposite dir explicitly
   const opposite = targetDir === 'ltr' ? 'rtl' : 'ltr';
@@ -1071,11 +1257,11 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
-      if (detection.type === 'english_as_hebrew') {
+      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian') {
         lastCase2Original = detection.original.trim().toLowerCase();
       }
     }
-    saveFeedback(detection.words, true);
+    saveFeedback(detection.words, true, detection.lang || 'he');
     sendFeedback(detection.words, 'fix', detection.type);
     removeToast(false);
     if (ok) {
@@ -1107,7 +1293,7 @@ function showToast(element, detection, forceShow = false) {
 
   // Reject — teach Kiko this is not a layout mistake
   toast.querySelector('.kld-reject').addEventListener('click', () => {
-    saveFeedback(detection.words, false);
+    saveFeedback(detection.words, false, detection.lang || 'he');
     sendFeedback(detection.words, 'reject', detection.type);
     const sample = detection.words.slice(0, 3).join(', ');
     showConfirm(`✓ Got it — "${sample}${detection.words.length > 3 ? '…' : ''}" noted`);
@@ -1160,7 +1346,10 @@ function showHint() {
   hintEl = document.createElement('div');
   hintEl.id = 'kld-hint';
   const wc      = lastDetection.words.length;
-  const dir     = lastDetection.type === 'hebrew_as_english' ? '→ EN' : '→ HE';
+  const dir     = lastDetection.type === 'hebrew_as_english' ? '→ EN'
+                : lastDetection.type === 'russian_as_english' ? '→ EN'
+                : lastDetection.type === 'english_as_russian' ? '→ RU'
+                : '→ HE';
   const wcLabel = wc >= 5 ? `${wc} words ${dir}` : escapeHtml(lastDetection.converted.slice(0, 22) + (lastDetection.converted.length > 22 ? '…' : ''));
   hintEl.innerHTML = `
     <span>⌨️</span>

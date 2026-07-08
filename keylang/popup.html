@@ -49,6 +49,7 @@
     }
     .word-tag.hebrew { border-left: 2px solid #3b82f6; }
     .word-tag.english { border-left: 2px solid #f87171; }
+    .word-tag.russian { border-left: 2px solid #a855f7; }
     .word-tag button {
       background: none; border: none; color: #64748b;
       cursor: pointer; font-size: 11px; padding: 0; line-height: 1;
@@ -150,7 +151,7 @@
 </head>
 <body>
   <h1>🦜 Kiko</h1>
-  <div class="version">v3.3.34 · Hebrew ↔ English detector</div>
+  <div class="version">v3.3.35 · Hebrew &amp; Russian ↔ English</div>
 
   <div class="stats">
     <div class="stat">
@@ -179,6 +180,13 @@
   <div class="add-row">
     <input id="add-english-input" type="text" placeholder="Add word to exclude…" />
     <button id="add-english-btn">Add</button>
+  </div>
+
+  <h2>Learned — Russian keyboard words</h2>
+  <div class="word-list" id="russian-words"></div>
+  <div class="add-row">
+    <input id="add-russian-input" type="text" placeholder="Add Russian keyboard word…" />
+    <button id="add-russian-btn">Add</button>
   </div>
 
   <hr class="divider">
@@ -230,7 +238,7 @@
   <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
   <div class="shortcut">Alt + Shift + K · Select text to convert on any page</div>
-  <div class="shortcut" style="margin-top:6px">🦜 Kiko v3.3.34</div>
+  <div class="shortcut" style="margin-top:6px">🦜 Kiko v3.3.35</div>
 
   <script src="popup.js"></script>
 </body>

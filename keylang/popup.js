@@ -2,8 +2,9 @@
 
 function render(data) {
   const stats = data.stats || { detected: 0, converted: 0, rejected: 0 };
-  const hebrewWords = data.learnedHebrew || [];
+  const hebrewWords  = data.learnedHebrew  || [];
   const englishWords = data.learnedEnglish || [];
+  const russianWords = data.learnedRussian || [];
 
   document.getElementById('s-detected').textContent = stats.detected;
   document.getElementById('s-converted').textContent = stats.converted;
@@ -18,8 +19,9 @@ function render(data) {
   // Sound toggle
   document.getElementById('sound-toggle').checked = data.soundEnabled !== false;
 
-  renderWordList('hebrew-words', hebrewWords, 'hebrew', (word) => removeWord(word, 'hebrew'));
+  renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
+  renderWordList('russian-words', russianWords, 'russian', (word) => removeWord(word, 'russian'));
 }
 
 function renderWordList(containerId, words, type, onRemove) {
@@ -38,23 +40,25 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
+const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'stats', 'detectionEnabled', 'soundEnabled'];
+
 function removeWord(word, type) {
-  chrome.storage.local.get(['learnedHebrew', 'learnedEnglish'], (data) => {
-    const key = type === 'hebrew' ? 'learnedHebrew' : 'learnedEnglish';
+  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : 'learnedEnglish';
+  chrome.storage.local.get([key], (data) => {
     const list = (data[key] || []).filter(w => w !== word);
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
+      chrome.storage.local.get(ALL_LEARNED_KEYS, render);
     });
   });
 }
 
 function addWord(word, type) {
   if (!word.trim()) return;
-  const key = type === 'hebrew' ? 'learnedHebrew' : 'learnedEnglish';
+  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : 'learnedEnglish';
   chrome.storage.local.get([key], (data) => {
     const list = [...new Set([...(data[key] || []), word.trim().toLowerCase()])];
     chrome.storage.local.set({ [key]: list }, () => {
-      chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
+      chrome.storage.local.get(ALL_LEARNED_KEYS, render);
     });
   });
 }
@@ -113,15 +117,24 @@ document.getElementById('add-english-btn').addEventListener('click', () => {
 document.getElementById('add-english-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('add-english-btn').click();
 });
+document.getElementById('add-russian-btn').addEventListener('click', () => {
+  const input = document.getElementById('add-russian-input');
+  addWord(input.value, 'russian');
+  input.value = '';
+});
+document.getElementById('add-russian-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('add-russian-btn').click();
+});
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   if (!confirm('Reset all learned data? Stats and word lists will be cleared.')) return;
   chrome.storage.local.set({
     learnedHebrew: [],
     learnedEnglish: [],
+    learnedRussian: [],
     stats: { detected: 0, converted: 0, rejected: 0 }
   }, () => {
-    chrome.storage.local.get(['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled'], render);
+    chrome.storage.local.get(ALL_LEARNED_KEYS, render);
   });
 });
 
@@ -157,7 +170,7 @@ document.getElementById('review-nudge-later').addEventListener('click', snoozeNu
 
 // Load on open
 chrome.storage.local.get(
-  ['learnedHebrew', 'learnedEnglish', 'stats', 'detectionEnabled', 'soundEnabled', 'reviewNudge'],
+  [...ALL_LEARNED_KEYS, 'reviewNudge'],
   (data) => {
     render(data);
     maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
