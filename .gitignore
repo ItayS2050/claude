@@ -1,1 +1,5 @@
 *.zip
+node_modules/
+take-screenshots.js
+package.json
+package-lock.json
