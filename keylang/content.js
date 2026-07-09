@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.35 – Hebrew & Russian ↔ English Layout Fixer
+// Kiko v3.3.36 – Hebrew & Russian ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '3.3.35';
+const KIKO_VERSION = '3.3.36';
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -14,7 +14,7 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
 
-console.log('[Kiko] v3.3.35 loaded');
+console.log('[Kiko] v3.3.36 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -1253,7 +1253,7 @@ function showToast(element, detection, forceShow = false) {
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
-    fixCooldownUntil = Date.now() + (ok ? 900 : 30000); // long cooldown on failure prevents re-detection loop
+    fixCooldownUntil = Date.now() + (ok ? 900 : 4000); // brief cooldown prevents immediate ghost re-detection
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
@@ -1564,6 +1564,15 @@ function attachTo(el) {
       showToast(el, detection);
     } else if (activeToast && lastElement === el) {
       removeToast(false); // user is now typing correctly — dismiss quietly
+    } else if (lastElement === el && dismissedSignature) {
+      // Field was cleared/corrected after a dismiss — reset so next paste shows full toast
+      const fieldText = el.isContentEditable
+        ? (el.innerText || el.textContent || '').trim()
+        : (el.value || '').trim();
+      if (fieldText.length < 3) {
+        dismissedSignature = null;
+        dismissedWordSet   = new Set();
+      }
     }
   }, 200, 1500);
   el.addEventListener('input',          check);
