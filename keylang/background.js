@@ -1,3 +1,8 @@
+// Re-assert popup and enabled state on every service-worker wakeup —
+// clears any persisted disabled/no-popup state from older installs.
+try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
+try { chrome.action.enable(); } catch {}
+
 chrome.runtime.onInstalled.addListener(async () => {
   chrome.contextMenus.create({
     id: 'kiko-fix',
