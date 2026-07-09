@@ -23,7 +23,7 @@
   },
   "action": {
     "popup": "popup.html",
-    "default_title": "Kiko – Hebrew ↔ English",
+    "default_title": "Kiko – Hebrew, Russian & Arabic ↔ English",
     "default_icon": {
       "16":  "icon16.png",
       "48":  "icon48.png",
