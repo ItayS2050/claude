@@ -4,5 +4,8 @@ take-screenshots.js
 make-promo.js
 promo-tile.html
 kiko-promo-440x280.png
+make-marquee.js
+marquee-tile.html
+kiko-marquee-1400x560.png
 package.json
 package-lock.json
