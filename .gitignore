@@ -1,5 +1,8 @@
 *.zip
 node_modules/
 take-screenshots.js
+make-promo.js
+promo-tile.html
+kiko-promo-440x280.png
 package.json
 package-lock.json
