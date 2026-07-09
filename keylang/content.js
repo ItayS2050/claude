@@ -1,8 +1,8 @@
 // ============================================================
-// Kiko v3.3.36 – Hebrew & Russian ↔ English Layout Fixer
+// Kiko v4.0.0 – Hebrew, Russian & Arabic ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '3.3.36';
+const KIKO_VERSION = '4.0.0';
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -14,7 +14,7 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
 
-console.log('[Kiko] v3.3.36 loaded');
+console.log('[Kiko] v4.0.0 loaded');
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -49,6 +49,21 @@ for (const [en, ru] of Object.entries(EN_TO_RU)) {
   if (RUSSIAN_RE.test(ru)) RU_TO_EN[ru] = en;
 }
 
+// ── Arabic keyboard mapping (Windows Arabic ↔ QWERTY) ──────────
+const EN_TO_AR = {
+  'q':'ض','w':'ص','e':'ث','r':'ق','t':'ف','y':'غ','u':'ع','i':'ه','o':'خ','p':'ح',
+  '[':'ج',']':'د',
+  'a':'ش','s':'س','d':'ي','f':'ب','g':'ل','h':'ا','j':'ت','k':'ن','l':'م',
+  ';':'ك',"'":'ط',
+  'z':'ئ','x':'ء','c':'ؤ','v':'ر','n':'ى','m':'ة',
+  ',':'و','.':'ز','/':'ظ'
+};
+const ARABIC_RE = /[؀-ۿ]/;
+const AR_TO_EN = {};
+for (const [en, ar] of Object.entries(EN_TO_AR)) {
+  if (ARABIC_RE.test(ar)) AR_TO_EN[ar] = en;
+}
+
 // ── Feedback telemetry (anonymous, fire-and-forget) ──────────
 // Set to your Apps Script web app URL to enable cross-user learning.
 // Leave empty to disable — no data is sent.
@@ -73,23 +88,27 @@ function sendFeedback(words, action, type) {
 let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
 let learnedRussian  = new Set();
+let learnedArabic   = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
+let enabledLangs    = { he: true, ru: true, ar: true };
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','stats','detectionEnabled','soundEnabled','toastPos']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
     learnedRussian  = new Set(d.learnedRussian || []);
+    learnedArabic   = new Set(d.learnedArabic  || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
     soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
+    if (d.enabledLangs) enabledLangs = { he: true, ru: true, ar: true, ...d.enabledLangs };
   } catch {}
 }
 
@@ -101,6 +120,7 @@ try {
     }
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
+    if ('enabledLangs' in changes) enabledLangs = { he: true, ru: true, ar: true, ...(changes.enabledLangs.newValue || {}) };
   });
 } catch {}
 
@@ -117,6 +137,19 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
       }
       await chrome.storage.local.set({
         learnedRussian: [...learnedRussian],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
+    } else if (lang === 'ar') {
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedArabic.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedArabic.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedArabic:  [...learnedArabic],
         learnedEnglish: [...learnedEnglish],
         stats
       });
@@ -355,12 +388,68 @@ function wordCouldBeRussian(word) {
   return russianScore(ruWord) >= 0.25;
 }
 
+// ── Arabic scoring data ───────────────────────────────────────
+const AR_BIGRAMS = new Set([
+  'ال','لا','ان','ين','ات','وا','نا','ها','ما','من',
+  'في','هم','كل','لم','لك','له','لل','ير','ية','ري',
+  'قا','كا','بي','بر','تا','تي','سي','سا','شي','قل',
+  'ول','رت','نت','مر','رح','حب','بل','عل','لن','دي',
+  'وه','وي','مع','رب','حي','كن','يا','اب','سل','غد',
+  'يل','يب','يت','يف','كب','صغ','طا','ثم','سم','نم',
+]);
+
+const COMMON_AR_WORDS = new Set([
+  // Pronouns
+  'هو','هي','هم','ها',
+  // Particles / prepositions
+  'من','في','ما','لا','مع','ثم','بل','كل','لم','قد','لو',
+  // Question words
+  'كيف','هنا','متى',
+  // Greetings / affirmations
+  'نعم','شكرا','مرحبا','سلام','تمام','صح','اهلا',
+  // Common nouns
+  'يوم','ليل','وقت','راس','باب','كتب',
+  // Verbs
+  'كان','قال','كنت','راح','رحت','كتب',
+  // Conjunctions / discourse
+  'لكن','حتى',
+  // Common phrases typed on Arabic keyboard
+  'هناك','كنا','كانت','قالت','قالوا','كانوا',
+]);
+
+function arabicScore(word) {
+  const s = word;
+  if (s.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    if (AR_BIGRAMS.has(s.slice(i, i + 2))) hits++;
+  }
+  return hits / (s.length - 1);
+}
+
+function wordCouldBeArabic(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedArabic.has(lower)) return true;
+  if (EN_WORDS.has(lower)) return false;
+  if (englishScore(lower) >= 0.35) return false;
+  const mapped = [...lower].map(c => EN_TO_AR[c]);
+  if (!mapped.every(c => c !== undefined)) return false;
+  const arWord = mapped.join('');
+  if (COMMON_AR_WORDS.has(arWord)) return true;
+  return arabicScore(arWord) >= 0.25;
+}
+
 // ── Helper functions ──────────────────────────────────────────
 function hasHebrew(t)          { return HEBREW_RE.test(t); }
+function hasArabic(t)          { return ARABIC_RE.test(t); }
 function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
 function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
+function convertToArabic(t)    { return [...t].map(c => EN_TO_AR[c]  || c).join(''); }
+function convertFromArabic(t)  { return [...t].map(c => AR_TO_EN[c] || c).join(''); }
 function truncatePreview(text, maxWords = 9) {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
@@ -460,14 +549,16 @@ function analyzeText(rawText, scanAll = false) {
   if (!rawText || rawText.trim().length < 3) return null;
 
   const text = scanAll ? rawText : rawText.slice(-2000);
-  const textHasHebrew = hasHebrew(text);
+  const textHasHebrew  = hasHebrew(text);
+  const textHasRussian = RUSSIAN_RE.test(text);
+  const textHasArabic  = hasArabic(text);
 
   // ── Case 1: Hebrew characters typed while English keyboard layout was expected
   // Hebrew final-form letters (ך ם ן ף ץ) never appear at the START of a word.
   // When English is typed on a Hebrew keyboard, those keys (l i o ; .) map to
   // exactly those final-form letters — so finding them in non-final position is
   // an unambiguous signal the user was in the wrong layout.
-  if (textHasHebrew) {
+  if (textHasHebrew && enabledLangs.he) {
     let allWords;
     try {
       allWords = text.trim().split(/\s+/).flatMap(w =>
@@ -601,7 +692,7 @@ function analyzeText(rawText, scanAll = false) {
   }
 
   // ── Case R1: Russian Cyrillic typed while English keyboard was expected
-  if (!textHasHebrew && RUSSIAN_RE.test(text)) {
+  if (!textHasHebrew && textHasRussian && enabledLangs.ru) {
     let allRuTokens;
     try {
       allRuTokens = text.trim().split(/\s+/).flatMap(w =>
@@ -649,6 +740,62 @@ function analyzeText(rawText, scanAll = false) {
                 original: originalR1, converted: convertedR1,
                 btnLabel: 'Fix → English', rejectLabel: 'Not English',
                 words: ruInRun
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ── Case A1: Arabic characters typed while English keyboard was expected
+  if (!textHasHebrew && !textHasRussian && textHasArabic && enabledLangs.ar) {
+    let allArTokens;
+    try {
+      allArTokens = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-zA-Z])(?=[؀-ۿ])|(?<=[؀-ۿ])(?=[a-zA-Z])/).filter(Boolean)
+      );
+    } catch {
+      allArTokens = text.trim().split(/\s+/);
+    }
+    const runA1 = [];
+    for (let i = allArTokens.length - 1; i >= 0; i--) {
+      const w = allArTokens[i];
+      if (ARABIC_RE.test(w)) {
+        runA1.unshift(w);
+      } else if (runA1.length > 0 && w.length <= 2) {
+        runA1.unshift(w);
+      } else if (runA1.length === 0) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    if (runA1.length >= 1) {
+      const arInRun = runA1.filter(w => ARABIC_RE.test(w));
+      if (!arInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        const allMap = arInRun.every(w => [...w].every(c => AR_TO_EN[c] !== undefined));
+        if (allMap) {
+          const originalA1 = arInRun.join(' ');
+          const convertedA1 = convertFromArabic(originalA1);
+          if (convertedA1.trim().length >= 2 && !ARABIC_RE.test(convertedA1)) {
+            const convWordsA1 = convertedA1.split(/\s+/)
+              .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+              .filter(w => w.length >= 2);
+            const hasCommonA1 = convWordsA1.some(w => COMMON_EN_WORDS.has(w));
+            const avgScoreA1 = convWordsA1.length
+              ? convWordsA1.reduce((a, w) => a + englishScore(w), 0) / convWordsA1.length
+              : 0;
+            const fire = runA1.length === 1
+              ? (convWordsA1.length >= 1 && convWordsA1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsA1[0]))
+              : (hasCommonA1 && avgScoreA1 >= 0.15);
+            if (fire) {
+              return {
+                type: 'arabic_as_english', lang: 'ar',
+                message: 'Wrong layout? Looks like English:',
+                original: originalA1, converted: convertedA1,
+                btnLabel: 'Fix → English', rejectLabel: 'Not English',
+                words: arInRun
               };
             }
           }
@@ -716,7 +863,7 @@ function analyzeText(rawText, scanAll = false) {
     }
   }
 
-  if (hebrewCount >= minRun) {
+  if (enabledLangs.he && hebrewCount >= minRun) {
     // Use the actual text span from first→last run word so intermediate single-char
     // words (e.g. 'w' → Hebrew apostrophe/geresh) are preserved in original/converted.
     const spanText = findRunSpan(text, run[0], run[run.length - 1]) || run.join(' ');
@@ -739,9 +886,9 @@ function analyzeText(rawText, scanAll = false) {
   }
 
   // ── Case R2: English characters typed while Russian keyboard was expected
-  if (!textHasHebrew) {
+  if (!textHasHebrew && enabledLangs.ru) {
     const ruCandWords = extractWords(text);
-    const ruMinRun = RUSSIAN_RE.test(text) ? 1 : 2;
+    const ruMinRun = textHasRussian ? 1 : 2;
     const allRuRuns = [];
     let curRuRun = [], curRuStartIdx = -1;
     for (let wi = 0; wi < ruCandWords.length; wi++) {
@@ -768,6 +915,41 @@ function analyzeText(rawText, scanAll = false) {
           original: spanRu2, converted: convertedRu2,
           btnLabel: 'Fix → Russian', rejectLabel: 'Not Russian',
           words: runRu2
+        };
+      }
+    }
+  }
+
+  // ── Case A2: English characters typed while Arabic keyboard was expected
+  if (!textHasHebrew && !textHasRussian && enabledLangs.ar) {
+    const arCandWords = extractWords(text);
+    const arMinRun = textHasArabic ? 1 : 2;
+    const allArRuns2 = [];
+    let curArRun2 = [], curArStartIdx2 = -1;
+    for (let wi = 0; wi < arCandWords.length; wi++) {
+      const w = arCandWords[wi];
+      if (wordCouldBeArabic(w)) {
+        if (curArRun2.length === 0) curArStartIdx2 = wi;
+        curArRun2.push(w);
+      } else {
+        if (curArRun2.length > 0) allArRuns2.push({ words: [...curArRun2], startIdx: curArStartIdx2 });
+        curArRun2 = []; curArStartIdx2 = -1;
+      }
+    }
+    if (curArRun2.length > 0) allArRuns2.push({ words: curArRun2, startIdx: curArStartIdx2 });
+
+    const arRunEntry2 = [...allArRuns2].reverse().find(r => r.words.length >= arMinRun);
+    if (arRunEntry2) {
+      const runAr2 = arRunEntry2.words;
+      const spanAr2 = findRunSpan(text, runAr2[0], runAr2[runAr2.length - 1]) || runAr2.join(' ');
+      const convertedAr2 = convertToArabic(spanAr2.toLowerCase());
+      if (ARABIC_RE.test(convertedAr2)) {
+        return {
+          type: 'english_as_arabic', lang: 'ar',
+          message: 'Wrong layout? Looks like Arabic:',
+          original: spanAr2, converted: convertedAr2,
+          btnLabel: 'Fix → Arabic', rejectLabel: 'Not Arabic',
+          words: runAr2
         };
       }
     }
@@ -989,8 +1171,8 @@ function applyConversion(el, detection) {
 
 function fixTextDirection(el, type) {
   if (!el || !el.isContentEditable) return;
-  // Only Hebrew (RTL) as target needs rtl; everything else (English or Russian) is ltr
-  const targetDir = type === 'english_as_hebrew' ? 'rtl' : 'ltr';
+  // Hebrew and Arabic as target need rtl; everything else (English or Russian) is ltr
+  const targetDir = (type === 'english_as_hebrew' || type === 'english_as_arabic') ? 'rtl' : 'ltr';
   el.dir = targetDir;
   // Also fix any block children that carry the opposite dir explicitly
   const opposite = targetDir === 'ltr' ? 'rtl' : 'ltr';
@@ -1257,7 +1439,7 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
-      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian') {
+      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_arabic') {
         lastCase2Original = detection.original.trim().toLowerCase();
       }
     }
@@ -1346,9 +1528,11 @@ function showHint() {
   hintEl = document.createElement('div');
   hintEl.id = 'kld-hint';
   const wc      = lastDetection.words.length;
-  const dir     = lastDetection.type === 'hebrew_as_english' ? '→ EN'
+  const dir     = lastDetection.type === 'hebrew_as_english'  ? '→ EN'
                 : lastDetection.type === 'russian_as_english' ? '→ EN'
+                : lastDetection.type === 'arabic_as_english'  ? '→ EN'
                 : lastDetection.type === 'english_as_russian' ? '→ RU'
+                : lastDetection.type === 'english_as_arabic'  ? '→ AR'
                 : '→ HE';
   const wcLabel = wc >= 5 ? `${wc} words ${dir}` : escapeHtml(lastDetection.converted.slice(0, 22) + (lastDetection.converted.length > 22 ? '…' : ''));
   hintEl.innerHTML = `
@@ -1450,14 +1634,35 @@ function convertSelection(text, sel) {
       rejectLabel: 'Cancel',
       words: []
     };
+  } else if (RUSSIAN_RE.test(text)) {
+    detection = {
+      type: 'russian_detected', lang: 'ru',
+      message: 'Convert selection to English?',
+      original: text,
+      converted: convertFromRussian(text),
+      btnLabel: 'Convert → English',
+      rejectLabel: 'Cancel',
+      words: []
+    };
+  } else if (hasArabic(text)) {
+    detection = {
+      type: 'arabic_detected', lang: 'ar',
+      message: 'Convert selection to English?',
+      original: text,
+      converted: convertFromArabic(text),
+      btnLabel: 'Convert → English',
+      rejectLabel: 'Cancel',
+      words: []
+    };
   } else {
-    const converted = convertToHebrew(text.toLowerCase());
-    if (hasHebrew(converted)) {
+    // Try Hebrew, then Russian, then Arabic conversion
+    const heConverted = convertToHebrew(text.toLowerCase());
+    if (hasHebrew(heConverted)) {
       detection = {
         type: 'english_as_hebrew',
         message: 'Convert selection to Hebrew?',
         original: text,
-        converted,
+        converted: heConverted,
         btnLabel: 'Convert → Hebrew',
         rejectLabel: 'Cancel',
         words: extractWords(text)

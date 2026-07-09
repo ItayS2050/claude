@@ -50,6 +50,7 @@
     .word-tag.hebrew { border-left: 2px solid #3b82f6; }
     .word-tag.english { border-left: 2px solid #f87171; }
     .word-tag.russian { border-left: 2px solid #a855f7; }
+    .word-tag.arabic { border-left: 2px solid #f59e0b; }
     .word-tag button {
       background: none; border: none; color: #64748b;
       cursor: pointer; font-size: 11px; padding: 0; line-height: 1;
@@ -151,7 +152,7 @@
 </head>
 <body>
   <h1>🦜 Kiko</h1>
-  <div class="version">v3.3.36 · Hebrew &amp; Russian ↔ English</div>
+  <div class="version">v4.0.0 · Hebrew, Russian &amp; Arabic ↔ English</div>
 
   <div class="stats">
     <div class="stat">
@@ -189,6 +190,13 @@
     <button id="add-russian-btn">Add</button>
   </div>
 
+  <h2>Learned — Arabic keyboard words</h2>
+  <div class="word-list" id="arabic-words"></div>
+  <div class="add-row">
+    <input id="add-arabic-input" type="text" placeholder="Add Arabic keyboard word…" />
+    <button id="add-arabic-btn">Add</button>
+  </div>
+
   <hr class="divider">
 
   <div class="paused-banner" id="paused-banner">
@@ -221,6 +229,38 @@
     </div>
   </div>
 
+  <h2 style="margin-top:14px">Languages</h2>
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">🔤 Hebrew ↔ English</div>
+      <div class="toggle-sub">Detect Hebrew keyboard layout mistakes</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="lang-he-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-row" style="margin-top:8px">
+    <div>
+      <div class="toggle-label">🔤 Russian ↔ English</div>
+      <div class="toggle-sub">Detect Russian keyboard layout mistakes</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="lang-ru-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-row" style="margin-top:8px">
+    <div>
+      <div class="toggle-label">🔤 Arabic ↔ English</div>
+      <div class="toggle-sub">Detect Arabic keyboard layout mistakes</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="lang-ar-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
   <div class="review-nudge" id="review-nudge">
     <div class="review-nudge-top">
       <div class="review-nudge-text">
@@ -238,7 +278,7 @@
   <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
   <div class="shortcut">Alt + Shift + K · Select text to convert on any page</div>
-  <div class="shortcut" style="margin-top:6px">🦜 Kiko v3.3.36</div>
+  <div class="shortcut" style="margin-top:6px">🦜 Kiko v4.0.0</div>
 
   <script src="popup.js"></script>
 </body>

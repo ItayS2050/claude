@@ -1,10 +1,11 @@
-// popup.js — KeyLang settings & stats
+// popup.js — Kiko settings & stats
 
 function render(data) {
   const stats = data.stats || { detected: 0, converted: 0, rejected: 0 };
   const hebrewWords  = data.learnedHebrew  || [];
   const englishWords = data.learnedEnglish || [];
   const russianWords = data.learnedRussian || [];
+  const arabicWords  = data.learnedArabic  || [];
 
   document.getElementById('s-detected').textContent = stats.detected;
   document.getElementById('s-converted').textContent = stats.converted;
@@ -19,9 +20,16 @@ function render(data) {
   // Sound toggle
   document.getElementById('sound-toggle').checked = data.soundEnabled !== false;
 
+  // Language toggles
+  const langs = data.enabledLangs || { he: true, ru: true, ar: true };
+  document.getElementById('lang-he-toggle').checked = langs.he !== false;
+  document.getElementById('lang-ru-toggle').checked = langs.ru !== false;
+  document.getElementById('lang-ar-toggle').checked = langs.ar !== false;
+
   renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
   renderWordList('russian-words', russianWords, 'russian', (word) => removeWord(word, 'russian'));
+  renderWordList('arabic-words',  arabicWords,  'arabic',  (word) => removeWord(word, 'arabic'));
 }
 
 function renderWordList(containerId, words, type, onRemove) {
@@ -40,10 +48,10 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
-const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'stats', 'detectionEnabled', 'soundEnabled'];
+const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'learnedArabic', 'stats', 'detectionEnabled', 'soundEnabled', 'enabledLangs'];
 
 function removeWord(word, type) {
-  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : 'learnedEnglish';
+  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : type === 'arabic' ? 'learnedArabic' : 'learnedEnglish';
   chrome.storage.local.get([key], (data) => {
     const list = (data[key] || []).filter(w => w !== word);
     chrome.storage.local.set({ [key]: list }, () => {
@@ -54,7 +62,7 @@ function removeWord(word, type) {
 
 function addWord(word, type) {
   if (!word.trim()) return;
-  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : 'learnedEnglish';
+  const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : type === 'arabic' ? 'learnedArabic' : 'learnedEnglish';
   chrome.storage.local.get([key], (data) => {
     const list = [...new Set([...(data[key] || []), word.trim().toLowerCase()])];
     chrome.storage.local.set({ [key]: list }, () => {
@@ -73,6 +81,17 @@ document.getElementById('detection-toggle').addEventListener('change', (e) => {
 document.getElementById('sound-toggle').addEventListener('change', (e) => {
   chrome.storage.local.set({ soundEnabled: e.target.checked });
 });
+
+// Per-language toggles
+function setLang(lang, enabled) {
+  chrome.storage.local.get(['enabledLangs'], (d) => {
+    const current = d.enabledLangs || { he: true, ru: true, ar: true };
+    chrome.storage.local.set({ enabledLangs: { ...current, [lang]: enabled } });
+  });
+}
+document.getElementById('lang-he-toggle').addEventListener('change', (e) => setLang('he', e.target.checked));
+document.getElementById('lang-ru-toggle').addEventListener('change', (e) => setLang('ru', e.target.checked));
+document.getElementById('lang-ar-toggle').addEventListener('change', (e) => setLang('ar', e.target.checked));
 
 // Test sound button — plays directly in popup (guaranteed user gesture)
 document.getElementById('test-sound-btn').addEventListener('click', () => {
@@ -125,6 +144,14 @@ document.getElementById('add-russian-btn').addEventListener('click', () => {
 document.getElementById('add-russian-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('add-russian-btn').click();
 });
+document.getElementById('add-arabic-btn').addEventListener('click', () => {
+  const input = document.getElementById('add-arabic-input');
+  addWord(input.value, 'arabic');
+  input.value = '';
+});
+document.getElementById('add-arabic-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('add-arabic-btn').click();
+});
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   if (!confirm('Reset all learned data? Stats and word lists will be cleared.')) return;
@@ -132,6 +159,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
     learnedHebrew: [],
     learnedEnglish: [],
     learnedRussian: [],
+    learnedArabic: [],
     stats: { detected: 0, converted: 0, rejected: 0 }
   }, () => {
     chrome.storage.local.get(ALL_LEARNED_KEYS, render);
