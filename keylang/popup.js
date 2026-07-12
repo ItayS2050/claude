@@ -20,11 +20,11 @@ function render(data) {
   // Sound toggle
   document.getElementById('sound-toggle').checked = data.soundEnabled !== false;
 
-  // Language toggles
-  const langs = data.enabledLangs || { he: true, ru: true, ar: true };
-  document.getElementById('lang-he-toggle').checked = langs.he !== false;
-  document.getElementById('lang-ru-toggle').checked = langs.ru !== false;
-  document.getElementById('lang-ar-toggle').checked = langs.ar !== false;
+  // Language toggles — default off until user completes onboarding
+  const langs = data.enabledLangs || { he: false, ru: false, ar: false };
+  document.getElementById('lang-he-toggle').checked = langs.he === true;
+  document.getElementById('lang-ru-toggle').checked = langs.ru === true;
+  document.getElementById('lang-ar-toggle').checked = langs.ar === true;
 
   renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
@@ -85,7 +85,7 @@ document.getElementById('sound-toggle').addEventListener('change', (e) => {
 // Per-language toggles
 function setLang(lang, enabled) {
   chrome.storage.local.get(['enabledLangs'], (d) => {
-    const current = d.enabledLangs || { he: true, ru: true, ar: true };
+    const current = d.enabledLangs || { he: false, ru: false, ar: false };
     chrome.storage.local.set({ enabledLangs: { ...current, [lang]: enabled } });
   });
 }

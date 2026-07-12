@@ -93,7 +93,7 @@ let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, ar: true };
+let enabledLangs    = { he: false, ru: false, ar: false };
 
 async function loadLearned() {
   try {
@@ -108,7 +108,7 @@ async function loadLearned() {
     detectionEnabled = d.detectionEnabled !== false;
     soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
-    if (d.enabledLangs) enabledLangs = { he: true, ru: true, ar: true, ...d.enabledLangs };
+    if (d.enabledLangs) enabledLangs = { he: false, ru: false, ar: false, ...d.enabledLangs };
   } catch {}
 }
 
@@ -120,7 +120,7 @@ try {
     }
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
-    if ('enabledLangs' in changes) enabledLangs = { he: true, ru: true, ar: true, ...(changes.enabledLangs.newValue || {}) };
+    if ('enabledLangs' in changes) enabledLangs = { he: false, ru: false, ar: false, ...(changes.enabledLangs.newValue || {}) };
   });
 } catch {}
 

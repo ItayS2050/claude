@@ -3,12 +3,16 @@
 try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
 try { chrome.action.enable(); } catch {}
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   chrome.contextMenus.create({
     id: 'kiko-fix',
     title: '🦜 Fix with Kiko',
     contexts: ['selection']
   });
+
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  }
 
   // Re-inject content.js into all existing tabs so users don't need to refresh
   // after an extension update. The new content.js version-guards itself via
