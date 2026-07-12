@@ -1449,6 +1449,7 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       const kb = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
       showConfirm(`✓ Fixed! Switch keyboard: ${kb}`);
+      setTimeout(maybeShowReviewToast, 3000);
       // Re-scan after a short delay to catch any remaining mismatched words
       // (e.g. a sentence with both Hebrew text and Latin-on-Hebrew-keyboard words)
       setTimeout(() => {
@@ -1516,6 +1517,62 @@ function showConfirm(message) {
 function removeToast(showRecall = true) {
   if (activeToast) { activeToast.remove(); activeToast = null; }
   if (showRecall && lastDetection) showHint();
+}
+
+// ── Review nudge (shown in-page after 3rd fix) ────────────────
+const REVIEW_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function showReviewToast() {
+  if (activeToast) return;
+  injectStyles();
+  const reviewUrl = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+  const toast = document.createElement('div');
+  toast.id = 'kld-toast';
+  toast.style.borderColor = '#f59e0b';
+  toast.innerHTML = `
+    <div class="kld-header">
+      <span>⭐</span>
+      <span style="flex:1;color:#fcd34d;font-weight:700">Enjoying Kiko?</span>
+      <button class="kld-btn kld-dismiss" id="kld-rv-x">✕</button>
+    </div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.5">A quick review helps others find it — takes 30 seconds!</div>
+    <div class="kld-actions">
+      <button class="kld-btn kld-primary" id="kld-rv-rate" style="background:#f59e0b">Rate Kiko ⭐</button>
+      <button class="kld-btn kld-reject" id="kld-rv-later">Maybe later</button>
+    </div>
+  `;
+  toast.querySelectorAll('button').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
+
+  const snooze = () => {
+    try { chrome.storage.local.set({ reviewNudge: { state: 'snoozed', snoozeUntil: Date.now() + REVIEW_SNOOZE_MS } }).catch(() => {}); } catch {}
+    toast.remove(); if (activeToast === toast) activeToast = null;
+  };
+  toast.querySelector('#kld-rv-rate').addEventListener('click', () => {
+    try { chrome.storage.local.set({ reviewNudge: { state: 'done' } }).catch(() => {}); } catch {}
+    toast.remove(); if (activeToast === toast) activeToast = null;
+    window.open(reviewUrl, '_blank');
+  });
+  toast.querySelector('#kld-rv-x').addEventListener('click', snooze);
+  toast.querySelector('#kld-rv-later').addEventListener('click', snooze);
+
+  applyPos(toast);
+  makeDraggable(toast);
+  (document.body || document.documentElement).appendChild(toast);
+  activeToast = toast;
+  const t = setTimeout(() => { if (activeToast === toast) snooze(); }, 9000);
+  toast.addEventListener('mouseenter', () => clearTimeout(t));
+}
+
+async function maybeShowReviewToast() {
+  try {
+    const d = await chrome.storage.local.get(['stats', 'reviewNudge']);
+    const converted = (d.stats || {}).converted || 0;
+    const nudge = d.reviewNudge || null;
+    if (converted < 3) return;
+    if (nudge && nudge.state === 'done') return;
+    if (nudge && nudge.state === 'snoozed' && Date.now() < nudge.snoozeUntil) return;
+    showReviewToast();
+  } catch {}
 }
 
 // ── Hint bubble (small persistent indicator) ──────────────────
