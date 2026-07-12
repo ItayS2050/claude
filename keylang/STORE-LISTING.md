@@ -1,10 +1,10 @@
 # Chrome Web Store Listing — Kiko
 
 ## Extension name
-Kiko – Hebrew ↔ English Layout Fixer
+Kiko – Multilingual Keyboard Layout Fixer
 
-## Short description (max 132 chars)
-Typed in the wrong language again? Kiko catches it instantly and fixes it with one click. Works everywhere. Learns from you.
+## Short description (max 132 chars — 119 chars)
+Caught typing in the wrong layout? Kiko detects Hebrew, Russian & Arabic keyboard mistakes and fixes them in one click.
 
 ## Full description (paste this into the store)
 
@@ -12,26 +12,33 @@ Typed in the wrong language again? Kiko catches it instantly and fixes it with o
 
 **Ever typed a whole sentence and realized it came out as gibberish because your keyboard was in the wrong layout?**
 
-Meet Kiko 🦜 — your smart keyboard companion that watches what you type and instantly catches when you're in the wrong layout. Hebrew coming out as English, or English as Hebrew? One click and it's fixed.
+Meet Kiko 🦜 — your multilingual keyboard companion that watches what you type and instantly catches when you're in the wrong layout. One click fixes it.
+
+**Supports Hebrew, Russian, and Arabic**
+- Typed English on a Hebrew keyboard? Kiko converts it back to Hebrew instantly.
+- Typed English on a Russian keyboard? Fixed.
+- Typed English on an Arabic keyboard? Fixed.
+- Works in both directions — catches native script typed while English layout was active too.
 
 **How it works**
-- Type normally. If Kiko detects a layout mismatch, a small popup appears with the corrected text.
+- Type normally in any text field. If Kiko detects a layout mismatch, a small notification appears with the corrected text.
 - Click **Convert** to instantly replace the garbled text with the correct version.
-- Kiko will also remind you to switch your keyboard layout back — so you can keep typing without missing a beat.
-- Click **✗ Not Hebrew** if it was wrong — Kiko learns from your feedback and won't flag that word again.
-- Use **Alt + Shift + K** to manually convert selected text at any time.
+- Click **Not Hebrew / Not Russian / Not Arabic** if the suggestion was wrong — Kiko learns from your feedback and won't flag that word again.
+- Press **Alt + Shift + K** to manually scan or convert selected text at any time.
 
 **Works everywhere**
-Any website with a text box — email, chat, documents, social media. If you can type in it, Kiko can fix it.
+Any website with a text field. If you can type in it, Kiko can fix it.
 
 **Smart & personal**
-- Learns your vocabulary over time
-- Silent mode for long typing sessions — shows a discreet recall button instead of interrupting
-- Draggable popup — position it wherever you want, it remembers
-- Enable/disable with one click
+- Enable or disable each language independently
+- Learns your vocabulary over time — fewer false positives the more you use it
+- Discreet recall bubble for long typing sessions — no interruptions
+- Draggable notification — position it wherever you like
+- Sound alert when a layout mistake is detected (optional)
+- Enable/disable auto-detection with one click
 
 **100% private**
-All processing happens in your browser. No text is ever sent to any server. No accounts required.
+All processing happens locally in your browser. No text is ever sent to any server. No account required.
 
 ---
 
@@ -39,7 +46,7 @@ All processing happens in your browser. No text is ever sent to any server. No a
 Productivity
 
 ## Language
-English (also supports Hebrew)
+English
 
 ## Screenshots needed (1280×800 each)
 1. Kiko detecting wrong layout and showing the corrected Hebrew text
