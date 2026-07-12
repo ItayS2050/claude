@@ -22,7 +22,7 @@ Meet Kiko 🦜 — your smart keyboard companion that watches what you type and 
 - Use **Alt + Shift + K** to manually convert selected text at any time.
 
 **Works everywhere**
-Gmail, WhatsApp Web, Slack, Notion, Google Docs, Twitter/X, LinkedIn — any website with a text box.
+Any website with a text box — email, chat, documents, social media. If you can type in it, Kiko can fix it.
 
 **Smart & personal**
 - Learns your vocabulary over time
