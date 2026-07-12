@@ -380,7 +380,7 @@ function wordCouldBeRussian(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedRussian.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
-  if (enabledLangs.he && physicallyMapsToHebrew(lower)) return false;
+  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
   if (englishScore(lower) >= 0.35) return false;
   const mapped = [...lower].map(c => EN_TO_RU[c]);
   if (!mapped.every(c => c !== undefined)) return false;
