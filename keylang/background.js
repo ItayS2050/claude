@@ -3,15 +3,17 @@
 try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
 try { chrome.action.enable(); } catch {}
 
-chrome.runtime.onInstalled.addListener(async (details) => {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: 'kiko-fix',
-      title: '🦜 Fix with Kiko',
-      contexts: ['selection']
-    });
-  });
+// Recreate context menu on every service-worker startup (MV3: menus can
+// vanish after the worker is killed). removeAll first to avoid duplicate-id
+// errors on update; suppress lastError in case create races with removeAll.
+chrome.contextMenus.removeAll(() => {
+  chrome.contextMenus.create(
+    { id: 'kiko-fix', title: '🦜 Fix with Kiko', contexts: ['selection'] },
+    () => void chrome.runtime.lastError
+  );
+});
 
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
   }
