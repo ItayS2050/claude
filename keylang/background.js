@@ -4,10 +4,12 @@ try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
 try { chrome.action.enable(); } catch {}
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  chrome.contextMenus.create({
-    id: 'kiko-fix',
-    title: '🦜 Fix with Kiko',
-    contexts: ['selection']
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'kiko-fix',
+      title: '🦜 Fix with Kiko',
+      contexts: ['selection']
+    });
   });
 
   if (details.reason === 'install') {
