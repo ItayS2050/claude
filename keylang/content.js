@@ -2,7 +2,7 @@
 // Kiko v4.0.0 – Hebrew, Russian & Arabic ↔ English Layout Fixer
 // content.js
 // ============================================================
-const KIKO_VERSION = '4.0.0';
+const KIKO_VERSION = chrome.runtime.getManifest().version;
 
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
@@ -65,9 +65,8 @@ for (const [en, ar] of Object.entries(EN_TO_AR)) {
 }
 
 // ── Feedback telemetry (anonymous, fire-and-forget) ──────────
-// Set to your Apps Script web app URL to enable cross-user learning.
-// Leave empty to disable — no data is sent.
-const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbxNmj5i4hyJFxLpup2yQdcMrCUo_sILioTREIuaXLjjqgYtBCCn58MN60dG_BolnMt7/exec';
+// Telemetry disabled — all processing is local, no text is sent to any server.
+const FEEDBACK_URL = '';
 
 function sendFeedback(words, action, type) {
   if (!FEEDBACK_URL) return;
@@ -509,8 +508,8 @@ function findRunSpan(text, firstWord, lastWord) {
   const lt = text.toLowerCase();
   const fi = lt.indexOf(firstWord.toLowerCase());
   if (fi === -1) return null;
-  const li = lt.lastIndexOf(lastWord.toLowerCase());
-  if (li === -1 || li < fi) return null;
+  const li = lt.indexOf(lastWord.toLowerCase(), fi);
+  if (li === -1) return null;
   return text.slice(fi, li + lastWord.length);
 }
 
