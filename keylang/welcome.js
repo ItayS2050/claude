@@ -22,7 +22,12 @@ document.getElementById('start-btn').addEventListener('click', () => {
     ru: selected.has('ru'),
     ar: selected.has('ar'),
   };
-  chrome.storage.local.set({ enabledLangs, onboardingDone: true }, () => {
-    window.close();
-  });
+  chrome.storage.local.set({ enabledLangs, onboardingDone: true }, () => window.close());
+});
+
+document.getElementById('skip-btn').addEventListener('click', () => {
+  chrome.storage.local.set({
+    enabledLangs: { he: true, ru: true, ar: true },
+    onboardingDone: true,
+  }, () => window.close());
 });

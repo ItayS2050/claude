@@ -97,7 +97,7 @@ let enabledLangs    = { he: false, ru: false, ar: false };
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
@@ -108,6 +108,9 @@ async function loadLearned() {
     soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
     if (d.enabledLangs) enabledLangs = { he: false, ru: false, ar: false, ...d.enabledLangs };
+    if ((d.disabledSites || []).includes(window.location.hostname)) {
+      detectionEnabled = false;
+    }
   } catch {}
 }
 
@@ -120,6 +123,12 @@ try {
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
     if ('enabledLangs' in changes) enabledLangs = { he: false, ru: false, ar: false, ...(changes.enabledLangs.newValue || {}) };
+    if ('disabledSites' in changes) {
+      const sites = changes.disabledSites.newValue || [];
+      const nowDisabled = sites.includes(window.location.hostname);
+      detectionEnabled = !nowDisabled;
+      if (nowDisabled) { removeToast(false); hideHint(); }
+    }
   });
 } catch {}
 
@@ -1432,6 +1441,10 @@ function showToast(element, detection, forceShow = false) {
 
   // Primary — fix the text in place
   toast.querySelector('.kld-primary').addEventListener('click', async () => {
+    // Snapshot for undo (input/textarea only; contenteditable uses browser Ctrl+Z)
+    const undoSnapshot = !element.isContentEditable && typeof element.value === 'string'
+      ? { val: element.value, sel: element.selectionStart ?? 0 } : null;
+
     // applyConversion is synchronous — must run before any await to keep
     // user activation for execCommand('insertText').
     const ok = applyConversion(element, detection);
@@ -1448,7 +1461,13 @@ function showToast(element, detection, forceShow = false) {
     removeToast(false);
     if (ok) {
       const kb = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
-      showConfirm(`✓ Fixed! Switch keyboard: ${kb}`);
+      const undoFn = undoSnapshot ? () => {
+        element.value = undoSnapshot.val;
+        element.selectionStart = element.selectionEnd = undoSnapshot.sel;
+        element.dispatchEvent(new Event('input',  { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      } : null;
+      showConfirm(`✓ Fixed! Switch keyboard: ${kb}`, undoFn);
       setTimeout(maybeShowReviewToast, 3000);
       // Re-scan after a short delay to catch any remaining mismatched words
       // (e.g. a sentence with both Hebrew text and Latin-on-Hebrew-keyboard words)
@@ -1502,16 +1521,28 @@ function showToast(element, detection, forceShow = false) {
   toast.addEventListener('mouseenter', () => clearTimeout(autoDismissId));
 }
 
-// Brief green confirmation flash
-function showConfirm(message) {
+// Brief green confirmation flash; pass undoFn to show an Undo button
+function showConfirm(message, undoFn = null) {
   injectStyles();
   const el = document.createElement('div');
   el.id = 'kld-toast';
   el.style.cssText = 'border-color:#22c55e!important;cursor:default';
-  el.innerHTML = `<div class="kld-header"><span>✓</span><span style="color:#86efac">${escapeHtml(message)}</span></div>`;
+  if (undoFn) {
+    el.innerHTML = `
+      <div class="kld-header">
+        <span>✓</span>
+        <span style="color:#86efac;flex:1">${escapeHtml(message)}</span>
+        <button class="kld-btn" style="background:#334155;color:#e2e8f0;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid #475569">Undo</button>
+      </div>`;
+    const undoBtn = el.querySelector('button');
+    undoBtn.addEventListener('mousedown', e => e.preventDefault());
+    undoBtn.addEventListener('click', () => { undoFn(); el.remove(); });
+  } else {
+    el.innerHTML = `<div class="kld-header"><span>✓</span><span style="color:#86efac">${escapeHtml(message)}</span></div>`;
+  }
   applyPos(el);
   (document.body || document.documentElement).appendChild(el);
-  setTimeout(() => el.remove(), 2800);
+  setTimeout(() => el.remove(), undoFn ? 5000 : 2800);
 }
 
 function removeToast(showRecall = true) {

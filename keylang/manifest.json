@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Kiko – Multilingual Keyboard Layout Fixer",
-  "version": "4.0.7",
+  "version": "4.0.8",
   "description": "Caught typing in the wrong layout? Kiko detects Hebrew, Russian & Arabic keyboard mistakes and fixes them in one click.",
   "author": "Kiko",
   "homepage_url": "https://kiko.app",
-  "permissions": ["storage", "contextMenus", "offscreen", "scripting"],
+  "permissions": ["storage", "contextMenus", "offscreen", "scripting", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "commands": {
     "_execute_action": {

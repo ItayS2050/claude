@@ -26,6 +26,15 @@ function render(data) {
   document.getElementById('lang-ru-toggle').checked = langs.ru === true;
   document.getElementById('lang-ar-toggle').checked = langs.ar === true;
 
+  // Per-site toggle
+  const disabled = data.disabledSites || [];
+  if (currentHostname) {
+    document.getElementById('site-hostname').textContent = currentHostname;
+    document.getElementById('site-toggle').checked = !disabled.includes(currentHostname);
+  } else {
+    document.getElementById('site-row').style.display = 'none';
+  }
+
   renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
   renderWordList('russian-words', russianWords, 'russian', (word) => removeWord(word, 'russian'));
@@ -48,7 +57,7 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
-const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'learnedArabic', 'stats', 'detectionEnabled', 'soundEnabled', 'enabledLangs'];
+const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'learnedArabic', 'stats', 'detectionEnabled', 'soundEnabled', 'enabledLangs', 'disabledSites'];
 
 function removeWord(word, type) {
   const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : type === 'arabic' ? 'learnedArabic' : 'learnedEnglish';
@@ -196,11 +205,32 @@ function snoozeNudge() {
 document.getElementById('review-nudge-close').addEventListener('click', snoozeNudge);
 document.getElementById('review-nudge-later').addEventListener('click', snoozeNudge);
 
+// ── Per-site disable ──────────────────────────────────────────
+let currentHostname = null;
+
+document.getElementById('site-toggle').addEventListener('change', (e) => {
+  if (!currentHostname) return;
+  chrome.storage.local.get(['disabledSites'], (d) => {
+    const sites = d.disabledSites || [];
+    const updated = e.target.checked
+      ? sites.filter(s => s !== currentHostname)
+      : [...new Set([...sites, currentHostname])];
+    chrome.storage.local.set({ disabledSites: updated });
+  });
+});
+
 // Load on open
-chrome.storage.local.get(
-  [...ALL_LEARNED_KEYS, 'reviewNudge'],
-  (data) => {
-    render(data);
-    maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
-  }
-);
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  try {
+    const url = tabs[0] && tabs[0].url ? new URL(tabs[0].url) : null;
+    currentHostname = url && !['chrome:', 'chrome-extension:'].includes(url.protocol)
+      ? url.hostname : null;
+  } catch {}
+  chrome.storage.local.get(
+    [...ALL_LEARNED_KEYS, 'reviewNudge'],
+    (data) => {
+      render(data);
+      maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
+    }
+  );
+});
