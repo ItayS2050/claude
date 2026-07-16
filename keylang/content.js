@@ -12,7 +12,7 @@ window.__kikoActive = KIKO_VERSION;
 
 // Detect orphaned state: chrome.runtime.id throws when the extension context
 // has been invalidated (i.e. this script belongs to an old extension version).
-const isLive = () => { try { return !!chrome.runtime.id; } catch { return false; } };
+const isLive = () => { try { return !!chrome.runtime.id && window.__kikoActive === KIKO_VERSION; } catch { return false; } };
 
 console.log('[Kiko] v4.0.0 loaded');
 
@@ -1772,11 +1772,11 @@ function convertSelection(text, sel) {
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
-    <div class="kld-header"><span>⌨️</span><span>${escapeHtml(detection.message)}</span></div>
+    <div class="kld-header"><span>⌨️</span><span style="flex:1">${escapeHtml(detection.message)}</span><button class="kld-btn kld-dismiss" title="Dismiss">✕</button></div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
-      <button class="kld-btn kld-dismiss">Cancel</button>
+      <button class="kld-btn kld-reject">Cancel</button>
     </div>
     <div class="kld-hint">Converting selected text</div>
   `;
@@ -1818,7 +1818,9 @@ function convertSelection(text, sel) {
     }
   });
 
-  toast.querySelector('.kld-dismiss').addEventListener('click', () => removeToast(false));
+  toast.querySelectorAll('.kld-dismiss, .kld-reject').forEach(btn =>
+    btn.addEventListener('click', () => removeToast(false))
+  );
 
   applyPos(toast);
   makeDraggable(toast);
@@ -1956,6 +1958,7 @@ setInterval(() => {
 
 // ── Right-click context menu ──────────────────────────────────
 chrome.runtime.onMessage.addListener(msg => {
+  if (!isLive()) return;
   if (msg.type !== 'kiko-fix-selection' || !msg.text) return;
   const sel     = window.getSelection();
   const selText = sel && sel.toString().trim();
