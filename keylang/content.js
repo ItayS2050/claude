@@ -1656,6 +1656,7 @@ function hideHint() {
 // ── Keyboard shortcut ─────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
+  if (!isLive()) return;
   // Escape — dismiss active toast
   if (e.key === 'Escape' && activeToast) {
     const sig = lastDetection ? lastDetection.words.join('|') : null;
@@ -1916,6 +1917,7 @@ function resolveEditor(el) {
 }
 
 document.addEventListener('focusin', e => {
+  if (!isLive()) return;
   const el = resolveEditor(e.target);
   // Moving to a different input: old dismissal is no longer relevant
   if (el !== lastElement) { dismissedSignature = null; dismissedWordSet = new Set(); }
@@ -1924,6 +1926,7 @@ document.addEventListener('focusin', e => {
 }, true);
 
 document.addEventListener('keyup', e => {
+  if (!isLive()) return;
   const el = resolveEditor(e.target) || resolveEditor(document.activeElement);
   if (!el || el._kldVer === KIKO_VERSION) return;
   attachTo(el);
