@@ -1,7 +1,8 @@
 // ============================================================
-// Kiko v4.0.0 – Hebrew, Russian & Arabic ↔ English Layout Fixer
-// content.js
+// Kiko – Hebrew, Russian & Arabic ↔ English Layout Fixer
+// content.js  (wrapped in IIFE so re-injection never causes const redeclaration)
 // ============================================================
+(()=>{
 const KIKO_VERSION = chrome.runtime.getManifest().version;
 
 // Guard against duplicate injection (e.g. after extension update).
@@ -1979,3 +1980,5 @@ if (typeof window !== 'undefined' && window.__kikoTestMode) {
     clearLearned:    ()   => { learnedHebrew.clear(); learnedEnglish.clear(); },
   };
 }
+
+})(); // end IIFE
