@@ -3,10 +3,10 @@
 try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
 try { chrome.action.enable(); } catch {}
 
-// Recreate context menu on every service-worker startup (MV3: menus can
-// vanish after the worker is killed). removeAll first to avoid duplicate-id
-// errors on update; suppress lastError in case create races with removeAll.
-chrome.contextMenus.removeAll(() => {
+// Recreate context menu on every service-worker startup.
+// Remove the specific item first (checking lastError), then create it.
+chrome.contextMenus.remove('kiko-fix', () => {
+  void chrome.runtime.lastError; // "not found" on first install — safe to ignore
   chrome.contextMenus.create(
     { id: 'kiko-fix', title: '🦜 Fix with Kiko', contexts: ['selection'] },
     () => void chrome.runtime.lastError
