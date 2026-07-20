@@ -1,0 +1,5 @@
+.env
+token.json
+scheduler.log
+__pycache__/
+*.pyc
