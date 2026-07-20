@@ -1,8 +1,16 @@
 # LinkedIn Post Scheduler
 
 Schedules and posts a queue of text posts to your own LinkedIn profile feed,
-using LinkedIn's official Posts API. Meant to be run periodically via cron —
-not a long-running daemon.
+using LinkedIn's official Posts API. Meant to be run periodically via a
+scheduled task (cron on Mac/Linux, Task Scheduler on Windows) — not a
+long-running daemon.
+
+**Fastest path:** after step 1 below (registering the LinkedIn app), just run
+`bash setup.sh` from this directory and answer its prompts — it does steps 2
+and 3 for you (venv, dependencies, `.env`, one-time authorization) and offers
+to install the cron job on Mac/Linux. On Windows it does everything except
+the recurring schedule, which needs a few clicks in Task Scheduler — see that
+section below.
 
 ## 1. Register a LinkedIn app
 
@@ -84,6 +92,29 @@ Add a cron entry to check every 15 minutes:
 ```
 
 Logs also go to `scheduler.log` in this directory.
+
+### Windows: Task Scheduler setup
+
+Windows has no `cron`, so `setup.sh` skips that step there — set up the
+equivalent manually:
+
+1. Open **Task Scheduler** (search for it in the Start menu).
+2. **Action → Create Task…** (not "Create Basic Task" — this one gives you
+   the repeat-every-N-minutes option).
+3. **General** tab: name it "LinkedIn Post Scheduler".
+4. **Triggers** tab → **New…** → Begin the task: *On a schedule* → *Daily* →
+   pick any start time → check **Repeat task every** and set it to
+   **15 minutes**, for a duration of **1 day**. Check "Enabled".
+5. **Actions** tab → **New…** → Action: *Start a program*:
+   - **Program/script**: the full path to `venv\Scripts\python.exe` inside
+     this folder (e.g. `C:\Users\you\linkedin-scheduler-app\linkedin-scheduler\venv\Scripts\python.exe`)
+   - **Add arguments**: `-m linkedin_scheduler.run --posts posts.csv`
+   - **Start in**: the full path to this folder (e.g.
+     `C:\Users\you\linkedin-scheduler-app\linkedin-scheduler`)
+6. **OK** through the prompts (enter your Windows password if asked).
+
+Check `scheduler.log` in this folder after the first scheduled run to
+confirm it's working.
 
 ## Notes / limitations
 

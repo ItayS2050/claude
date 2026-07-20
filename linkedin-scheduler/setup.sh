@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # One-shot setup for the LinkedIn Post Scheduler.
 # Run this, answer the prompts, and you're done: venv + deps + .env +
-# one-time LinkedIn authorization + (optionally) the cron job.
+# one-time LinkedIn authorization + (optionally) a recurring schedule.
+# Works in a Mac/Linux terminal or in Git Bash on Windows.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -11,19 +12,37 @@ echo "== LinkedIn Post Scheduler setup =="
 echo "Working in: $DIR"
 echo
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "python3 is not installed. Install it first (e.g. from python.org) and re-run this script."
+PYTHON=""
+for candidate in python3 python; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+if [ -z "$PYTHON" ]; then
+  echo "Python is not installed or not on your PATH."
+  echo "Install it from https://www.python.org/downloads/ (on Windows, check"
+  echo "\"Add python.exe to PATH\" during install) and re-run this script."
   exit 1
 fi
 
 if [ ! -d venv ]; then
   echo "-- Creating virtual environment..."
-  python3 -m venv venv
+  "$PYTHON" -m venv venv
+fi
+
+# venv layout differs: Scripts/ on Windows, bin/ on Mac/Linux.
+if [ -f venv/Scripts/python.exe ]; then
+  VENV_PY="venv/Scripts/python.exe"
+  VENV_PIP="venv/Scripts/pip.exe"
+else
+  VENV_PY="venv/bin/python"
+  VENV_PIP="venv/bin/pip"
 fi
 
 echo "-- Installing dependencies..."
-./venv/bin/pip install -q --upgrade pip
-./venv/bin/pip install -q -r requirements.txt
+"$VENV_PIP" install -q --upgrade pip
+"$VENV_PIP" install -q -r requirements.txt
 
 if [ ! -f .env ]; then
   echo
@@ -49,22 +68,28 @@ fi
 echo
 read -r -p "Authorize with LinkedIn now? This opens your browser. [Y/n] " DO_AUTH
 if [[ ! "$DO_AUTH" =~ ^[Nn] ]]; then
-  ./venv/bin/python -m linkedin_scheduler.auth
+  "$VENV_PY" -m linkedin_scheduler.auth
 fi
 
 echo
-read -r -p "Install a cron job to check for due posts every 15 minutes? [Y/n] " DO_CRON
-if [[ ! "$DO_CRON" =~ ^[Nn] ]]; then
-  CRON_CMD="*/15 * * * * cd $DIR && $DIR/venv/bin/python -m linkedin_scheduler.run --posts $DIR/posts.csv >> $DIR/cron.log 2>&1"
-  if crontab -l 2>/dev/null | grep -qF "linkedin_scheduler.run --posts $DIR/posts.csv"; then
-    echo "-- Cron entry already installed, skipping."
-  else
-    (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
-    echo "-- Cron job installed (runs every 15 minutes)."
+if command -v crontab >/dev/null 2>&1; then
+  read -r -p "Install a cron job to check for due posts every 15 minutes? [Y/n] " DO_CRON
+  if [[ ! "$DO_CRON" =~ ^[Nn] ]]; then
+    CRON_CMD="*/15 * * * * cd $DIR && $DIR/$VENV_PY -m linkedin_scheduler.run --posts $DIR/posts.csv >> $DIR/cron.log 2>&1"
+    if crontab -l 2>/dev/null | grep -qF "linkedin_scheduler.run --posts $DIR/posts.csv"; then
+      echo "-- Cron entry already installed, skipping."
+    else
+      (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
+      echo "-- Cron job installed (runs every 15 minutes)."
+    fi
   fi
+else
+  echo "-- No 'cron' on this system (expected on Windows) — set up a recurring run yourself"
+  echo "   via Task Scheduler. See README.md 'Windows: Task Scheduler setup' for exact steps"
+  echo "   and the command to enter."
 fi
 
 echo
 echo "== Done =="
 echo "Next: edit posts.csv with your real posts, then check it worked with:"
-echo "  ./venv/bin/python -m linkedin_scheduler.run --posts posts.csv --dry-run"
+echo "  \"$VENV_PY\" -m linkedin_scheduler.run --posts posts.csv --dry-run"
