@@ -3,6 +3,10 @@
 try { chrome.action.setPopup({ popup: 'popup.html' }); } catch {}
 try { chrome.action.enable(); } catch {}
 
+// Open uninstall survey when the extension is removed.
+// Replace the URL with your Google Form or survey page.
+chrome.runtime.setUninstallURL('https://docs.google.com/forms/d/e/REPLACE_WITH_YOUR_FORM_ID/viewform');
+
 // Recreate context menu on every service-worker startup.
 // Remove the specific item first (checking lastError), then create it.
 chrome.contextMenus.remove('kiko-fix', () => {
