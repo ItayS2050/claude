@@ -5,7 +5,7 @@ try { chrome.action.enable(); } catch {}
 
 // Open uninstall survey when the extension is removed.
 // Replace the URL with your Google Form or survey page.
-chrome.runtime.setUninstallURL('https://docs.google.com/forms/d/1LaHVWw5GZl5tcF16uMcaP2U7I3EHh4uhgwPHj9I9gGA/viewform');
+chrome.runtime.setUninstallURL('https://docs.google.com/forms/d/e/1FAIpQLScfDa6ZKDuV1dYR-XMQGn4r_YISIR3uaJKqyVK0qDN7S65OyA/viewform');
 
 // Recreate context menu on every service-worker startup.
 // Remove the specific item first (checking lastError), then create it.
