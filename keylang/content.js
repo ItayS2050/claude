@@ -15,7 +15,8 @@ window.__kikoActive = KIKO_VERSION;
 // has been invalidated (i.e. this script belongs to an old extension version).
 const isLive = () => { try { return !!chrome.runtime.id && window.__kikoActive === KIKO_VERSION; } catch { return false; } };
 
-console.log('[Kiko] v4.0.0 loaded');
+// Remove any toast left behind by a previous version before we take over
+document.querySelectorAll('#kld-toast,#kld-hint').forEach(el => el.remove());
 
 // ── Keyboard mapping ─────────────────────────────────────────
 const EN_TO_HE = {
@@ -93,7 +94,7 @@ let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: false, ru: false, ar: false };
+let enabledLangs    = { he: true, ru: true, ar: true }; // overridden by loadLearned; permissive default avoids blank window
 
 async function loadLearned() {
   try {
@@ -108,7 +109,7 @@ async function loadLearned() {
     detectionEnabled = d.detectionEnabled !== false;
     soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
-    if (d.enabledLangs) enabledLangs = { he: false, ru: false, ar: false, ...d.enabledLangs };
+    if (d.enabledLangs) enabledLangs = { ...enabledLangs, ...d.enabledLangs };
     if ((d.disabledSites || []).includes(window.location.hostname)) {
       detectionEnabled = false;
     }
@@ -123,7 +124,7 @@ try {
     }
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
-    if ('enabledLangs' in changes) enabledLangs = { he: false, ru: false, ar: false, ...(changes.enabledLangs.newValue || {}) };
+    if ('enabledLangs' in changes) enabledLangs = { ...enabledLangs, ...(changes.enabledLangs.newValue || {}) };
     if ('disabledSites' in changes) {
       const sites = changes.disabledSites.newValue || [];
       const nowDisabled = sites.includes(window.location.hostname);
