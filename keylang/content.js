@@ -79,6 +79,123 @@ for (const [en, ar] of Object.entries(EN_TO_AR)) {
   if (ARABIC_RE.test(ar)) AR_TO_EN[ar] = en;
 }
 
+// ── Korean keyboard mapping (두벌식 Dubeolsik ↔ QWERTY) ────────
+// Korean is the one layout that can't be a 1:1 character table: jamo compose
+// into syllable blocks, so "dkssud" is 안녕, not six separate letters.
+// EN_TO_KO maps keys to jamo; composeHangul() then runs the same state machine
+// a real IME does, and decomposeHangul() reverses it.
+const EN_TO_KO = {
+  'q':'ㅂ','w':'ㅈ','e':'ㄷ','r':'ㄱ','t':'ㅅ','y':'ㅛ','u':'ㅕ','i':'ㅑ','o':'ㅐ','p':'ㅔ',
+  'a':'ㅁ','s':'ㄴ','d':'ㅇ','f':'ㄹ','g':'ㅎ','h':'ㅗ','j':'ㅓ','k':'ㅏ','l':'ㅣ',
+  'z':'ㅋ','x':'ㅌ','c':'ㅊ','v':'ㅍ','b':'ㅠ','n':'ㅜ','m':'ㅡ',
+  'Q':'ㅃ','W':'ㅉ','E':'ㄸ','R':'ㄲ','T':'ㅆ','O':'ㅒ','P':'ㅖ'
+};
+// Lowercase keys win on the reverse map — shifted jamo keep their own entries.
+const KO_TO_EN = {};
+for (const [en, ko] of Object.entries(EN_TO_KO)) if (!(ko in KO_TO_EN)) KO_TO_EN[ko] = en;
+
+const KO_INITIALS = [...'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'];
+const KO_MEDIALS  = [...'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'];
+const KO_FINALS   = ['', ...'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'];
+
+// Two keystrokes that merge into one compound vowel / final consonant
+const KO_VOWEL_JOIN = {
+  'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ'
+};
+const KO_FINAL_JOIN = {
+  'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ',
+  'ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ'
+};
+const KO_VOWEL_SPLIT = {};
+for (const [pair, joined] of Object.entries(KO_VOWEL_JOIN)) KO_VOWEL_SPLIT[joined] = [...pair];
+const KO_FINAL_SPLIT = {};
+for (const [pair, joined] of Object.entries(KO_FINAL_JOIN)) KO_FINAL_SPLIT[joined] = [...pair];
+
+const HANGUL_RE      = /[가-힣]/;              // complete syllable blocks
+const HANGUL_ANY_RE  = /[가-힣ㄱ-ㅎㅏ-ㅣ]/;    // blocks or bare jamo
+const SYLLABLE_BASE  = 0xAC00;
+
+// Fold a jamo stream into syllable blocks, exactly as a Dubeolsik IME would.
+function composeHangul(jamo) {
+  let out = '';
+  let L = -1, V = -1, T = 0; // initial / medial indices (-1 = unset), final index (0 = none)
+  const flush = () => {
+    if (L >= 0 && V >= 0)      out += String.fromCharCode(SYLLABLE_BASE + (L * 21 + V) * 28 + T);
+    else if (L >= 0)           out += KO_INITIALS[L];
+    else if (V >= 0)           out += KO_MEDIALS[V];
+    L = -1; V = -1; T = 0;
+  };
+  for (const ch of jamo) {
+    if (!HANGUL_ANY_RE.test(ch)) { flush(); out += ch; continue; }
+
+    const vi = KO_MEDIALS.indexOf(ch);
+    if (vi >= 0) {
+      if (T > 0) {
+        // A vowel after a final means that final was really the NEXT syllable's
+        // initial — "tkfkd" is 사랑, not 삵+ㅏ. Hand it over (compound finals
+        // give up only their second half).
+        const split = KO_FINAL_SPLIT[KO_FINALS[T]];
+        const moved = split ? split[1] : KO_FINALS[T];
+        T = split ? KO_FINALS.indexOf(split[0]) : 0;
+        flush();
+        L = KO_INITIALS.indexOf(moved);
+        V = vi;
+      } else if (L >= 0 && V < 0) {
+        V = vi;
+      } else if (V >= 0) {
+        const joined = KO_VOWEL_JOIN[KO_MEDIALS[V] + ch];
+        if (joined) V = KO_MEDIALS.indexOf(joined);
+        else { flush(); V = vi; }
+      } else {
+        flush(); V = vi;
+      }
+      continue;
+    }
+
+    const li = KO_INITIALS.indexOf(ch);
+    const fi = KO_FINALS.indexOf(ch);
+    if (L < 0 && V < 0) {
+      if (li >= 0) L = li; else out += ch;
+    } else if (L < 0 || V < 0) {
+      // A bare vowel, or an initial with no vowel yet, can't carry a final —
+      // every syllable block needs both. Start a fresh syllable instead.
+      flush(); if (li >= 0) L = li; else out += ch;
+    } else if (T === 0) {
+      if (fi > 0) T = fi;
+      else { flush(); if (li >= 0) L = li; else out += ch; }
+    } else {
+      const joined = KO_FINAL_JOIN[KO_FINALS[T] + ch];
+      if (joined) T = KO_FINALS.indexOf(joined);
+      else { flush(); if (li >= 0) L = li; else out += ch; }
+    }
+  }
+  flush();
+  return out;
+}
+
+// Break syllable blocks back into the jamo keystrokes that produced them.
+function decomposeHangul(text) {
+  let out = '';
+  for (const ch of text) {
+    const idx = ch.charCodeAt(0) - SYLLABLE_BASE;
+    if (idx >= 0 && idx < 11172) {
+      const L = Math.floor(idx / (21 * 28));
+      const V = Math.floor((idx % (21 * 28)) / 28);
+      const T = idx % 28;
+      out += KO_INITIALS[L];
+      const v = KO_MEDIALS[V];
+      out += KO_VOWEL_SPLIT[v] ? KO_VOWEL_SPLIT[v].join('') : v;
+      if (T > 0) {
+        const f = KO_FINALS[T];
+        out += KO_FINAL_SPLIT[f] ? KO_FINAL_SPLIT[f].join('') : f;
+      }
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 // ── Feedback telemetry (anonymous, fire-and-forget) ──────────
 // Telemetry disabled — all processing is local, no text is sent to any server.
 const FEEDBACK_URL = '';
@@ -103,22 +220,24 @@ let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
 let learnedRussian  = new Set();
 let learnedUkrainian = new Set();
+let learnedKorean   = new Set();
 let learnedArabic   = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, uk: true, ar: true }; // overridden by loadLearned; permissive default avoids blank window
+let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true }; // overridden by loadLearned; permissive default avoids blank window
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
     learnedRussian  = new Set(d.learnedRussian || []);
     learnedUkrainian = new Set(d.learnedUkrainian || []);
+    learnedKorean   = new Set(d.learnedKorean || []);
     learnedArabic   = new Set(d.learnedArabic  || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
@@ -175,6 +294,19 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
       }
       await chrome.storage.local.set({
         learnedUkrainian: [...learnedUkrainian],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
+    } else if (lang === 'ko') {
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedKorean.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedKorean.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedKorean: [...learnedKorean],
         learnedEnglish: [...learnedEnglish],
         stats
       });
@@ -541,6 +673,56 @@ function wordCouldBeArabic(word) {
   return arabicScore(arWord) >= 0.25;
 }
 
+// ── Korean scoring data ───────────────────────────────────────
+// English maps onto valid-looking Hangul far more readily than onto Cyrillic,
+// so Korean is scored on whole syllables against a frequency list rather than
+// on bigrams, and held to a higher threshold.
+const KO_SYLLABLES = new Set([...(
+  '이다는에가하을를의고지서사한로자어대아그시인수나도리부상정기스주우만년일오소전무신성안내니라미조유것등문화회생국학산방물명요여남동발경제개계공과관광구군금김노능단당두말매면목반백법변보복본분비삼선세속손술습승식실심씨악야약양업연열영예온왕외용원월위은음임입장재저적절점접종좌준중즉증진질집차참창채처천청초총최추축출충취층치친침카코타토통특파판편평포표품풍피필할함합항해행향현형호확환활황획효후훈휴흑힘밥집일돈책영화노래친구가족음식시간사람오늘내일어제지금진짜정말조금많이여기거기저기학교'
+)]);
+
+const COMMON_KO_WORDS = new Set([
+  '안녕','안녕하세요','감사','감사합니다','고마워','고맙습니다','미안','죄송합니다',
+  '네','아니','아니요','응','그래','맞아','알겠습니다','괜찮아','괜찮아요',
+  '뭐','왜','어디','누구','언제','어떻게','얼마',
+  '지금','오늘','내일','어제','아침','저녁','시간','요일',
+  '사람','친구','가족','학교','회사','집','일','돈','책','음식','물','밥',
+  '사랑','행복','생각','문제','이유','방법','정도','경우',
+  '하다','있다','없다','좋다','싫다','크다','작다','많다','적다',
+  '해요','합니다','했어','했어요','할게','할까','하자','해줘',
+  '진짜','정말','조금','많이','너무','아주','다시','아직','벌써',
+  '이거','저거','그거','여기','거기','저기','이것','그것',
+  '한국','한국어','서울','부산','영화','노래','게임','사진',
+]);
+
+function koreanScore(word) {
+  const syls = [...word].filter(c => HANGUL_RE.test(c));
+  if (syls.length === 0) return 0;
+  return syls.filter(c => KO_SYLLABLES.has(c)).length / syls.length;
+}
+
+function wordCouldBeKorean(word) {
+  if (word.length < 2) return false;
+  const lower = word.toLowerCase();
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedKorean.has(lower)) return true;
+  if (EN_WORDS.has(lower)) return false;
+  // No wordCouldBeHebrew() guard here, unlike the Cyrillic checks: the Hebrew
+  // pass already runs earlier and returns before this one, and the short
+  // keystroke runs behind 안녕 / 사랑 / 한국 all look plausibly Hebrew — keeping
+  // the guard silently cost Korean its most common words.
+  if (![...word].every(c => EN_TO_KO[c] !== undefined)) return false;
+  const koWord = convertToKorean(word);
+  // Every keystroke must land inside a complete syllable — leftover bare jamo
+  // means this was never Korean, just letters that happen to map.
+  if (!/^[가-힣]{2,}$/.test(koWord)) return false;
+  // A known Korean word outranks the English-likeness heuristic: "dkssud" (안녕)
+  // scores 0.40 as English and would otherwise never be caught.
+  if (COMMON_KO_WORDS.has(koWord)) return true;
+  if (englishScore(lower) >= 0.35) return false;
+  return koreanScore(koWord) >= 0.5;
+}
+
 // ── Helper functions ──────────────────────────────────────────
 function hasHebrew(t)          { return HEBREW_RE.test(t); }
 function hasArabic(t)          { return ARABIC_RE.test(t); }
@@ -548,6 +730,8 @@ function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
 function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
+function convertToKorean(t)    { return composeHangul([...t].map(c => EN_TO_KO[c] ?? c).join('')); }
+function convertFromKorean(t)  { return [...decomposeHangul(t)].map(c => KO_TO_EN[c] ?? c).join(''); }
 function convertToUkrainian(t)   { return [...t].map(c => EN_TO_UK[c] || c).join(''); }
 function convertFromUkrainian(t) { return [...t].map(c => UK_TO_EN[c] || c).join(''); }
 function convertToArabic(t)    { return [...t].map(c => EN_TO_AR[c]  || c).join(''); }
@@ -655,6 +839,7 @@ function analyzeText(rawText, scanAll = false) {
   const textHasRussian = RUSSIAN_RE.test(text);
   const textHasArabic  = hasArabic(text);
   const textHasUkOnly  = UK_ONLY_RE.test(text);
+  const textHasHangul  = HANGUL_ANY_RE.test(text);
 
   // ── Case 1: Hebrew characters typed while English keyboard layout was expected
   // Hebrew final-form letters (ך ם ן ף ץ) never appear at the START of a word.
@@ -787,6 +972,61 @@ function analyzeText(rawText, scanAll = false) {
               btnLabel: 'Fix → English',
               rejectLabel: 'Not English',
               words: run1.filter(w => HEBREW_RE.test(w))
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // ── Case K1: Hangul typed while English keyboard was expected
+  // Hangul shares no code points with the other scripts, so this pass can run
+  // first and never contend with them.
+  if (textHasHangul && enabledLangs.ko) {
+    let allKoTokens;
+    try {
+      allKoTokens = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-zA-Z])(?=[가-힣ㄱ-ㅎㅏ-ㅣ])|(?<=[가-힣ㄱ-ㅎㅏ-ㅣ])(?=[a-zA-Z])/).filter(Boolean)
+      );
+    } catch {
+      allKoTokens = text.trim().split(/\s+/);
+    }
+    const runK1 = [];
+    for (let i = allKoTokens.length - 1; i >= 0; i--) {
+      const w = allKoTokens[i];
+      if (HANGUL_ANY_RE.test(w)) {
+        runK1.unshift(w);
+      } else if (runK1.length > 0 && w.length <= 2) {
+        runK1.unshift(w);
+      } else if (runK1.length === 0) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    if (runK1.length >= 1) {
+      const koInRun = runK1.filter(w => HANGUL_ANY_RE.test(w));
+      if (!koInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        const originalK1  = koInRun.join(' ');
+        const convertedK1 = convertFromKorean(originalK1);
+        if (convertedK1.trim().length >= 2 && !HANGUL_ANY_RE.test(convertedK1)) {
+          const convWordsK1 = convertedK1.split(/\s+/)
+            .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+            .filter(w => w.length >= 2);
+          const hasCommonK1 = convWordsK1.some(w => COMMON_EN_WORDS.has(w));
+          const avgScoreK1 = convWordsK1.length
+            ? convWordsK1.reduce((a, w) => a + englishScore(w), 0) / convWordsK1.length
+            : 0;
+          const fireK1 = runK1.length === 1
+            ? (convWordsK1.length >= 1 && convWordsK1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsK1[0]))
+            : (hasCommonK1 && avgScoreK1 >= 0.15);
+          if (fireK1) {
+            return {
+              type: 'korean_as_english', lang: 'ko',
+              message: 'Wrong layout? Looks like English:',
+              original: originalK1, converted: convertedK1,
+              btnLabel: 'Fix → English', rejectLabel: 'Not English',
+              words: koInRun
             };
           }
         }
@@ -1150,6 +1390,44 @@ function analyzeText(rawText, scanAll = false) {
           original: spanAr2, converted: convertedAr2,
           btnLabel: 'Fix → Arabic', rejectLabel: 'Not Arabic',
           words: runAr2
+        };
+      }
+    }
+  }
+
+  // ── Case K2: English characters typed while Korean keyboard was expected
+  // Runs last of all the English→X passes. wordCouldBeKorean already demands a
+  // clean syllable decomposition, but English maps onto plausible Hangul easily,
+  // so the established languages keep first claim on any ambiguous run.
+  if (!textHasHebrew && enabledLangs.ko) {
+    const koCandWords = extractWords(text);
+    const koMinRun = textHasHangul ? 1 : 2;
+    const allKoRuns = [];
+    let curKoRun = [], curKoStartIdx = -1;
+    for (let wi = 0; wi < koCandWords.length; wi++) {
+      const w = koCandWords[wi];
+      if (wordCouldBeKorean(w)) {
+        if (curKoRun.length === 0) curKoStartIdx = wi;
+        curKoRun.push(w);
+      } else {
+        if (curKoRun.length > 0) allKoRuns.push({ words: [...curKoRun], startIdx: curKoStartIdx });
+        curKoRun = []; curKoStartIdx = -1;
+      }
+    }
+    if (curKoRun.length > 0) allKoRuns.push({ words: curKoRun, startIdx: curKoStartIdx });
+
+    const koRunEntry = [...allKoRuns].reverse().find(r => r.words.length >= koMinRun);
+    if (koRunEntry) {
+      const runKo2 = koRunEntry.words;
+      const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
+      const convertedKo2 = convertToKorean(spanKo2);
+      if (HANGUL_RE.test(convertedKo2)) {
+        return {
+          type: 'english_as_korean', lang: 'ko',
+          message: 'Wrong layout? Looks like Korean:',
+          original: spanKo2, converted: convertedKo2,
+          btnLabel: 'Fix → Korean', rejectLabel: 'Not Korean',
+          words: runKo2
         };
       }
     }
@@ -1647,7 +1925,7 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
-      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_ukrainian' || detection.type === 'english_as_arabic') {
+      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_ukrainian' || detection.type === 'english_as_korean' || detection.type === 'english_as_arabic') {
         lastCase2Original = detection.original.trim().toLowerCase();
       }
     }
@@ -1814,6 +2092,8 @@ function showHint() {
   const dir     = lastDetection.type === 'hebrew_as_english'  ? '→ EN'
                 : lastDetection.type === 'russian_as_english' ? '→ EN'
                 : lastDetection.type === 'arabic_as_english'  ? '→ EN'
+                : lastDetection.type === 'korean_as_english' ? '→ EN'
+                : lastDetection.type === 'english_as_korean' ? '→ KO'
                 : lastDetection.type === 'ukrainian_as_english' ? '→ EN'
                 : lastDetection.type === 'english_as_ukrainian' ? '→ UK'
                 : lastDetection.type === 'english_as_russian' ? '→ RU'
@@ -1914,6 +2194,16 @@ function convertSelection(text, sel) {
       message: 'Convert selection to English?',
       original: text,
       converted: convertToEnglish(text),
+      btnLabel: 'Convert → English',
+      rejectLabel: 'Cancel',
+      words: []
+    };
+  } else if (HANGUL_ANY_RE.test(text)) {
+    detection = {
+      type: 'korean_detected', lang: 'ko',
+      message: 'Convert selection to English?',
+      original: text,
+      converted: convertFromKorean(text),
       btnLabel: 'Convert → English',
       rejectLabel: 'Cancel',
       words: []
