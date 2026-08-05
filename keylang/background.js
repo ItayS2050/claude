@@ -22,6 +22,21 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
   }
 
+  // Stamp when this user first installed, and which version they arrived on.
+  // Written on update too, so people already running an older build are still
+  // recorded rather than looking like brand-new installs. Purely local: nothing
+  // is sent anywhere. This only has to exist from the first published version —
+  // added later, every existing user is indistinguishable from a new one, and
+  // there is no way to tell early adopters apart if terms ever change.
+  try {
+    const { firstInstall } = await chrome.storage.local.get('firstInstall');
+    if (!firstInstall) {
+      await chrome.storage.local.set({
+        firstInstall: { at: Date.now(), version: chrome.runtime.getManifest().version }
+      });
+    }
+  } catch {}
+
   // Re-inject content.js into all existing tabs so users don't need to refresh
   // after an extension update. The new content.js version-guards itself via
   // window.__kikoActive so it safely overwrites the old orphaned script.
