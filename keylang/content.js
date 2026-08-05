@@ -79,6 +79,38 @@ for (const [en, ar] of Object.entries(EN_TO_AR)) {
   if (ARABIC_RE.test(ar)) AR_TO_EN[ar] = en;
 }
 
+// ── Greek keyboard mapping (Greek 220 ↔ QWERTY) ───────────────
+// A plain 1:1 table with one wrinkle: the ';' key is a dead key that adds the
+// tonos accent to the vowel after it, so "kalhm;era" is καλημέρα. foldGreekTonos
+// applies that pairing; expandGreekTonos undoes it on the way back.
+const EN_TO_EL = {
+  'q':';','w':'ς','e':'ε','r':'ρ','t':'τ','y':'υ','u':'θ','i':'ι','o':'ο','p':'π',
+  'a':'α','s':'σ','d':'δ','f':'φ','g':'γ','h':'η','j':'ξ','k':'κ','l':'λ',';':'΄',
+  'z':'ζ','x':'χ','c':'ψ','v':'ω','b':'β','n':'ν','m':'μ'
+};
+const GREEK_RE = /[Ά-ώ]/;
+const EL_TO_EN = {};
+for (const [en, el] of Object.entries(EN_TO_EL)) {
+  if (GREEK_RE.test(el)) EL_TO_EN[el] = en;
+}
+EL_TO_EN['΄'] = ';'; // the tonos dead key itself is not a Greek letter
+
+const EL_TONOS = { 'α':'ά','ε':'έ','η':'ή','ι':'ί','ο':'ό','υ':'ύ','ω':'ώ' };
+const EL_UNTONOS = {};
+for (const [plain, accented] of Object.entries(EL_TONOS)) EL_UNTONOS[accented] = plain;
+
+function foldGreekTonos(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '΄' && EL_TONOS[text[i + 1]]) { out += EL_TONOS[text[i + 1]]; i++; }
+    else out += text[i];
+  }
+  return out;
+}
+function expandGreekTonos(text) {
+  return [...text].map(c => EL_UNTONOS[c] ? '΄' + EL_UNTONOS[c] : c).join('');
+}
+
 // ── Korean keyboard mapping (두벌식 Dubeolsik ↔ QWERTY) ────────
 // Korean is the one layout that can't be a 1:1 character table: jamo compose
 // into syllable blocks, so "dkssud" is 안녕, not six separate letters.
@@ -221,23 +253,25 @@ let learnedEnglish  = new Set();
 let learnedRussian  = new Set();
 let learnedUkrainian = new Set();
 let learnedKorean   = new Set();
+let learnedGreek    = new Set();
 let learnedArabic   = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true }; // overridden by loadLearned; permissive default avoids blank window
+let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true, el: true }; // overridden by loadLearned; permissive default avoids blank window
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedGreek','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
     learnedRussian  = new Set(d.learnedRussian || []);
     learnedUkrainian = new Set(d.learnedUkrainian || []);
     learnedKorean   = new Set(d.learnedKorean || []);
+    learnedGreek    = new Set(d.learnedGreek || []);
     learnedArabic   = new Set(d.learnedArabic  || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
@@ -294,6 +328,19 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
       }
       await chrome.storage.local.set({
         learnedUkrainian: [...learnedUkrainian],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
+    } else if (lang === 'el') {
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedGreek.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedGreek.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedGreek: [...learnedGreek],
         learnedEnglish: [...learnedEnglish],
         stats
       });
@@ -673,6 +720,63 @@ function wordCouldBeArabic(word) {
   return arabicScore(arWord) >= 0.25;
 }
 
+// ── Greek scoring data ────────────────────────────────────────
+const EL_BIGRAMS = new Set([
+  'αι','τα','το','ου','ος','ει','ης','ον','αν','ερ',
+  'ρο','κα','να','με','τη','ντ','στ','ια','εν','ις',
+  'ας','ατ','ικ','λο','ολ','ορ','πο','πα','ρα','ρι',
+  'σε','τι','υπ','χα','ωσ','μα','μο','νο','λι','λα',
+  'δε','δι','γι','γε','θα','θε','φο','φα','βα','ελ',
+  'τρ','πρ','κρ','χρ','γρ','δρ','σπ','σκ','αρ','απ',
+  'επ','εκ','ετ','ημ','ιν','ιο','ητ','ομ','οπ','συ',
+]);
+
+const COMMON_EL_WORDS = new Set([
+  'και','να','το','τα','της','του','την','τον','των','οι',
+  'με','σε','για','από','που','δεν','είναι','ένα','μια','ένας',
+  'στο','στη','στον','στην','στα','ως','αν','θα','όταν',
+  'όχι','ναι','γεια','σου','σας','μου','μας','τους','τις',
+  'καλά','καλή','καλό','ευχαριστώ','παρακαλώ','συγγνώμη',
+  'τι','πως','πώς','πού','ποιος','πότε','γιατί','ποιο',
+  'όλα','όλοι','κάτι','τίποτα','πολύ','λίγο','ακόμα','πάλι',
+  'τώρα','μετά','πριν','εδώ','εκεί','σήμερα','αύριο','χθες',
+  'σπίτι','δουλειά','φίλος','φίλε','χρόνος','μέρα','νύχτα','ώρα',
+  'καλημέρα','καλησπέρα','καληνύχτα','αντίο','έλα','πάμε',
+  'άνθρωπος','παιδί','κόσμος','ζωή','χέρι','μάτι','νερό','ψωμί',
+  'θέλω','έχω','κάνω','λέω','πάω','ξέρω','μπορώ','πρέπει',
+  'αυτό','αυτή','αυτός','εγώ','εσύ','εμείς','εσείς','αλλά',
+]);
+
+// Plenty of people type Greek without the tonos key, so match the word list
+// with accents stripped from both sides rather than demanding an exact hit.
+const stripTonos = w => [...w].map(c => EL_UNTONOS[c] || c).join('');
+const COMMON_EL_WORDS_PLAIN = new Set([...COMMON_EL_WORDS].map(stripTonos));
+
+function greekScore(word) {
+  const s = word.toLowerCase();
+  if (s.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    if (EL_BIGRAMS.has(s.slice(i, i + 2))) hits++;
+  }
+  return hits / (s.length - 1);
+}
+
+function wordCouldBeGreek(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedGreek.has(lower)) return true;
+  if (EN_WORDS.has(lower)) return false;
+  if (![...lower].every(c => EN_TO_EL[c] !== undefined)) return false;
+  const elWord = convertToGreek(lower);
+  if (COMMON_EL_WORDS_PLAIN.has(stripTonos(elWord))) return true;
+  if (englishScore(lower) >= 0.35) return false;
+  // 0.3 let "lazy"/"project"/"support" through — nearly every QWERTY key maps to
+  // a Greek letter, so this pass needs the tighter bar Korean uses.
+  return greekScore(elWord) >= 0.5;
+}
+
 // ── Korean scoring data ───────────────────────────────────────
 // English maps onto valid-looking Hangul far more readily than onto Cyrillic,
 // so Korean is scored on whole syllables against a frequency list rather than
@@ -730,6 +834,8 @@ function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
 function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
+function convertToGreek(t)     { return foldGreekTonos([...t].map(c => EN_TO_EL[c] ?? c).join('')); }
+function convertFromGreek(t)   { return [...expandGreekTonos(t)].map(c => EL_TO_EN[c] ?? c).join(''); }
 function convertToKorean(t)    { return composeHangul([...t].map(c => EN_TO_KO[c] ?? c).join('')); }
 function convertFromKorean(t)  { return [...decomposeHangul(t)].map(c => KO_TO_EN[c] ?? c).join(''); }
 function convertToUkrainian(t)   { return [...t].map(c => EN_TO_UK[c] || c).join(''); }
@@ -840,6 +946,7 @@ function analyzeText(rawText, scanAll = false) {
   const textHasArabic  = hasArabic(text);
   const textHasUkOnly  = UK_ONLY_RE.test(text);
   const textHasHangul  = HANGUL_ANY_RE.test(text);
+  const textHasGreek   = GREEK_RE.test(text);
 
   // ── Case 1: Hebrew characters typed while English keyboard layout was expected
   // Hebrew final-form letters (ך ם ן ף ץ) never appear at the START of a word.
@@ -973,6 +1080,64 @@ function analyzeText(rawText, scanAll = false) {
               rejectLabel: 'Not English',
               words: run1.filter(w => HEBREW_RE.test(w))
             };
+          }
+        }
+      }
+    }
+  }
+
+  // ── Case G1: Greek typed while English keyboard was expected
+  // Greek shares no code points with the other scripts, so like Hangul this can
+  // run early without contending with them.
+  if (textHasGreek && enabledLangs.el) {
+    let allElTokens;
+    try {
+      allElTokens = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-zA-Z])(?=[Ά-ώ])|(?<=[Ά-ώ])(?=[a-zA-Z])/).filter(Boolean)
+      );
+    } catch {
+      allElTokens = text.trim().split(/\s+/);
+    }
+    const runG1 = [];
+    for (let i = allElTokens.length - 1; i >= 0; i--) {
+      const w = allElTokens[i];
+      if (GREEK_RE.test(w)) {
+        runG1.unshift(w);
+      } else if (runG1.length > 0 && w.length <= 2) {
+        runG1.unshift(w);
+      } else if (runG1.length === 0) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    if (runG1.length >= 1) {
+      const elInRun = runG1.filter(w => GREEK_RE.test(w));
+      if (!elInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        const allMapG = elInRun.every(w => [...expandGreekTonos(w)].every(c => EL_TO_EN[c] !== undefined));
+        if (allMapG) {
+          const originalG1  = elInRun.join(' ');
+          const convertedG1 = convertFromGreek(originalG1);
+          if (convertedG1.trim().length >= 2 && !GREEK_RE.test(convertedG1)) {
+            const convWordsG1 = convertedG1.split(/\s+/)
+              .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+              .filter(w => w.length >= 2);
+            const hasCommonG1 = convWordsG1.some(w => COMMON_EN_WORDS.has(w));
+            const avgScoreG1 = convWordsG1.length
+              ? convWordsG1.reduce((a, w) => a + englishScore(w), 0) / convWordsG1.length
+              : 0;
+            const fireG1 = runG1.length === 1
+              ? (convWordsG1.length >= 1 && convWordsG1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsG1[0]))
+              : (hasCommonG1 && avgScoreG1 >= 0.15);
+            if (fireG1) {
+              return {
+                type: 'greek_as_english', lang: 'el',
+                message: 'Wrong layout? Looks like English:',
+                original: originalG1, converted: convertedG1,
+                btnLabel: 'Fix → English', rejectLabel: 'Not English',
+                words: elInRun
+              };
+            }
           }
         }
       }
@@ -1428,6 +1593,43 @@ function analyzeText(rawText, scanAll = false) {
           original: spanKo2, converted: convertedKo2,
           btnLabel: 'Fix → Korean', rejectLabel: 'Not Korean',
           words: runKo2
+        };
+      }
+    }
+  }
+
+  // ── Case G2: English characters typed while Greek keyboard was expected
+  // Runs after Korean, last of all: nearly every QWERTY key maps to a Greek
+  // letter, so this is the loosest pass and must not pre-empt the others.
+  if (!textHasHebrew && enabledLangs.el) {
+    const elCandWords = extractWords(text);
+    const elMinRun = textHasGreek ? 1 : 2;
+    const allElRuns = [];
+    let curElRun = [], curElStartIdx = -1;
+    for (let wi = 0; wi < elCandWords.length; wi++) {
+      const w = elCandWords[wi];
+      if (wordCouldBeGreek(w)) {
+        if (curElRun.length === 0) curElStartIdx = wi;
+        curElRun.push(w);
+      } else {
+        if (curElRun.length > 0) allElRuns.push({ words: [...curElRun], startIdx: curElStartIdx });
+        curElRun = []; curElStartIdx = -1;
+      }
+    }
+    if (curElRun.length > 0) allElRuns.push({ words: curElRun, startIdx: curElStartIdx });
+
+    const elRunEntry = [...allElRuns].reverse().find(r => r.words.length >= elMinRun);
+    if (elRunEntry) {
+      const runEl2 = elRunEntry.words;
+      const spanEl2 = findRunSpan(text, runEl2[0], runEl2[runEl2.length - 1]) || runEl2.join(' ');
+      const convertedEl2 = convertToGreek(spanEl2.toLowerCase());
+      if (GREEK_RE.test(convertedEl2)) {
+        return {
+          type: 'english_as_greek', lang: 'el',
+          message: 'Wrong layout? Looks like Greek:',
+          original: spanEl2, converted: convertedEl2,
+          btnLabel: 'Fix → Greek', rejectLabel: 'Not Greek',
+          words: runEl2
         };
       }
     }
@@ -1925,7 +2127,7 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
-      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_ukrainian' || detection.type === 'english_as_korean' || detection.type === 'english_as_arabic') {
+      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_ukrainian' || detection.type === 'english_as_korean' || detection.type === 'english_as_greek' || detection.type === 'english_as_arabic') {
         lastCase2Original = detection.original.trim().toLowerCase();
       }
     }
@@ -2092,6 +2294,8 @@ function showHint() {
   const dir     = lastDetection.type === 'hebrew_as_english'  ? '→ EN'
                 : lastDetection.type === 'russian_as_english' ? '→ EN'
                 : lastDetection.type === 'arabic_as_english'  ? '→ EN'
+                : lastDetection.type === 'greek_as_english' ? '→ EN'
+                : lastDetection.type === 'english_as_greek' ? '→ EL'
                 : lastDetection.type === 'korean_as_english' ? '→ EN'
                 : lastDetection.type === 'english_as_korean' ? '→ KO'
                 : lastDetection.type === 'ukrainian_as_english' ? '→ EN'
@@ -2194,6 +2398,16 @@ function convertSelection(text, sel) {
       message: 'Convert selection to English?',
       original: text,
       converted: convertToEnglish(text),
+      btnLabel: 'Convert → English',
+      rejectLabel: 'Cancel',
+      words: []
+    };
+  } else if (GREEK_RE.test(text)) {
+    detection = {
+      type: 'greek_detected', lang: 'el',
+      message: 'Convert selection to English?',
+      original: text,
+      converted: convertFromGreek(text),
       btnLabel: 'Convert → English',
       rejectLabel: 'Cancel',
       words: []

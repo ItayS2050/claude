@@ -52,6 +52,7 @@
     .word-tag.russian { border-left: 2px solid #a855f7; }
     .word-tag.ukrainian { border-left: 2px solid #facc15; }
     .word-tag.korean { border-left: 2px solid #22d3ee; }
+    .word-tag.greek { border-left: 2px solid #818cf8; }
     .word-tag.arabic { border-left: 2px solid #f59e0b; }
     .word-tag button {
       background: none; border: none; color: #64748b;
@@ -154,7 +155,7 @@
 </head>
 <body>
   <h1>🦜 Kiko</h1>
-  <div class="version">v4.3.0 · Hebrew, Russian, Ukrainian, Korean &amp; Arabic ↔ English</div>
+  <div class="version">v4.4.0 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
 
   <div class="stats">
     <div class="stat">
@@ -204,6 +205,13 @@
   <div class="add-row">
     <input id="add-korean-input" type="text" placeholder="Add Korean keyboard word…" />
     <button id="add-korean-btn">Add</button>
+  </div>
+
+  <h2>Learned — Greek keyboard words</h2>
+  <div class="word-list" id="greek-words"></div>
+  <div class="add-row">
+    <input id="add-greek-input" type="text" placeholder="Add Greek keyboard word…" />
+    <button id="add-greek-btn">Add</button>
   </div>
 
   <h2>Learned — Arabic keyboard words</h2>
@@ -288,6 +296,16 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
+      <div class="toggle-label">🔤 Greek ↔ English</div>
+      <div class="toggle-sub">Detect Greek keyboard layout mistakes</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="lang-el-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="toggle-row" style="margin-top:8px">
+    <div>
       <div class="toggle-label">🔤 Arabic ↔ English</div>
       <div class="toggle-sub">Detect Arabic keyboard layout mistakes</div>
     </div>
@@ -327,7 +345,7 @@
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
   <div class="shortcut">Alt + Shift + K · Scan or convert selected text on any page</div>
   <div class="shortcut" style="margin-top:4px">Works on any website with a text field</div>
-  <div class="shortcut" style="margin-top:6px">🦜 Kiko v4.3.0</div>
+  <div class="shortcut" style="margin-top:6px">🦜 Kiko v4.4.0</div>
 
   <script src="popup.js"></script>
 </body>

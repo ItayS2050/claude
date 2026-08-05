@@ -4,7 +4,7 @@
 Kiko – Multilingual Keyboard Layout Fixer
 
 ## Short description (max 132 chars — 119 chars)
-Caught typing in the wrong layout? Kiko detects Hebrew, Russian, Ukrainian, Korean & Arabic keyboard mistakes and fixes them in one click.
+Caught typing in the wrong layout? Kiko detects Hebrew, Russian, Ukrainian, Korean, Greek & Arabic keyboard mistakes and fixes them in one click.
 
 ## Full description (paste this into the store)
 
@@ -14,7 +14,7 @@ Caught typing in the wrong layout? Kiko detects Hebrew, Russian, Ukrainian, Kore
 
 Meet Kiko 🦜 — your multilingual keyboard companion that watches what you type and instantly catches when you're in the wrong layout. One click fixes it.
 
-**Supports Hebrew, Russian, Ukrainian, Korean, and Arabic**
+**Supports Hebrew, Russian, Ukrainian, Korean, Greek, and Arabic**
 - Typed English on a Hebrew keyboard? Kiko converts it back to Hebrew instantly.
 - Typed English on a Russian keyboard? Fixed.
 - Typed English on an Arabic keyboard? Fixed.
@@ -23,7 +23,7 @@ Meet Kiko 🦜 — your multilingual keyboard companion that watches what you ty
 **How it works**
 - Type normally in any text field. If Kiko detects a layout mismatch, a small notification appears with the corrected text.
 - Click **Convert** to instantly replace the garbled text with the correct version.
-- Click **Not Hebrew / Not Russian / Not Ukrainian / Not Korean / Not Arabic** if the suggestion was wrong — Kiko learns from your feedback and won't flag that word again.
+- Click **Not Hebrew / Not Russian / Not Ukrainian / Not Korean / Not Greek / Not Arabic** if the suggestion was wrong — Kiko learns from your feedback and won't flag that word again.
 - Press **Alt + Shift + K** to manually scan or convert selected text at any time.
 
 **Works everywhere**
