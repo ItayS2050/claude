@@ -8,7 +8,7 @@ const KIKO_VERSION = chrome.runtime.getManifest().version;
 // Guard against duplicate injection (e.g. after extension update).
 // Old orphaned script set window.__kikoActive to its own version; new script
 // overwrites the guard so it wins, then re-attaches all editors.
-if (window.__kikoActive === KIKO_VERSION) { throw new Error('kiko:already-active'); }
+if (window.__kikoActive === KIKO_VERSION) { return; }
 window.__kikoActive = KIKO_VERSION;
 
 // Detect orphaned state: chrome.runtime.id throws when the extension context
