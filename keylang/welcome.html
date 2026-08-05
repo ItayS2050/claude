@@ -52,6 +52,9 @@
     .lang-card.selected { border-color: #3b82f6; background: #1e3a5f; }
     .lang-card.selected.ru { border-color: #a855f7; background: #2d1f47; }
     .lang-card.selected.ar { border-color: #f59e0b; background: #451a03; }
+    .lang-card.selected.uk { border-color: #facc15; background: #422006; }
+    .lang-card.selected.ko { border-color: #22d3ee; background: #083344; }
+    .lang-card.selected.el { border-color: #818cf8; background: #1e1b4b; }
     .lang-icon { font-size: 28px; flex-shrink: 0; }
     .lang-info { flex: 1; }
     .lang-name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
@@ -67,6 +70,9 @@
     }
     .lang-card.selected.ru .lang-check { background: #a855f7; border-color: #a855f7; }
     .lang-card.selected.ar .lang-check { background: #f59e0b; border-color: #f59e0b; }
+    .lang-card.selected.uk .lang-check { background: #facc15; border-color: #facc15; }
+    .lang-card.selected.ko .lang-check { background: #22d3ee; border-color: #22d3ee; }
+    .lang-card.selected.el .lang-check { background: #818cf8; border-color: #818cf8; }
     .btn {
       width: 100%; padding: 13px;
       background: #3b82f6; border: none; border-radius: 10px;
@@ -111,6 +117,30 @@
           <div class="lang-example">Typed <em>ahlan</em> but meant <strong>اهلان</strong></div>
         </div>
         <div class="lang-check" id="check-ar"></div>
+      </div>
+      <div class="lang-card uk" id="card-uk" data-lang="uk">
+        <div class="lang-icon">🇺🇦</div>
+        <div class="lang-info">
+          <div class="lang-name">Ukrainian</div>
+          <div class="lang-example">Typed <em>ghbdsn</em> but meant <strong>привіт</strong></div>
+        </div>
+        <div class="lang-check" id="check-uk"></div>
+      </div>
+      <div class="lang-card ko" id="card-ko" data-lang="ko">
+        <div class="lang-icon">🇰🇷</div>
+        <div class="lang-info">
+          <div class="lang-name">Korean</div>
+          <div class="lang-example">Typed <em>dkssud</em> but meant <strong>안녕</strong></div>
+        </div>
+        <div class="lang-check" id="check-ko"></div>
+      </div>
+      <div class="lang-card el" id="card-el" data-lang="el">
+        <div class="lang-icon">🇬🇷</div>
+        <div class="lang-info">
+          <div class="lang-name">Greek</div>
+          <div class="lang-example">Typed <em>geia</em> but meant <strong>γεια</strong></div>
+        </div>
+        <div class="lang-check" id="check-el"></div>
       </div>
     </div>
 

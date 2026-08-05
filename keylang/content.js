@@ -277,7 +277,13 @@ async function loadLearned() {
     detectionEnabled = d.detectionEnabled !== false;
     soundEnabled     = d.soundEnabled !== false;
     toastPos        = d.toastPos || null;
-    if (d.enabledLangs) enabledLangs = { ...enabledLangs, ...d.enabledLangs };
+    // A stored object means the user has been through onboarding, so languages
+    // they never opted into stay off — otherwise someone upgrading from a build
+    // with fewer languages silently gets the new ones running while the popup
+    // (which defaults its toggles to off) shows them as disabled.
+    if (d.enabledLangs) {
+      enabledLangs = { he: false, ru: false, uk: false, ko: false, el: false, ar: false, ...d.enabledLangs };
+    }
     if ((d.disabledSites || []).includes(window.location.hostname)) {
       detectionEnabled = false;
     }
