@@ -51,6 +51,19 @@ for (const [en, ru] of Object.entries(EN_TO_RU)) {
   if (RUSSIAN_RE.test(ru)) RU_TO_EN[ru] = en;
 }
 
+// ── Ukrainian keyboard mapping (ЙЦУКЕН-UA ↔ QWERTY) ───────────
+// The Ukrainian layout is the Russian one with four keys changed:
+//   s → і (not ы), ' → є (not э), ] → ї (not ъ), \ → ґ
+const EN_TO_UK = { ...EN_TO_RU, 's': 'і', "'": 'є', ']': 'ї', '\\': 'ґ' };
+// Letters Ukrainian has and Russian doesn't — the only unambiguous signal that
+// a Cyrillic run belongs to Ukrainian rather than Russian.
+const UK_ONLY_RE  = /[іїєґІЇЄҐ]/;
+const CYRILLIC_RE = /[а-яёА-ЯЁіїєґІЇЄҐ]/;
+const UK_TO_EN = {};
+for (const [en, uk] of Object.entries(EN_TO_UK)) {
+  if (CYRILLIC_RE.test(uk)) UK_TO_EN[uk] = en;
+}
+
 // ── Arabic keyboard mapping (Windows Arabic ↔ QWERTY) ──────────
 const EN_TO_AR = {
   'q':'ض','w':'ص','e':'ث','r':'ق','t':'ف','y':'غ','u':'ع','i':'ه','o':'خ','p':'ح',
@@ -89,21 +102,23 @@ function sendFeedback(words, action, type) {
 let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
 let learnedRussian  = new Set();
+let learnedUkrainian = new Set();
 let learnedArabic   = new Set();
 let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, ar: true }; // overridden by loadLearned; permissive default avoids blank window
+let enabledLangs    = { he: true, ru: true, uk: true, ar: true }; // overridden by loadLearned; permissive default avoids blank window
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
     learnedRussian  = new Set(d.learnedRussian || []);
+    learnedUkrainian = new Set(d.learnedUkrainian || []);
     learnedArabic   = new Set(d.learnedArabic  || []);
     stats           = d.stats || { detected: 0, converted: 0, rejected: 0 };
     detectionEnabled = d.detectionEnabled !== false;
@@ -147,6 +162,19 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
       }
       await chrome.storage.local.set({
         learnedRussian: [...learnedRussian],
+        learnedEnglish: [...learnedEnglish],
+        stats
+      });
+    } else if (lang === 'uk') {
+      if (isWrongLayout) {
+        normalised.forEach(w => { learnedUkrainian.add(w); learnedEnglish.delete(w); });
+        stats.converted++;
+      } else {
+        normalised.forEach(w => { learnedEnglish.add(w); learnedUkrainian.delete(w); });
+        stats.rejected++;
+      }
+      await chrome.storage.local.set({
+        learnedUkrainian: [...learnedUkrainian],
         learnedEnglish: [...learnedEnglish],
         stats
       });
@@ -399,6 +427,67 @@ function wordCouldBeRussian(word) {
   return russianScore(ruWord) >= 0.25;
 }
 
+// ── Ukrainian scoring data ────────────────────────────────────
+const UK_BIGRAMS = new Set([
+  'на','не','ні','ня','но','ти','то','та','те','ть',
+  'по','пр','ра','ре','ро','ри','ко','ка','ки','ку',
+  'ла','ли','ло','лі','ва','ве','ви','во','ий','ів',
+  'ик','ин','ич','ід','із','іс','іт','сь','ст','ся',
+  'го','ги','ер','ор','ар','ур','ан','ен','ін','он',
+  'ит','ол','ал','ел','ул','ом','ам','ем','ум','об',
+  'од','ож','за','зн','до','де','ді','му','мо','ма',
+  'ми','чи','ча','че','що','як','ак','ок','ук','ює',
+  'ає','ії','аю','ую','єт','ьс','жи','ша','ши','бу',
+]);
+
+const COMMON_UK_WORDS = new Set([
+  'я','ти','ви','ми','він','вона','воно','вони','це','цей','ця',
+  'що','як','де','хто','коли','чому','який','яка','яке','чи',
+  'так','ні','вже','ще','дуже','тут','там','нам','вам','його','її','їх',
+  'привіт','дякую','будь','ласка','добре','гаразд','вибач','бувай',
+  'якщо','тому','щоб','бо','але','або','лише','навіть',
+  'буду','буде','треба','можна','можу','хочу','знаю','думаю','йду','чекаю',
+  'час','день','ніч','ранок','вечір','рік','раз','тиждень',
+  'справа','слово','місце','друг','світ','робота','дім','дома','місто',
+  'йти','бути','знати','думати','говорити','робити',
+  'бачити','зрозуміти','сказати','дати','взяти',
+  'нічого','трохи','багато','мало','тільки','просто','зараз','потім',
+  'мене','тебе','нього','неї','нас','вас','них',
+  'мені','тобі','йому','їй','їм','себе','собі',
+  'сам','сама','саме','самі','один','два','три','перший',
+  'добрий','гарний','великий','малий','новий','старий',
+  'україна','український','київ','львів','вітаю',
+]);
+
+function ukrainianScore(word) {
+  const s = word.toLowerCase();
+  if (s.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    if (UK_BIGRAMS.has(s.slice(i, i + 2))) hits++;
+  }
+  return hits / (s.length - 1);
+}
+
+function wordCouldBeUkrainian(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2) return false;
+  if (learnedEnglish.has(lower)) return false;
+  if (learnedUkrainian.has(lower)) return true;
+  if (EN_WORDS.has(lower)) return false;
+  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
+  if (englishScore(lower) >= 0.35) return false;
+  const mapped = [...lower].map(c => EN_TO_UK[c]);
+  if (!mapped.every(c => c !== undefined)) return false;
+  const ukWord = mapped.join('');
+  if (COMMON_UK_WORDS.has(ukWord)) return true;
+  // Beyond the common-word list, only claim words carrying a letter Russian
+  // doesn't have. Everything else decodes identically under both layouts, and
+  // the Russian pass runs first — so it owns those.
+  if (!UK_ONLY_RE.test(ukWord)) return false;
+  return ukrainianScore(ukWord) >= 0.25;
+}
+
 // ── Arabic scoring data ───────────────────────────────────────
 const AR_BIGRAMS = new Set([
   'ال','لا','ان','ين','ات','وا','نا','ها','ما','من',
@@ -459,6 +548,8 @@ function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
 function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
+function convertToUkrainian(t)   { return [...t].map(c => EN_TO_UK[c] || c).join(''); }
+function convertFromUkrainian(t) { return [...t].map(c => UK_TO_EN[c] || c).join(''); }
 function convertToArabic(t)    { return [...t].map(c => EN_TO_AR[c]  || c).join(''); }
 function convertFromArabic(t)  { return [...t].map(c => AR_TO_EN[c] || c).join(''); }
 function truncatePreview(text, maxWords = 9) {
@@ -563,6 +654,7 @@ function analyzeText(rawText, scanAll = false) {
   const textHasHebrew  = hasHebrew(text);
   const textHasRussian = RUSSIAN_RE.test(text);
   const textHasArabic  = hasArabic(text);
+  const textHasUkOnly  = UK_ONLY_RE.test(text);
 
   // ── Case 1: Hebrew characters typed while English keyboard layout was expected
   // Hebrew final-form letters (ך ם ן ף ץ) never appear at the START of a word.
@@ -696,6 +788,66 @@ function analyzeText(rawText, scanAll = false) {
               rejectLabel: 'Not English',
               words: run1.filter(w => HEBREW_RE.test(w))
             };
+          }
+        }
+      }
+    }
+  }
+
+  // ── Case U1: Ukrainian Cyrillic typed while English keyboard was expected
+  // Runs here first, but only claims text containing і/ї/є/ґ. Anything else
+  // decodes identically under both Cyrillic layouts and belongs to Case R1.
+  if (!textHasHebrew && textHasUkOnly && enabledLangs.uk) {
+    let allUkTokens;
+    try {
+      allUkTokens = text.trim().split(/\s+/).flatMap(w =>
+        w.split(/(?<=[a-zA-Z])(?=[а-яёА-ЯЁіїєґІЇЄҐ])|(?<=[а-яёА-ЯЁіїєґІЇЄҐ])(?=[a-zA-Z])/).filter(Boolean)
+      );
+    } catch {
+      allUkTokens = text.trim().split(/\s+/);
+    }
+    const runU1 = [];
+    for (let i = allUkTokens.length - 1; i >= 0; i--) {
+      const w = allUkTokens[i];
+      if (CYRILLIC_RE.test(w)) {
+        runU1.unshift(w);
+      } else if (runU1.length > 0 && w.length <= 2) {
+        runU1.unshift(w);
+      } else if (runU1.length === 0) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    if (runU1.length >= 1) {
+      const ukInRun = runU1.filter(w => CYRILLIC_RE.test(w));
+      // Only take the run if the Ukrainian-only letters are actually in it
+      if (ukInRun.some(w => UK_ONLY_RE.test(w)) &&
+          !ukInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        const allMapU = ukInRun.every(w => [...w].every(c => UK_TO_EN[c] !== undefined));
+        if (allMapU) {
+          const originalU1  = ukInRun.join(' ');
+          const convertedU1 = convertFromUkrainian(originalU1);
+          if (convertedU1.trim().length >= 2 && !CYRILLIC_RE.test(convertedU1)) {
+            const convWordsU1 = convertedU1.split(/\s+/)
+              .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
+              .filter(w => w.length >= 2);
+            const hasCommonU1 = convWordsU1.some(w => COMMON_EN_WORDS.has(w));
+            const avgScoreU1 = convWordsU1.length
+              ? convWordsU1.reduce((a, w) => a + englishScore(w), 0) / convWordsU1.length
+              : 0;
+            const fireU1 = runU1.length === 1
+              ? (convWordsU1.length >= 1 && convWordsU1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsU1[0]))
+              : (hasCommonU1 && avgScoreU1 >= 0.15);
+            if (fireU1) {
+              return {
+                type: 'ukrainian_as_english', lang: 'uk',
+                message: 'Wrong layout? Looks like English:',
+                original: originalU1, converted: convertedU1,
+                btnLabel: 'Fix → English', rejectLabel: 'Not English',
+                words: ukInRun
+              };
+            }
           }
         }
       }
@@ -926,6 +1078,43 @@ function analyzeText(rawText, scanAll = false) {
           original: spanRu2, converted: convertedRu2,
           btnLabel: 'Fix → Russian', rejectLabel: 'Not Russian',
           words: runRu2
+        };
+      }
+    }
+  }
+
+  // ── Case U2: English characters typed while Ukrainian keyboard was expected
+  // Runs after R2 so genuine Russian keeps its existing behaviour; this picks up
+  // what's left, which wordCouldBeUkrainian limits to distinctly-Ukrainian text.
+  if (!textHasHebrew && enabledLangs.uk) {
+    const ukCandWords = extractWords(text);
+    const ukMinRun = textHasRussian || textHasUkOnly ? 1 : 2;
+    const allUkRuns = [];
+    let curUkRun = [], curUkStartIdx = -1;
+    for (let wi = 0; wi < ukCandWords.length; wi++) {
+      const w = ukCandWords[wi];
+      if (wordCouldBeUkrainian(w)) {
+        if (curUkRun.length === 0) curUkStartIdx = wi;
+        curUkRun.push(w);
+      } else {
+        if (curUkRun.length > 0) allUkRuns.push({ words: [...curUkRun], startIdx: curUkStartIdx });
+        curUkRun = []; curUkStartIdx = -1;
+      }
+    }
+    if (curUkRun.length > 0) allUkRuns.push({ words: curUkRun, startIdx: curUkStartIdx });
+
+    const ukRunEntry = [...allUkRuns].reverse().find(r => r.words.length >= ukMinRun);
+    if (ukRunEntry) {
+      const runUk2 = ukRunEntry.words;
+      const spanUk2 = findRunSpan(text, runUk2[0], runUk2[runUk2.length - 1]) || runUk2.join(' ');
+      const convertedUk2 = convertToUkrainian(spanUk2.toLowerCase());
+      if (CYRILLIC_RE.test(convertedUk2)) {
+        return {
+          type: 'english_as_ukrainian', lang: 'uk',
+          message: 'Wrong layout? Looks like Ukrainian:',
+          original: spanUk2, converted: convertedUk2,
+          btnLabel: 'Fix → Ukrainian', rejectLabel: 'Not Ukrainian',
+          words: runUk2
         };
       }
     }
@@ -1458,7 +1647,7 @@ function showToast(element, detection, forceShow = false) {
     if (ok) {
       fixTextDirection(element, detection.type);
       strictModeUntil = Date.now() + 15000; // 15 s: only strong signals after a fix
-      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_arabic') {
+      if (detection.type === 'english_as_hebrew' || detection.type === 'english_as_russian' || detection.type === 'english_as_ukrainian' || detection.type === 'english_as_arabic') {
         lastCase2Original = detection.original.trim().toLowerCase();
       }
     }
@@ -1625,6 +1814,8 @@ function showHint() {
   const dir     = lastDetection.type === 'hebrew_as_english'  ? '→ EN'
                 : lastDetection.type === 'russian_as_english' ? '→ EN'
                 : lastDetection.type === 'arabic_as_english'  ? '→ EN'
+                : lastDetection.type === 'ukrainian_as_english' ? '→ EN'
+                : lastDetection.type === 'english_as_ukrainian' ? '→ UK'
                 : lastDetection.type === 'english_as_russian' ? '→ RU'
                 : lastDetection.type === 'english_as_arabic'  ? '→ AR'
                 : '→ HE';
@@ -1723,6 +1914,16 @@ function convertSelection(text, sel) {
       message: 'Convert selection to English?',
       original: text,
       converted: convertToEnglish(text),
+      btnLabel: 'Convert → English',
+      rejectLabel: 'Cancel',
+      words: []
+    };
+  } else if (UK_ONLY_RE.test(text)) {
+    detection = {
+      type: 'ukrainian_detected', lang: 'uk',
+      message: 'Convert selection to English?',
+      original: text,
+      converted: convertFromUkrainian(text),
       btnLabel: 'Convert → English',
       rejectLabel: 'Cancel',
       words: []
