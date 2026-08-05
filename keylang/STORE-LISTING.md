@@ -119,18 +119,56 @@ promo mockups, and this file.
 
 ---
 
-# SCREENSHOTS
+# STORE ASSETS
 
-Existing mockups in this folder (`store-screenshot*.html`) render at 1280×800 and
-render to PNG with the same names. They currently show **Hebrew only** and the old
-"Not Hebrew" button label — worth refreshing to show the six-language lineup before
-submitting, since the listing now leads with all six.
+All generated — run `python3 make-store-assets.py` to rebuild after any UI change.
+Output lands in `store/`. The wrong-layout text in each shot was produced by the
+extension's own converters, so it is exactly what Kiko would show.
 
-Suggested set:
-1. Detection toast catching a Hebrew mistake mid-sentence
-2. The same for Korean or Russian — shows it is genuinely multilingual
-3. The popup: stats, language toggles, learned word lists
-4. The recall bubble during a long typing session
+| File | Size | Use |
+|---|---|---|
+| `store/shot1-hebrew.png` | 1280×800 | Screenshot 1 — the hero, shown in search results |
+| `store/shot2-korean.png` | 1280×800 | Screenshot 2 |
+| `store/shot3-russian.png` | 1280×800 | Screenshot 3 |
+| `store/shot4-popup.png` | 1280×800 | Screenshot 4 — language toggles |
+| `store/shot5-languages.png` | 1280×800 | Screenshot 5 — all six pairs |
+| `store/promo-small-440x280.png` | 440×280 | Small promo tile (optional) |
+| `store/promo-marquee-1400x560.png` | 1400×560 | Marquee tile (optional, needed for featuring) |
+
+Upload the screenshots in that order — the first is the one people see before
+they click through.
+
+---
+
+# FILL THE FORM IN THIS ORDER
+
+The dashboard splits the listing across four tabs. Everything you need is above.
+
+**1. Package** — upload `dist/kiko-4.4.0.zip` first; the version is read from it.
+
+**2. Store listing tab**
+- Title: `Kiko – Multilingual Keyboard Layout Fixer`
+- Summary: the short description above (128 chars, under the 132 limit)
+- Description: the full description above
+- Category: Productivity
+- Language: English
+- Screenshots: the five above, in order
+- Promo tiles: the two above (skip unless you want to be featureable)
+
+**3. Privacy tab** — the one that holds up reviews
+- Single purpose: *"Detect and correct keyboard-layout mistakes in text fields."*
+- A justification for **every** permission — copy them from the section above
+- Data usage: tick nothing. Kiko collects no user data
+- Certify the disclosures are accurate
+- Privacy policy URL — required, must be publicly reachable
+
+**4. Distribution tab**
+- Visibility: Public
+- Regions: all
+- Pricing: Free, no in-app purchases (there is no payment code in this build)
+
+**5. Submit for review** — usually 1–3 business days. Broad host permissions
+(`<all_urls>`) push it toward the longer end.
 
 ---
 
