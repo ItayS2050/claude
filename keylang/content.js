@@ -1361,7 +1361,8 @@ function showToast(element, detection, forceShow = false) {
     const isExact   = sig === dismissedSignature;
     const isSubset  = dismissedWordSet.size >= 2 &&
       [...dismissedWordSet].every(w => detection.words.includes(w));
-    if (isExact || isSubset) {
+    const hasNewWords = detection.words.some(w => !dismissedWordSet.has(w));
+    if ((isExact || isSubset) && !hasNewWords) {
       lastDetection = detection;
       lastElement   = element;
       if (!hintEl) showHint();
@@ -1379,6 +1380,9 @@ function showToast(element, detection, forceShow = false) {
     else if (!hintEl)    showHint();
     return;
   }
+
+  // Same detection as the one already on screen — leave the toast alone
+  if (!forceShow && lastDetection && sig === lastDetection.words.join('|')) return;
 
   // Guard: don't regress to a smaller detection on the same element
   if (activeToast && lastDetection && lastElement === element) {
@@ -1516,10 +1520,10 @@ function showToast(element, detection, forceShow = false) {
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
 
-  // Auto-dismiss after 5 s if the user never touches the toast
+  // Auto-dismiss after 8 s if the user never touches the toast
   const autoDismissId = setTimeout(() => {
     if (activeToast === toast) removeToast(true);
-  }, 5000);
+  }, 8000);
   toast.addEventListener('mouseenter', () => clearTimeout(autoDismissId));
 }
 
@@ -1679,9 +1683,7 @@ document.addEventListener('keydown', e => {
   }
 
   // Alt+Shift+K without selection:
-  // 1. Active toast → dismiss it
-  if (activeToast) { removeToast(); return; }
-  // 2. Remembered detection on same element → re-show toast
+  // 1. Remembered detection on same element → re-show toast
   // Resolve active element — walk into shadow roots if needed
   let focusedEl = document.activeElement;
   while (focusedEl && focusedEl.shadowRoot && focusedEl.shadowRoot.activeElement) {
@@ -1690,10 +1692,10 @@ document.addEventListener('keydown', e => {
   const editorEl = resolveEditor(focusedEl);
   if (lastDetection && lastElement && editorEl === lastElement) {
     dismissedSignature = null; dismissedWordSet = new Set();
-    showToast(lastElement, lastDetection);
+    showToast(lastElement, lastDetection, true); // forceShow: recall must bypass the same-signature guard
     return;
   }
-  // 3. Scan the FULL text of the currently focused field
+  // 2. Scan the FULL text of the currently focused field
   if (editorEl) {
     if (editorEl._kldVer !== KIKO_VERSION) attachTo(editorEl);
     const det = analyzeFullField(editorEl);
@@ -1860,8 +1862,6 @@ function attachTo(el) {
     const detection = analyzeFullField(el) || analyze(el);
     if (detection) {
       showToast(el, detection);
-    } else if (activeToast && lastElement === el) {
-      removeToast(false); // user is now typing correctly — dismiss quietly
     } else if (lastElement === el && dismissedSignature) {
       // Field was cleared/corrected after a dismiss — reset so next paste shows full toast
       const fieldText = el.isContentEditable
