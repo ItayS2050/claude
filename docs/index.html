@@ -189,6 +189,18 @@
     .foot-in{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
     .foot-links{display:flex;gap:22px;flex-wrap:wrap}
     .foot-links a:hover{color:var(--ink)}
+    /* ---- where it works ---- */
+    .works{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px;margin-bottom:34px}
+    .works > div{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+      border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+    .works .tick{color:var(--ok);font-weight:900;font-size:17px;line-height:1.35;flex:0 0 auto}
+    .works b{display:block;font-size:16px;letter-spacing:-.01em}
+    .works span.sub{font-size:14px;color:var(--ink-2);display:block;margin-top:3px}
+    .desk{background:var(--ink);color:#fff;border-radius:var(--r-lg);padding:30px 34px;
+      display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+    .desk .big{font-size:34px;line-height:1;flex:0 0 auto}
+    .desk b{display:block;font-size:19px;margin-bottom:5px}
+    .desk p{color:#b9b6cc;font-size:15.5px;margin:0;max-width:640px}
   </style>
 </head>
 <body>
@@ -198,6 +210,7 @@
     <a class="logo" href="#top"><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px"> Kiko</a>
     <div class="nav-links">
       <a href="#languages">Languages</a>
+      <a href="#works">Where it works</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
@@ -248,6 +261,40 @@
         handles it — in both directions. Here's the same greeting in each.</p>
     </div>
     <div class="langs" id="langcards"></div>
+  </div>
+</section>
+
+
+<section id="works">
+  <div class="wrap">
+    <div class="sec-head center">
+      <div class="eyebrow">Where it works</div>
+      <h2>Every text field in your browser.</h2>
+      <p class="lede">Kiko attaches to the field you are typing in, whatever the site is built
+        with — plain inputs, rich editors, the lot.</p>
+    </div>
+    <div class="works">
+      <div><span class="tick">&check;</span><div><b>Webmail</b>
+        <span class="sub">Compose windows, subject lines, replies.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>Chat and messaging on the web</b>
+        <span class="sub">Message boxes in browser-based chat apps.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>Search boxes</b>
+        <span class="sub">Any search field, on any site.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>Forms and comments</b>
+        <span class="sub">Contact forms, comment boxes, reviews, support tickets.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>Document and rich-text editors</b>
+        <span class="sub">Online docs, note apps, CMS and blog editors.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>Admin panels and CRMs</b>
+        <span class="sub">The internal tools you live in all day.</span></div></div>
+    </div>
+    <div class="desk">
+      <span class="big">&#128187;</span>
+      <div>
+        <b>Prefer the desktop app for something?</b>
+        <p>Kiko lives in Chrome, so open that app's web version in a tab and it is there with you —
+          same account, same conversations, plus the layout fixing.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -381,10 +428,11 @@
       <details><summary>Does it work the other way round?</summary>
         <p>Yes. Typed English while your keyboard was still in Hebrew, Korean or Greek? Kiko reads
           the gibberish and turns it back into English.</p></details>
-      <details><summary>Does it work in desktop apps like Slack or WhatsApp?</summary>
-        <p>No. Kiko is a browser extension, so it works on websites you open in Chrome — including
-          the web versions of those apps. Desktop applications are separate programs that a browser
-          extension cannot reach, and no extension can.</p></details>
+      <details><summary>Does it work with apps I use on the desktop?</summary>
+        <p>Kiko works on any website you open in Chrome, and that includes the web version of
+          nearly every desktop app — same account, same messages. Open it in a tab and Kiko is
+          there. Standalone desktop applications run outside the browser, so no browser extension
+          can reach them.</p></details>
       <details><summary>Which browsers?</summary>
         <p>Chrome today, and Chromium browsers like Edge, Brave and Arc. Firefox and Safari are on
           the list.</p></details>
