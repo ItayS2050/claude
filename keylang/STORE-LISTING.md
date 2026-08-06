@@ -259,6 +259,18 @@ URL is still a placeholder.
 - `docs/index.html` → `CHECKOUT_URL`
 - `keylang/popup.js` → `CHECKOUT_URL`
 
+`WEBSTORE_URL` also appears in `docs/activate.html` — same value as in
+`docs/index.html`.
+
+## Purchase confirmation modal
+Point the button at **https://get-kiko.com/activate.html**. It covers both
+cases: someone who already has the extension, and someone who bought from the
+website before installing. Suggested button label: **Activate Kiko**.
+
+The modal text should tell them to paste the key into the popup — a buyer who
+closes it without doing that has paid and got nothing, and will ask for a
+refund.
+
 ## What to tell Lemon Squeezy at verification
 Product description, when they ask when you charge:
 

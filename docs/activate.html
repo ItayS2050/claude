@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activate Kiko</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="icon128.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#12111a; --ink-2:#4a4860; --ink-3:#807d95;
+      --line:#e8e6f0; --bg-soft:#f6f5fb; --brand:#ff4f5a; --brand-dark:#e63946;
+      --ok:#12b886; --r:16px;
+      --shadow:0 1px 2px rgba(18,17,26,.04), 0 12px 32px rgba(18,17,26,.07);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;
+      background:
+        radial-gradient(900px 420px at 80% -10%, #ffe9e6 0%, transparent 60%),
+        radial-gradient(700px 380px at 5% 0%, #eef0ff 0%, transparent 55%), #fff;
+      min-height:100vh; padding:56px 24px 80px;
+    }
+    .wrap{max-width:680px;margin:0 auto}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;
+      letter-spacing:-.03em;margin-bottom:36px}
+    .logo img{border-radius:8px}
+    h1{font-size:clamp(32px,5vw,44px);line-height:1.08;letter-spacing:-.03em;font-weight:900;
+      margin-bottom:14px}
+    .lede{font-size:19px;color:var(--ink-2);margin-bottom:40px}
+    ol{list-style:none;counter-reset:s;display:grid;gap:14px;margin-bottom:36px}
+    li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:var(--r);
+      padding:20px 22px 20px 62px;position:relative;box-shadow:var(--shadow)}
+    li::before{content:counter(s);position:absolute;left:20px;top:19px;width:28px;height:28px;
+      border-radius:9px;background:var(--brand);color:#fff;font-weight:900;font-size:14px;
+      display:grid;place-items:center}
+    li > b{display:block;font-size:17px;letter-spacing:-.01em;margin-bottom:3px}
+    li p{color:var(--ink-2);font-size:15.5px}
+    code{background:var(--bg-soft);border:1px solid var(--line);border-radius:6px;
+      padding:2px 7px;font-size:14.5px;font-family:ui-monospace,'SF Mono',Menlo,monospace}
+    .note{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r);
+      padding:20px 22px;font-size:15.5px;color:var(--ink-2);margin-bottom:22px}
+    .note b{color:var(--ink)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;
+      font-size:16px;padding:14px 26px;border-radius:999px;background:var(--brand);color:#fff;
+      text-decoration:none;box-shadow:0 8px 22px rgba(255,79,90,.32)}
+    .btn:hover{background:var(--brand-dark)}
+    footer{margin-top:44px;font-size:15px;color:var(--ink-3)}
+    footer a{color:var(--brand);font-weight:600;text-decoration:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><img src="icon128.png" alt="" width="30" height="30"> Kiko</div>
+
+  <h1>Thanks — let's switch it on.</h1>
+  <p class="lede">Takes about twenty seconds. Your licence key is in the confirmation
+    you just saw, and in your email.</p>
+
+  <ol>
+    <li>
+      <b>Install Kiko, if you haven't yet</b>
+      <p>Skip this if it's already in your toolbar.
+        <a href="#" data-webstore style="color:var(--brand);font-weight:600">Get it from the Chrome Web Store →</a></p>
+    </li>
+    <li>
+      <b>Open the Kiko popup</b>
+      <p>Click the Kiko icon in your Chrome toolbar. Don't see it? Click the puzzle-piece
+        icon and pin Kiko.</p>
+    </li>
+    <li>
+      <b>Paste your key</b>
+      <p>Drop it into the box marked <code>Already paid? Paste licence key</code> and
+        press <b>Activate</b>.</p>
+    </li>
+  </ol>
+
+  <div class="note">
+    <b>That's it.</b> The banner turns green and every language stays unlocked. Nothing to
+    restart, no account to create, and your learned words are exactly where you left them.
+  </div>
+
+  <div class="note">
+    <b>Using more than one computer?</b> Each device needs its own activation. If you run out,
+    email us and we'll sort it.
+  </div>
+
+  <a class="btn" href="#" data-webstore>Open the Chrome Web Store</a>
+
+  <footer>
+    Something not working? <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a> —
+    we reply within one business day.<br>
+    <a href="index.html">Back to get-kiko.com</a>
+  </footer>
+</div>
+
+<script>
+  // Same constant as the landing page — fill in once the store ID is to hand.
+  const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/REPLACE_WITH_EXTENSION_ID';
+  document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });
+</script>
+</body>
+</html>
