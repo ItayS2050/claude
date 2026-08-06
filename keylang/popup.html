@@ -151,11 +151,54 @@
     }
     input:checked + .slider { background: #3b82f6; }
     input:checked + .slider:before { transform: translateX(18px); }
+    .ent {
+      border-radius: 9px; padding: 11px 13px; margin: 12px 0 0;
+      font-size: 12px; line-height: 1.45;
+    }
+    .ent.trial    { background: #1e3a5f; border: 1px solid #3b82f6; color: #dbeafe; }
+    .ent.expired  { background: #7f1d1d; border: 1px solid #f87171; color: #fecaca; }
+    .ent.licensed { background: #064e3b; border: 1px solid #10b981; color: #d1fae5; }
+    .ent b { display: block; font-size: 13px; margin-bottom: 3px; }
+    .ent a { color: #93c5fd; font-weight: 600; }
+    .ent-cta {
+      display: block; width: 100%; text-align: center; margin-top: 9px;
+      background: #3b82f6; color: #fff; border: none; border-radius: 7px;
+      padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+      text-decoration: none;
+    }
+    .ent-cta:hover { opacity: .9; }
+    .key-row { display: flex; gap: 6px; margin-top: 9px; }
+    .key-row input {
+      flex: 1; background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+      border-radius: 6px; padding: 6px 8px; font-size: 11px;
+      font-family: ui-monospace, monospace;
+    }
+    .key-row input:focus { outline: none; border-color: #3b82f6; }
+    .key-row button {
+      background: #334155; color: #e2e8f0; border: none; border-radius: 6px;
+      padding: 6px 11px; font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .key-row button:hover { background: #475569; }
+    .key-msg { margin-top: 7px; font-size: 11px; }
+    .key-msg.err { color: #fca5a5; }
+    .key-msg.ok  { color: #86efac; }
   </style>
 </head>
 <body>
   <h1><img src="icon48.png" alt="" width="22" height="22" style="border-radius:6px"> Kiko</h1>
-  <div class="version">v4.4.1 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
+  <div class="version">v4.5.0 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
+
+
+  <div class="ent" id="ent-box" style="display:none">
+    <b id="ent-title"></b>
+    <span id="ent-body"></span>
+    <a class="ent-cta" id="ent-cta" href="#" target="_blank" rel="noopener">Subscribe — $5/month</a>
+    <div class="key-row">
+      <input id="key-input" type="text" placeholder="Already paid? Paste licence key" />
+      <button id="key-btn">Activate</button>
+    </div>
+    <div class="key-msg" id="key-msg"></div>
+  </div>
 
   <div class="stats">
     <div class="stat">
@@ -345,7 +388,7 @@
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
   <div class="shortcut">Alt + Shift + K · Scan or convert selected text on any page</div>
   <div class="shortcut" style="margin-top:4px">Works on any website with a text field</div>
-  <div class="shortcut" style="margin-top:6px">Kiko v4.4.1</div>
+  <div class="shortcut" style="margin-top:6px">Kiko v4.5.0</div>
 
   <script src="popup.js"></script>
 </body>

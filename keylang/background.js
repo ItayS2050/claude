@@ -37,6 +37,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
   } catch {}
 
+  await refreshEntitlement({ force: true });
+
   // Re-inject content.js into all existing tabs so users don't need to refresh
   // after an extension update. The new content.js version-guards itself via
   // window.__kikoActive so it safely overwrites the old orphaned script.
@@ -49,6 +51,109 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }).catch(() => {});
   }
 });
+
+// ── Trial and licence ─────────────────────────────────────────
+// Entitlement is computed here, in one place, and written to storage as a
+// plain object. content.js and the popup only ever read it — they never
+// recompute, so there is no second copy of this logic to drift.
+//
+// Lemon Squeezy's licence endpoints are designed to be called from a client
+// and need no API key, so there is no server of ours in the loop. The host is
+// already covered by the existing <all_urls> permission, which matters: adding
+// a host permission would disable the extension for every current user until
+// they re-approved it.
+
+const TRIAL_DAYS   = 30;
+const DAY_MS       = 86400000;
+const RECHECK_MS   = DAY_MS;       // don't hit the API more than once a day
+const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
+const LS_API       = 'https://api.lemonsqueezy.com/v1/licenses';
+
+function computeEntitlement(firstInstall, licence, now = Date.now()) {
+  // A licence that validated recently, or within the offline grace window,
+  // entitles regardless of the trial. Fail toward letting people work.
+  if (licence && licence.valid && now - (licence.checkedAt || 0) < RECHECK_MS + GRACE_MS) {
+    return { entitled: true, state: 'licensed', daysLeft: null };
+  }
+  const start    = (firstInstall && firstInstall.at) || now;
+  const daysLeft = TRIAL_DAYS - Math.floor((now - start) / DAY_MS);
+  return {
+    entitled: daysLeft > 0,
+    state: daysLeft > 0 ? 'trial' : 'expired',
+    daysLeft: Math.max(0, daysLeft),
+  };
+}
+
+async function refreshEntitlement({ force = false } = {}) {
+  let firstInstall, licence;
+  try {
+    ({ firstInstall, licence } = await chrome.storage.local.get(['firstInstall', 'licence']));
+  } catch { return null; }
+
+  // Re-validate a stored key at most daily. A network failure leaves the
+  // previous result untouched so the grace window in computeEntitlement can
+  // carry a paying user through an outage.
+  if (licence && licence.key && (force || Date.now() - (licence.checkedAt || 0) > RECHECK_MS)) {
+    try {
+      const body = new URLSearchParams({ license_key: licence.key });
+      if (licence.instanceId) body.set('instance_id', licence.instanceId);
+      const res  = await fetch(`${LS_API}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body,
+      });
+      const data = await res.json();
+      licence = {
+        ...licence,
+        valid: data.valid === true,
+        status: (data.license_key && data.license_key.status) || 'unknown',
+        checkedAt: Date.now(),
+      };
+      await chrome.storage.local.set({ licence });
+    } catch {
+      // offline or API down — keep the last known result
+    }
+  }
+
+  const entitlement = computeEntitlement(firstInstall, licence);
+  try { await chrome.storage.local.set({ entitlement }); } catch {}
+  return entitlement;
+}
+
+async function activateLicence(key) {
+  const clean = String(key || '').trim();
+  if (!clean) return { ok: false, error: 'Enter a licence key.' };
+  try {
+    const res = await fetch(`${LS_API}/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({ license_key: clean, instance_name: 'kiko-browser' }),
+    });
+    const data = await res.json();
+    if (!data.activated) {
+      // Lemon Squeezy returns the seat-limit message here when a team licence
+      // is already fully used, which is exactly what the user needs to read.
+      return { ok: false, error: (data.error || 'That key could not be activated.') };
+    }
+    await chrome.storage.local.set({
+      licence: {
+        key: clean,
+        instanceId: data.instance && data.instance.id,
+        valid: true,
+        status: (data.license_key && data.license_key.status) || 'active',
+        checkedAt: Date.now(),
+      },
+    });
+    const entitlement = await refreshEntitlement();
+    return { ok: true, entitlement };
+  } catch {
+    return { ok: false, error: 'Could not reach the licence server. Check your connection.' };
+  }
+}
+
+// Recompute whenever the worker wakes, so an expiring trial takes effect
+// without needing the popup to be opened.
+refreshEntitlement();
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'kiko-fix') {
@@ -85,6 +190,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     fetch(msg.url, { method: 'POST', body: msg.body })
       .catch(() => {})
       .finally(() => sendResponse());
+    return true;
+  }
+  if (msg.type === 'kiko-activate-licence') {
+    activateLicence(msg.key).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'kiko-refresh-entitlement') {
+    refreshEntitlement({ force: !!msg.force }).then(e => sendResponse(e));
     return true;
   }
   if (msg.type !== 'kiko-play-sound') return;

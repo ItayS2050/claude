@@ -259,12 +259,16 @@ let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true, el: true }; // overridden by loadLearned; permissive default avoids blank window
+let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true, el: true };
+// Entitlement is computed in background.js and mirrored here. Defaults to true
+// on purpose: if the service worker has not run yet, or storage is unreadable,
+// a paying user must not be locked out of their own text.
+let entitled        = true; // overridden by loadLearned; permissive default avoids blank window
 
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedGreek','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedGreek','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites','entitlement']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
@@ -281,6 +285,7 @@ async function loadLearned() {
     // they never opted into stay off — otherwise someone upgrading from a build
     // with fewer languages silently gets the new ones running while the popup
     // (which defaults its toggles to off) shows them as disabled.
+    if (d.entitlement) entitled = d.entitlement.entitled !== false;
     if (d.enabledLangs) {
       enabledLangs = { he: false, ru: false, uk: false, ko: false, el: false, ar: false, ...d.enabledLangs };
     }
@@ -298,6 +303,10 @@ try {
     }
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
+    if ('entitlement' in changes) {
+      entitled = !changes.entitlement.newValue || changes.entitlement.newValue.entitled !== false;
+      if (!entitled) { removeToast(false); hideHint(); }
+    }
     if ('enabledLangs' in changes) enabledLangs = { ...enabledLangs, ...(changes.enabledLangs.newValue || {}) };
     if ('disabledSites' in changes) {
       const sites = changes.disabledSites.newValue || [];
@@ -960,6 +969,7 @@ function getTextBeforeCursor(el) {
 // ── Core analysis ─────────────────────────────────────────────
 // scanAll = true → don't slice (used for explicit user-triggered full scan)
 function analyzeText(rawText, scanAll = false) {
+  if (!entitled) return null;
   if (!rawText || rawText.trim().length < 3) return null;
 
   const text = scanAll ? rawText : rawText.slice(-2000);

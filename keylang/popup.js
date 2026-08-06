@@ -41,6 +41,8 @@ function render(data) {
     document.getElementById('site-row').style.display = 'none';
   }
 
+  renderEntitlement(data.entitlement);
+
   renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
   renderWordList('russian-words', russianWords, 'russian', (word) => removeWord(word, 'russian'));
@@ -66,7 +68,63 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
-const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'learnedUkrainian', 'learnedKorean', 'learnedGreek', 'learnedArabic', 'stats', 'detectionEnabled', 'soundEnabled', 'enabledLangs', 'disabledSites'];
+// Lemon Squeezy checkout. Create the product, then paste its checkout URL here.
+const CHECKOUT_URL = 'https://get-kiko.com/#pricing';
+
+// ── Trial / licence banner ────────────────────────────────────
+function renderEntitlement(ent) {
+  const box = document.getElementById('ent-box');
+  if (!ent) { box.style.display = 'none'; return; }
+  const title = document.getElementById('ent-title');
+  const body  = document.getElementById('ent-body');
+  const cta   = document.getElementById('ent-cta');
+  const keys  = document.querySelector('.key-row');
+
+  box.style.display = 'block';
+  box.className = 'ent ' + ent.state;
+  cta.href = CHECKOUT_URL;
+
+  if (ent.state === 'licensed') {
+    title.textContent = 'Subscription active';
+    body.textContent  = 'Thanks — every language is unlocked.';
+    cta.style.display = 'none';
+    keys.style.display = 'none';
+  } else if (ent.state === 'trial') {
+    const d = ent.daysLeft;
+    title.textContent = d === 1 ? 'Last day of your free trial' : `${d} days left in your free trial`;
+    body.textContent  = 'Everything works. Subscribe any time to keep it after the trial.';
+    cta.style.display = 'block';
+    keys.style.display = 'flex';
+  } else {
+    title.textContent = 'Your free trial has ended';
+    body.textContent  = 'Detection is paused. Your learned words are safe — subscribe to switch it back on.';
+    cta.style.display = 'block';
+    keys.style.display = 'flex';
+  }
+}
+
+document.getElementById('key-btn').addEventListener('click', () => {
+  const input = document.getElementById('key-input');
+  const msg   = document.getElementById('key-msg');
+  msg.className = 'key-msg';
+  msg.textContent = 'Checking…';
+  chrome.runtime.sendMessage({ type: 'kiko-activate-licence', key: input.value }, (res) => {
+    if (!res || !res.ok) {
+      msg.className = 'key-msg err';
+      msg.textContent = (res && res.error) || 'Could not activate that key.';
+      return;
+    }
+    msg.className = 'key-msg ok';
+    msg.textContent = 'Activated. Thank you!';
+    input.value = '';
+    renderEntitlement(res.entitlement);
+  });
+});
+document.getElementById('key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('key-btn').click();
+});
+
+const ALL_LEARNED_KEYS = ['learnedHebrew', 'learnedEnglish', 'learnedRussian', 'learnedUkrainian', 'learnedKorean', 'learnedGreek', 'learnedArabic', 'stats', 'detectionEnabled', 'soundEnabled', 'enabledLangs', 'disabledSites', 'entitlement'];
 
 function removeWord(word, type) {
   const key = type === 'hebrew' ? 'learnedHebrew' : type === 'russian' ? 'learnedRussian' : type === 'ukrainian' ? 'learnedUkrainian' : type === 'korean' ? 'learnedKorean' : type === 'greek' ? 'learnedGreek' : type === 'arabic' ? 'learnedArabic' : 'learnedEnglish';
@@ -269,6 +327,10 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     [...ALL_LEARNED_KEYS, 'reviewNudge'],
     (data) => {
       render(data);
+      chrome.runtime.sendMessage({ type: 'kiko-refresh-entitlement' }, (ent) => {
+        void chrome.runtime.lastError;
+        if (ent) renderEntitlement(ent);
+      });
       maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
     }
   );

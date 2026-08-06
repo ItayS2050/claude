@@ -20,13 +20,15 @@
   <p>Kiko is a Chrome extension that detects when you accidentally type in the wrong keyboard layout (Hebrew vs. English) and offers to correct it.</p>
 
   <h2>Data we collect — and don't collect</h2>
-  <p><strong>Kiko does not collect, transmit, or store any of your data on external servers.</strong></p>
+  <p><strong>Kiko does not collect, transmit, or store any of your text, browsing activity, or personal data on external servers.</strong></p>
+  <p>There is exactly one thing Kiko ever sends anywhere, and only if you subscribe: your licence key. See "Licence checks" below.</p>
   <p>Specifically:</p>
   <ul>
     <li>Kiko reads text you type in order to detect layout mismatches. This analysis happens entirely inside your browser — no text is ever sent anywhere.</li>
     <li>Your feedback ("Convert" / "Not Hebrew") is stored locally in your browser using <code>chrome.storage.local</code>. This data never leaves your device.</li>
     <li>The date you installed Kiko is recorded in local storage so we can tell long-time users apart if our terms ever change. It is never transmitted.</li>
     <li>We do not collect personal information, browsing history, or any usage analytics.</li>
+    <li>We never send the text you type anywhere, subscriber or not.</li>
     <li>We do not use cookies or any tracking technology.</li>
     <li>We have no backend servers and no databases.</li>
   </ul>
@@ -37,8 +39,13 @@
   </ul>
   <p>Kiko does not request access to your tabs, browsing history, clipboard (except to copy converted text when you explicitly click "Copy"), or any other sensitive data.</p>
 
+  <h2>Licence checks</h2>
+  <p>If you subscribe, Kiko stores your licence key on your device and sends it to Lemon Squeezy — our payment provider — to confirm the subscription is active. That request contains the licence key and an anonymous instance identifier. Nothing else: no text you have typed, no page content, no browsing history.</p>
+  <p>It happens at most once a day, and if the check cannot be reached your subscription keeps working for seven days so an outage never locks you out.</p>
+  <p><strong>During the free trial, and if you never subscribe, Kiko makes no network requests at all.</strong> With no licence key stored there is nothing to check, and the code path is never entered.</p>
+
   <h2>Third parties</h2>
-  <p>Kiko shares no data with any third parties. There are no analytics services, ad networks, or external APIs involved.</p>
+  <p>Kiko shares no data with any third parties for advertising or analytics. There are no analytics services, no ad networks, and no tracking of any kind. The only external service Kiko ever contacts is Lemon Squeezy, and only to validate a subscriber's licence key as described above.</p>
 
   <h2>Changes to this policy</h2>
   <p>If this policy changes in a future version, the updated date above will reflect that. We will never introduce data collection without clearly disclosing it.</p>

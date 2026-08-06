@@ -213,28 +213,51 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 
 ---
 
-# PAID TIER PLAN (not built yet)
+# PAYMENTS (built in 4.5.0, not yet live)
 
-**The website and legal pages now advertise a 30-day trial then $5/month, but
-nothing in the extension enforces it.** There is no payment code, no licence
-check, and no trial expiry — every install stays fully functional forever.
-Until that is built, users get more than they were promised, which is the safe
-direction, but the store listing and terms must not be published claiming a
-charge that then never happens to some users and does to others.
+Lemon Squeezy, chosen because its licence keys are a built-in feature: the
+per-key **activation limit is the seat count**, so the 5-seat team plan needs no
+code of ours. Their licence endpoints take no API key and are meant to be called
+from a client, so there is no server in the loop.
 
-What has to ship together before charging:
-1. Trial expiry driven by the `firstInstall` timestamp already recorded
-2. Paddle or Lemon Squeezy checkout plus a licence check
-3. `privacy.html` updated — a licence check is a network call, and the page
-   currently promises there is no server
-4. Chrome listing switched to declare in-app purchases
+## Ship 4.4.1 first
+4.4.1 has no payment code and declares no data collection — submit that today.
+4.5.0 cannot ship until the Lemon Squeezy product exists, because the checkout
+URL is still a placeholder.
 
-## Pricing as advertised
-- **Individual** — 30 days free, then $5/month
-- **Team** — $36/seat/year, minimum 5 seats, invoiced annually
+## What you set up in Lemon Squeezy
+1. Store → verify the account (needs the live site, which get-kiko.com now is)
+2. Product **Kiko Individual** — $5/month subscription, 30-day free trial
+   - Enable **licence keys**, activation limit **1**
+3. Product **Kiko Team** — $36/seat/year
+   - Enable **licence keys**, activation limit = seats sold (minimum 5)
+4. Copy each checkout URL
 
-## Also missing from the extension
-The popup and welcome screen say nothing about a trial or a price. A user
-installing today has no idea a clock is running. Whenever billing ships, the
-extension needs to show trial days remaining and an upgrade path, or the first
-anyone hears about payment is the moment detection stops.
+## Then two constants, same value
+- `docs/index.html` → `CHECKOUT_URL`
+- `keylang/popup.js` → `CHECKOUT_URL`
+
+## What the extension does
+- Trial is 30 days from the `firstInstall` stamp. That stamp is written on
+  update too, so the users you have today start their 30 days when 4.4.1
+  reaches them, not retroactively from whenever they installed.
+- `background.js` owns entitlement and writes it to storage; content.js and the
+  popup only read it, so there is no second copy of the logic.
+- A stored key is re-validated at most once a day. If the check fails, the last
+  good result stands for seven days — an outage must never lock out someone who
+  has paid.
+- The gate fails **open**: if the service worker has not run or storage is
+  unreadable, detection stays on.
+- No new permissions. The API host is already covered by `<all_urls>` — adding a
+  host permission would disable the extension for every existing user until they
+  re-approved it.
+
+## Store listing changes for 4.5.0
+- Data usage: tick **Authentication information** (the licence key is sent to
+  Lemon Squeezy). Nothing else changes — no text is ever transmitted.
+- Remote code: still **No**. A licence check is data, not code.
+- In-app purchases: yes.
+
+## Still missing
+Nothing tells a trial user how long they have except the popup. Consider a
+one-time toast at day 25.

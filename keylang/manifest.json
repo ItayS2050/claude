@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Kiko – Multilingual Keyboard Layout Fixer",
-  "version": "4.4.1",
+  "version": "4.5.0",
   "description": "Wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic typing mix-ups and fixes them in one click.",
   "author": "Kiko",
   "homepage_url": "https://get-kiko.com",

@@ -54,11 +54,23 @@ function loadContentScript() {
   // Wrap in a function: the script keeps the IIFE's top-level `return` from the
   // duplicate-injection guard, which is illegal at true top level.
   return vm.runInContext(
-    '(function () {\n' + src + '\nreturn { analyzeText, setLangs: o => { enabledLangs = o; } };\n})()',
+    '(function () {\n' + src +
+    '\nreturn { analyzeText, setLangs: o => { enabledLangs = o; },' +
+    '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
 }
 
+function loadComputeEntitlement() {
+  const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  const fn = src.slice(src.indexOf('function computeEntitlement'),
+                       src.indexOf('async function refreshEntitlement'));
+  const ctx = vm.createContext({});
+  return vm.runInContext(
+    'const TRIAL_DAYS=30, DAY_MS=86400000, RECHECK_MS=86400000, GRACE_MS=7*86400000;\n' + fn + ';computeEntitlement', ctx);
+}
+
 const kiko = loadContentScript();
+const computeEntitlement = loadComputeEntitlement();
 const ALL = { he: true, ru: true, uk: true, ko: true, el: true, ar: true };
 const NONE = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
 
@@ -128,6 +140,47 @@ check('all off', 'ghbdtn rfr',    null, { langs: { ...NONE } });
 console.log('Foreign script typed while English was meant');
 check('korean -> english', 'ㅔㅣㄷㅁㄴㄷ ㄴ둥 솓 ㄱ데ㅐㄱㅅ', 'korean_as_english',
       { converted: 'please send the report' });
+
+console.log('Trial and licence entitlement');
+{
+  const DAY = 86400000, now = Date.UTC(2026, 0, 31);
+  const day = n => ({ at: now - n * DAY });
+  const eq = (label, got, want) => {
+    const ok = got.entitled === want.entitled && got.state === want.state &&
+      (want.daysLeft === undefined || got.daysLeft === want.daysLeft);
+    if (ok) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${JSON.stringify(want)}`);
+    console.log(`        actual   ${JSON.stringify(got)}`);
+  };
+
+  eq('fresh install',      computeEntitlement(day(0),  null, now), { entitled: true,  state: 'trial', daysLeft: 30 });
+  eq('day 29 of trial',    computeEntitlement(day(29), null, now), { entitled: true,  state: 'trial', daysLeft: 1 });
+  eq('day 30 — expired',   computeEntitlement(day(30), null, now), { entitled: false, state: 'expired', daysLeft: 0 });
+  eq('long past',          computeEntitlement(day(400),null, now), { entitled: false, state: 'expired', daysLeft: 0 });
+  // No stamp at all must not lock someone out — treat it as starting today.
+  eq('no firstInstall',    computeEntitlement(null,    null, now), { entitled: true,  state: 'trial' });
+
+  const fresh = { valid: true, checkedAt: now - DAY / 2 };
+  eq('licensed, trial over', computeEntitlement(day(400), fresh, now), { entitled: true, state: 'licensed' });
+  // Offline for six days on a valid licence: still working, by design.
+  eq('licensed, offline 6d', computeEntitlement(day(400), { valid: true, checkedAt: now - 6 * DAY }, now),
+     { entitled: true, state: 'licensed' });
+  // Past the grace window it falls back to the trial, which has expired.
+  eq('licensed, offline 30d', computeEntitlement(day(400), { valid: true, checkedAt: now - 30 * DAY }, now),
+     { entitled: false, state: 'expired' });
+  eq('licence revoked',    computeEntitlement(day(400), { valid: false, checkedAt: now }, now),
+     { entitled: false, state: 'expired' });
+}
+
+console.log('An expired trial stops detection');
+kiko.setEntitled(false);
+check('expired: russian silent', 'ghbdtn rfr',    null);
+check('expired: korean silent',  'dkssud gksrnr', null);
+check('expired: hebrew silent',  'akuo nvhs ekhu', null);
+kiko.setEntitled(true);
+check('restored after paying',   'ghbdtn rfr',    'english_as_russian');
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
