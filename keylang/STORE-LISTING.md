@@ -44,7 +44,7 @@ Kiko is not a dictionary lookup — it scores every word against the letter patt
 
 No account. No sign-up. No servers. Every conversion runs inside your browser, and your learned word lists live in local storage and never leave your device. Kiko has no backend to send anything to.
 
-**Free to use.**
+**Free for 30 days. Then $5/month.**
 
 ---
 
@@ -190,7 +190,10 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 **4. Distribution tab**
 - Visibility: Public
 - Regions: all
-- Pricing: Free, no in-app purchases (there is no payment code in this build)
+- Pricing: Free to install. **Declare in-app purchases** — the site now advertises
+  a 30-day trial then $5/month, so the listing must say so or it contradicts
+  your own terms. Do not submit as "no in-app purchases" while the website
+  sells a subscription.
 
 **5. Submit for review** — usually 1–3 business days. Broad host permissions
 (`<all_urls>`) push it toward the longer end.
@@ -199,8 +202,22 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 
 # PAID TIER PLAN (not built yet)
 
-There is currently **no payment code in the extension** and nothing is gated.
-`terms.html` and `refund.html` describe the $5/month plan as something that may
+**The website and legal pages now advertise a 30-day trial then $5/month, but
+nothing in the extension enforces it.** There is no payment code, no licence
+check, and no trial expiry — every install stays fully functional forever.
+Until that is built, users get more than they were promised, which is the safe
+direction, but the store listing and terms must not be published claiming a
+charge that then never happens to some users and does to others.
+
+What has to ship together before charging:
+1. Trial expiry driven by the `firstInstall` timestamp already recorded
+2. Paddle or Lemon Squeezy checkout plus a licence check
+3. `privacy.html` updated — a licence check is a network call, and the page
+   currently promises there is no server
+4. Chrome listing switched to declare in-app purchases
+
+Older note, kept for context:
+`terms.html` and `refund.html` used to describe the $5/month plan as something that may
 be introduced later, which is what makes them accurate against a free listing.
 Before charging, all three of these need to happen together:
 
