@@ -103,11 +103,34 @@ promo mockups, and this file.
 - [ ] Screenshots ready — 1280×800, between 1 and 5 of them
 - [ ] Version in `manifest.json` is higher than the currently published one
 
-## Hosting the privacy policy free (GitHub Pages)
-1. In this repo, create a `docs/` folder
-2. Copy `privacy.html`, `terms.html` and `refund.html` into it
-3. Settings → Pages → Source: `main` branch, `/docs` folder
-4. URL becomes `https://itays2050.github.io/claude/privacy.html`
+## Hosting the site + privacy policy (GitHub Pages)
+The website now lives in `docs/` at the repo root — landing page plus the three
+legal pages. To publish:
+
+1. Settings → Pages → Source: `main` branch, `/docs` folder → Save
+2. Wait ~1 min. Privacy URL becomes:
+   `https://itays2050.github.io/claude/privacy.html`
+3. Paste that into the Chrome listing. Done — no domain required.
+
+### Once get-kiko.com is bought
+1. Create `docs/CNAME` containing exactly `get-kiko.com`
+2. At the registrar, point the apex at GitHub Pages with four A records:
+   `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   (and a CNAME for `www` → `itays2050.github.io`)
+3. Settings → Pages → Custom domain → `get-kiko.com` → Enforce HTTPS
+4. Swap `homepage_url` in `manifest.json` to `https://get-kiko.com`
+5. Set up a `hello@get-kiko.com` forwarder and replace `itay@selltech.io`
+   across `docs/*.html`
+
+Do **not** add the CNAME before the domain resolves — Pages will redirect the
+github.io URL to a dead domain and take your privacy policy offline with it.
+
+### Two placeholders to fill after publishing
+- `docs/index.html` — `WEBSTORE_URL` at the bottom of the file. The extension ID
+  only exists once the store accepts the package; every "Add to Chrome" button
+  reads from that one constant.
+- Pro and Team both point at mailto: links. There is no checkout yet, and no
+  payment code in the extension — see the paid tier section below.
 
 ## Submit
 1. https://chrome.google.com/webstore/devconsole

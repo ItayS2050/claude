@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kiko – Hebrew ↔ English Layout Fixer</title>
+  <title>Kiko – Fix wrong keyboard layout in Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic</title>
+  <meta name="description" content="Typed שלום and got akuo? Kiko catches wrong-keyboard-layout mistakes in six languages and fixes them in one click. Free Chrome extension.">
+  <link rel="icon" href="icon128.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -118,6 +120,19 @@
       .hero h1 { font-size: 32px; }
       .pricing-card { padding: 28px 24px; }
     }
+    /* Languages */
+    .lang-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; max-width: 900px; margin: 0 auto; }
+    .lang-row { display: flex; align-items: center; gap: 14px; background: #1e293b; border-left: 4px solid var(--c); border-radius: 10px; padding: 16px 18px; }
+    .lang-row span { font-size: 26px; }
+    .lang-row b { display: block; color: #e2e8f0; font-size: 15px; }
+    .lang-row code { display: block; color: #64748b; font-size: 13px; margin-top: 3px; font-family: ui-monospace, monospace; }
+    .lang-note { text-align: center; color: #94a3b8; font-size: 15px; max-width: 620px; margin: 26px auto 0; line-height: 1.6; }
+    /* Pricing grid */
+    .pricing-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 16px; align-items: start; max-width: 1020px; margin: 0 auto; }
+    .pricing-card { max-width: none; padding: 30px 24px; border-color: #334155; }
+    .pricing-card.featured { border-color: #3b82f6; }
+    .pricing-card .price { font-size: 44px; }
+    .btn-secondary.block { display: block; width: 100%; text-align: center; padding: 14px; font-size: 15px; }
   </style>
 </head>
 <body>
@@ -125,6 +140,7 @@
   <nav>
     <div class="nav-logo">🦜 Kiko</div>
     <div class="nav-links">
+      <a href="#languages">Languages</a>
       <a href="#how-it-works">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="privacy.html">Privacy</a>
@@ -132,13 +148,28 @@
   </nav>
 
   <div class="hero">
-    <div class="hero-badge">Chrome Extension · Hebrew ↔ English</div>
+    <div class="hero-badge">Chrome Extension · 6 languages · Free</div>
     <h1>Stop typing in the<br><span>wrong language</span></h1>
-    <p>Kiko instantly detects when you're typing Hebrew on an English keyboard (or vice versa) and fixes it with one click.</p>
+    <p>You meant to type <strong>שלום</strong>. You got <strong>akuo</strong>. Kiko spots the moment your text stops making sense in one layout and starts making sense in another — then fixes it in place, in one click.</p>
     <div class="hero-btns">
-      <a class="btn-primary" href="#pricing">Get Kiko – $5/mo</a>
+      <a class="btn-primary" href="#" data-webstore>Add to Chrome — Free</a>
       <a class="btn-secondary" href="#how-it-works">See how it works</a>
     </div>
+  </div>
+
+
+  <div class="section" id="languages">
+    <div class="section-label">Languages</div>
+    <h2>Six languages, both directions.</h2>
+    <div class="lang-grid">
+      <div class="lang-row" style="--c:#3b82f6"><span>🇮🇱</span><div><b>Hebrew ↔ English</b><code>akuo → שלום</code></div></div>
+      <div class="lang-row" style="--c:#a855f7"><span>🇷🇺</span><div><b>Russian ↔ English</b><code>ghbdtn → привет</code></div></div>
+      <div class="lang-row" style="--c:#facc15"><span>🇺🇦</span><div><b>Ukrainian ↔ English</b><code>ghbdsn → привіт</code></div></div>
+      <div class="lang-row" style="--c:#22d3ee"><span>🇰🇷</span><div><b>Korean ↔ English</b><code>dkssud → 안녕</code></div></div>
+      <div class="lang-row" style="--c:#818cf8"><span>🇬🇷</span><div><b>Greek ↔ English</b><code>geia → γεια</code></div></div>
+      <div class="lang-row" style="--c:#f59e0b"><span>🇸🇦</span><div><b>Arabic ↔ English</b><code>lvpfh → مرحبا</code></div></div>
+    </div>
+    <p class="lang-note">It works the other way too — type English while your keyboard is still in Hebrew, Korean or Greek and Kiko reads the gibberish back into English.</p>
   </div>
 
   <div class="section" id="how-it-works">
@@ -219,36 +250,69 @@
 
   <div class="section" id="pricing">
     <div class="section-label">Pricing</div>
-    <h2>Simple, transparent pricing.</h2>
+    <h2>Free to use. Pro when you want more.</h2>
     <div class="pricing-wrap">
       <div class="pricing-card">
+        <div class="plan">Free</div>
+        <div class="price">$0</div>
+        <div class="desc">Everything Kiko does today. No account, no card.</div>
+        <ul>
+          <li>All six language pairs, both directions</li>
+          <li>Auto-detection on every website</li>
+          <li>Full-field scan (Alt+Shift+K)</li>
+          <li>Learns from your corrections</li>
+          <li>Nothing leaves your device</li>
+        </ul>
+        <a class="btn-primary" href="#" data-webstore>Add to Chrome</a>
+        <div class="pricing-note">Free — and staying that way</div>
+      </div>
+
+      <div class="pricing-card featured">
         <div class="plan">Pro</div>
         <div class="price">$5<span>/month</span></div>
-        <div class="desc">Everything you need. Cancel anytime.</div>
+        <div class="desc">Or $40/year. For people who type in two scripts all day.</div>
         <ul>
-          <li>Auto-detection on all websites</li>
-          <li>Sound alert when wrong layout detected</li>
-          <li>Full-field scan (Alt+Shift+K)</li>
-          <li>Self-learning from your corrections</li>
-          <li>Supports Hebrew ↔ English</li>
-          <li>100% private — no data collected</li>
+          <li>Everything in Free</li>
+          <li>Sync your learned words across devices</li>
+          <li>Priority support</li>
+          <li>Early access to new languages</li>
         </ul>
-        <a class="btn-primary" href="#" id="buy-btn">Get started</a>
-        <div class="pricing-note">Secure payment via Paddle · Cancel anytime</div>
+        <a class="btn-secondary block" href="mailto:itay@selltech.io?subject=Kiko%20Pro%20—%20notify%20me">Notify me at launch</a>
+        <div class="pricing-note">Not available yet — no charge, no card</div>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan">Team</div>
+        <div class="price">$36<span>/seat/yr</span></div>
+        <div class="desc">Minimum 5 seats, invoiced annually.</div>
+        <ul>
+          <li>Everything in Pro for every seat</li>
+          <li>One invoice, no per-person cards</li>
+          <li>Still zero data leaves your machines</li>
+          <li>Onboarding help for your team</li>
+        </ul>
+        <a class="btn-secondary block" href="mailto:itay@selltech.io?subject=Kiko%20for%20teams">Talk to us</a>
+        <div class="pricing-note">Reply within one business day</div>
       </div>
     </div>
   </div>
 
   <footer>
-    <div style="margin-bottom:10px">🦜 Kiko · Hebrew ↔ English Layout Fixer</div>
+    <div style="margin-bottom:10px">🦜 Kiko · Keyboard layout fixer for Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic</div>
     <div>
       <a href="privacy.html">Privacy Policy</a>
       <a href="terms.html">Terms of Service</a>
       <a href="refund.html">Refund Policy</a>
-      <a href="mailto:hello@kiko.app">Contact</a>
+      <a href="mailto:itay@selltech.io">Contact</a>
     </div>
     <div style="margin-top:10px">© 2026 Kiko. All rights reserved.</div>
   </footer>
 
+  <script>
+    // Set after the extension is published — the ID only exists once the Web
+    // Store accepts it. Every "Add to Chrome" button reads from here.
+    const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/REPLACE_WITH_EXTENSION_ID';
+    document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });
+  </script>
 </body>
 </html>

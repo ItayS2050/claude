@@ -7,8 +7,9 @@ cd "$(dirname "$0")"
 VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['version'])")
 OUT="dist/kiko-${VERSION}.zip"
 
-# Files the extension loads at runtime. manifest.json references the first four;
-# welcome.html opens on install; the legal pages are linked from it.
+# Files the extension loads at runtime. manifest.json references the first four
+# and welcome.html opens on install. The legal pages are NOT here: nothing in
+# the extension links to them, they live on the website (docs/).
 FILES=(
   manifest.json
   background.js
@@ -19,9 +20,6 @@ FILES=(
   popup.js
   welcome.html
   welcome.js
-  privacy.html
-  terms.html
-  refund.html
   icon16.png
   icon48.png
   icon128.png
