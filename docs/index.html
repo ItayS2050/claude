@@ -385,7 +385,8 @@
           <li>Nothing leaves your device</li>
         </ul>
         <a class="btn btn-primary" href="#" data-webstore>Start free — no card</a>
-        <div class="plan-note">30 days free, then $5/month. Cancel anytime.</div>
+        <div class="plan-note">30 days free, then $5/month. Cancel anytime.<br>
+          <a href="#" data-checkout style="color:var(--brand);font-weight:600">Already using Kiko? Subscribe →</a></div>
       </div>
 
       <div class="plan">
@@ -462,6 +463,9 @@
   // Set once the Web Store assigns an extension ID. Every "Add to Chrome"
   // button on the page reads from this one constant.
   const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/REPLACE_WITH_EXTENSION_ID';
+  // Lemon Squeezy checkout, $5/month. Same value as CHECKOUT_URL in keylang/popup.js.
+  const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
+  document.querySelectorAll('[data-checkout]').forEach(a => { a.href = CHECKOUT_URL; });
   document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });
 
   // Every "typed" string below was produced by running the extension's own

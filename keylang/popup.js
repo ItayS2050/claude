@@ -68,8 +68,8 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
-// Lemon Squeezy checkout. Create the product, then paste its checkout URL here.
-const CHECKOUT_URL = 'https://get-kiko.com/#pricing';
+// Lemon Squeezy checkout for the $5/month plan.
+const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
 
 // ── Trial / licence banner ────────────────────────────────────
 function renderEntitlement(ent) {
