@@ -603,12 +603,26 @@ function wordCouldBeRussian(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedRussian.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
-  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
-  if (englishScore(lower) >= 0.35) return false;
   const mapped = [...lower].map(c => EN_TO_RU[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const ruWord = mapped.join('');
+  // A known Russian word outranks both heuristics below. Checked after
+  // EN_WORDS so real English still wins, but before them because they were
+  // silently eating the two commonest words in the language: "ghbdtn"
+  // (привет) looks plausibly Hebrew, and "rfr" (как) scores 0.50 as English.
   if (COMMON_RU_WORDS.has(ruWord)) return true;
+  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
+  if (englishScore(lower) >= 0.35) return false;
+  // Yield to Ukrainian when this is plainly a Ukrainian word and not a Russian
+  // one. "ghbdsn" decodes to привіт under the Ukrainian layout, but under the
+  // Russian one it becomes привыт — not a word, yet still scoring well enough
+  // on bigrams to be claimed here, which starved Case U2 of every word it
+  // exists to catch.
+  if (enabledLangs.uk && !COMMON_RU_WORDS.has(ruWord)) {
+    const ukMapped = [...lower].map(c => EN_TO_UK[c]);
+    if (ukMapped.every(c => c !== undefined) &&
+        COMMON_UK_WORDS.has(ukMapped.join(''))) return false;
+  }
   return russianScore(ruWord) >= 0.25;
 }
 
@@ -660,12 +674,13 @@ function wordCouldBeUkrainian(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedUkrainian.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
-  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
-  if (englishScore(lower) >= 0.35) return false;
   const mapped = [...lower].map(c => EN_TO_UK[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const ukWord = mapped.join('');
+  // Known word first, for the same reason as the Russian check above.
   if (COMMON_UK_WORDS.has(ukWord)) return true;
+  if (enabledLangs.he && wordCouldBeHebrew(word)) return false;
+  if (englishScore(lower) >= 0.35) return false;
   // Beyond the common-word list, only claim words carrying a letter Russian
   // doesn't have. Everything else decodes identically under both layouts, and
   // the Russian pass runs first — so it owns those.
@@ -718,11 +733,12 @@ function wordCouldBeArabic(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedArabic.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
-  if (englishScore(lower) >= 0.35) return false;
   const mapped = [...lower].map(c => EN_TO_AR[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const arWord = mapped.join('');
+  // Known word first, for the same reason as the Russian check above.
   if (COMMON_AR_WORDS.has(arWord)) return true;
+  if (englishScore(lower) >= 0.35) return false;
   return arabicScore(arWord) >= 0.25;
 }
 
