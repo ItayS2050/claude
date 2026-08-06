@@ -100,7 +100,7 @@ promo mockups, and this file.
 - [ ] `./build.sh` run, `dist/kiko-4.4.0.zip` exists
 - [x] Privacy policy live at https://get-kiko.com/privacy.html
 - [ ] Screenshots ready — 1280×800, between 1 and 5 of them
-- [ ] Version in `manifest.json` is higher than the currently published one
+- [ ] Version in `manifest.json` (4.4.0) is higher than the published one
 
 ## Hosting the site + privacy policy (GitHub Pages)
 The website now lives in `docs/` at the repo root — landing page plus the three
@@ -128,19 +128,27 @@ Stuck on DNS and need the privacy URL today? Delete `docs/CNAME`, enable Pages,
 and the site serves instantly at `https://itays2050.github.io/claude/`.
 
 ### Two placeholders to fill after publishing
-- `docs/index.html` — `WEBSTORE_URL` at the bottom of the file. The extension ID
-  only exists once the store accepts the package; every "Add to Chrome" button
-  reads from that one constant.
+- `docs/index.html` — `WEBSTORE_URL` at the bottom of the file. Kiko is already
+  published, so the ID exists now: copy it from the dashboard URL and paste the
+  full store link in. Every "Add to Chrome" button reads from that one constant.
 - Pro and Team both point at mailto: links. There is no checkout yet, and no
   payment code in the extension — see the paid tier section below.
 
-## Submit
-1. https://chrome.google.com/webstore/devconsole
-2. $5 one-time developer registration (first submission only)
-3. New Item → upload the ZIP
-4. Paste the listing copy above
-5. Paste the permission justifications above into the privacy practices tab
-6. Submit → review usually takes 1–3 business days, longer for broad host permissions
+## Submit — this is an UPDATE, not a new item
+Kiko is already published and has users. Do not create a new item: a new item
+gets a new extension ID, and every existing install stays on the old one.
+
+1. https://chrome.google.com/webstore/devconsole → open the **existing Kiko item**
+2. Package → **Upload new package** → `dist/kiko-4.4.0.zip`
+   (4.4.0 must be higher than the published version, or it is rejected)
+3. Store listing tab → replace description, summary and screenshots
+4. Privacy tab → single purpose, the permission justifications, data usage none,
+   privacy URL `https://get-kiko.com/privacy.html`
+5. Distribution → tick **contains in-app purchases** (the site sells a
+   subscription; over-declaring is safe, under-declaring is the violation)
+6. Submit → 1–3 business days
+
+Existing users get 4.4.0 automatically once it is approved.
 
 ---
 
