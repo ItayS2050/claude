@@ -227,8 +227,11 @@ URL is still a placeholder.
 
 ## What you set up in Lemon Squeezy
 1. Store → verify the account (needs the live site, which get-kiko.com now is)
-2. Product **Kiko Individual** — $5/month subscription, 30-day free trial
+2. Product **Kiko Individual** — $5/month subscription, **no trial in Lemon Squeezy**
    - Enable **licence keys**, activation limit **1**
+   - The extension owns the 30-day trial and takes no card for it. Configuring a
+     trial here too would stack them: someone subscribing on day 5 would get 30
+     more free days. Charge immediately at checkout.
 3. Product **Kiko Team** — $36/seat/year
    - Enable **licence keys**, activation limit = seats sold (minimum 5)
 4. Copy each checkout URL
@@ -236,6 +239,17 @@ URL is still a placeholder.
 ## Then two constants, same value
 - `docs/index.html` → `CHECKOUT_URL`
 - `keylang/popup.js` → `CHECKOUT_URL`
+
+## What to tell Lemon Squeezy at verification
+Product description, when they ask when you charge:
+
+> Kiko is a browser extension that detects when someone has typed with the wrong
+> keyboard layout active — Hebrew, Russian, Ukrainian, Korean, Greek or Arabic
+> typed while the keyboard was in English, or the reverse — and corrects the text
+> in one click. We sell it as a $5/month subscription, plus a $36/seat/year team
+> plan, through our website get-kiko.com and the Chrome Web Store; customers use
+> it free for 30 days without entering any payment details, and are charged
+> immediately at checkout when they choose to subscribe.
 
 ## What the extension does
 - Trial is 30 days from the `firstInstall` stamp. That stamp is written on
