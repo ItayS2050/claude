@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Kiko editor harness</title></head>
+<body>
+<!--
+  Dev-only integration harness. Loads the real content.js against the editor
+  shapes real sites use, types wrong-layout text into each, and reports whether
+  Kiko detected it and whether clicking Fix actually replaced the text.
+
+  Run:  node test-editors.js
+  Not shipped — build.sh packages an explicit file list.
+-->
+
+<h3>plain input</h3>
+<input id="ed-input" type="text">
+
+<h3>textarea</h3>
+<textarea id="ed-textarea"></textarea>
+
+<h3>plain contenteditable (Gmail-shaped)</h3>
+<div id="ed-ce" contenteditable="true"></div>
+
+<h3>Quill (Slack / LinkedIn messaging shape)</h3>
+<div class="ql-container"><div id="ed-quill" class="ql-editor" contenteditable="true"><p><br></p></div></div>
+
+<h3>Lexical (Meta / newer editors)</h3>
+<div id="ed-lexical" contenteditable="true" data-lexical-editor="true" role="textbox"><p><br></p></div>
+
+<h3>role=textbox only</h3>
+<div id="ed-role" contenteditable="true" role="textbox"></div>
+
+<pre id="results">running…</pre>
+
+<script>
+// Minimal chrome stub so content.js loads outside an extension context.
+window.chrome = {
+  runtime: {
+    getManifest: () => ({ version: 'harness' }),
+    sendMessage: () => ({ catch() {} }),
+    id: 'harness',
+    onMessage: { addListener() {} },
+  },
+  storage: {
+    local: {
+      get: async () => ({
+        enabledLangs: { he: true, ru: true, uk: true, ko: true, el: true, ar: true },
+        entitlement: { entitled: true, state: 'trial', daysLeft: 30 },
+      }),
+      set: async () => {},
+    },
+    onChanged: { addListener() {} },
+  },
+};
+</script>
+<script src="content.js"></script>
+<script>
+// Distinct text per editor: identical text in a second field is suppressed by
+// the same-signature guard, which would look like "the editor is unsupported".
+const CASES = [
+  ['input',       'ed-input',    false, 'ghbdtn rfr',    'привет как'],
+  ['textarea',    'ed-textarea', false, 'rfr ltkf',      'как дела'],
+  ['contenteditable', 'ed-ce',   true,  'dkssud gksrnr', '안녕 한국'],
+  ['quill',       'ed-quill',    true,  'geia soy',      'γεια σου'],
+  ['lexical',     'ed-lexical',  true,  'ghbdsn nfr',    'привіт так'],
+  ['role=textbox','ed-role',     true,  'ltkf rfr',      'дела как'],
+];
+const out = [];
+
+function setText(el, ce, text) {
+  el.focus();
+  if (ce) {
+    el.textContent = text;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  } else {
+    el.value = text;
+    el.selectionStart = el.selectionEnd = text.length;
+  }
+  el.dispatchEvent(new InputEvent('input', { bubbles: true, data: 'x', inputType: 'insertText' }));
+}
+
+function readText(el, ce) {
+  return (ce ? (el.innerText || el.textContent || '') : el.value).trim();
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+(async () => {
+  await sleep(400);
+  for (const [name, id, ce, TYPED, WANT] of CASES) {
+    const el = document.getElementById(id);
+    setText(el, ce, TYPED);
+    await sleep(700);                       // past the detection debounce
+
+    const toast = document.getElementById('kld-toast');
+    if (!toast) { out.push(`${name.padEnd(16)} NO TOAST`); continue; }
+
+    const btn = toast.querySelector('.kld-primary');
+    if (!btn) { out.push(`${name.padEnd(16)} toast but no fix button`); continue; }
+    btn.click();
+    await sleep(500);
+
+    const after = readText(el, ce);
+    out.push(`${name.padEnd(16)} ${after === WANT ? 'OK   ' : 'FIX FAILED'} "${after}"`);
+    document.querySelectorAll('#kld-toast,#kld-hint').forEach(n => n.remove());
+    // A fix arms strictModeUntil for 15s. Wait it out or every later editor
+    // reports "NO TOAST" and looks unsupported when it is merely suppressed.
+    await sleep(16000);
+  }
+  document.getElementById('results').textContent = out.join('\n');
+  document.title = 'done';
+})();
+</script>
+</body>
+</html>

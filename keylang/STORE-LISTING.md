@@ -88,6 +88,25 @@ delayed when these are vague — the text below is what to paste in.
 
 # SUBMISSION CHECKLIST
 
+## Which sites actually work — read before writing marketing copy
+`node test-editors.js` runs the real content.js against six editor shapes in
+headless Chromium: input, textarea, plain contenteditable, Quill, Lexical, and
+role=textbox. All six pass.
+
+That is weaker than it sounds. These are DOM *shapes*. A div carrying Quill's
+`.ql-editor` class is not a live Quill instance with its own document model, and
+a framework editor can revert a programmatic write immediately after we make it.
+Passing proves the selector matches and the write path works on that structure —
+it proves nothing about any particular website.
+
+Slack has been reported not to work despite `.ql-editor` and
+`[data-qa="message_input"]` both being in the selector list, which points at the
+write being reverted rather than the field never being found. Gmail, LinkedIn
+and WhatsApp are unverified: nobody has tested them on the live sites.
+
+**Do not name an app in the listing or on the site until someone has used Kiko
+on it.** The copy now describes field types instead.
+
 ## Run the tests first
 `node test-detection.js` from the `keylang/` folder. 38 assertions covering all
 six languages, the two-word minimum, false positives on natural English, and
