@@ -224,22 +224,12 @@ What has to ship together before charging:
    currently promises there is no server
 4. Chrome listing switched to declare in-app purchases
 
-Older note, kept for context:
-`terms.html` and `refund.html` used to describe the $5/month plan as something that may
-be introduced later, which is what makes them accurate against a free listing.
-Before charging, all three of these need to happen together:
+## Pricing as advertised
+- **Individual** — 30 days free, then $5/month
+- **Team** — $36/seat/year, minimum 5 seats, invoiced annually
 
-- Payment + license check actually implemented in the extension
-- `terms.html` section 3 switched from "may introduce" to the active wording
-- Store listing updated to declare in-app purchases
-
-## Free forever
-- Detection and correction for all six language pairs
-- Personal learned-word lists
-- Every feature currently in the extension
-
-## What Pro could add (build at 500+ active users)
-- **Cloud sync** — learned words follow you across devices and browsers
-- **Collective learning** — benefit from other users' corrections
-- **Team mode** — shared word lists for companies
-- **Priority support**
+## Also missing from the extension
+The popup and welcome screen say nothing about a trial or a price. A user
+installing today has no idea a clock is running. Whenever billing ships, the
+extension needs to show trial days remaining and an upgrade path, or the first
+anyone hears about payment is the moment detection stops.
