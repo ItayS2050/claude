@@ -152,11 +152,13 @@ Stuck on DNS and need the privacy URL today? Delete `docs/CNAME`, enable Pages,
 and the site serves instantly at `https://itays2050.github.io/claude/`.
 
 ### Two placeholders to fill after publishing
-- `docs/index.html` — `WEBSTORE_URL` at the bottom of the file. Kiko is already
-  published, so the ID exists now: copy it from the dashboard URL and paste the
-  full store link in. Every "Add to Chrome" button reads from that one constant.
-- Pro and Team both point at mailto: links. There is no checkout yet, and no
-  payment code in the extension — see the paid tier section below.
+Both are filled in:
+- `WEBSTORE_URL` = `https://chromewebstore.google.com/detail/alibejcaklfjcbjmncgbhpdichpblnkl` — in `docs/index.html` and `docs/activate.html`
+- `CHECKOUT_URL` = the Lemon Squeezy $5/month link — in `docs/index.html` and
+  `keylang/popup.js`
+
+Team is still a mailto, deliberately: Lemon Squeezy's activation limit is fixed
+per variant, so seats are set when a deal closes.
 
 ## Submit — this is an UPDATE, not a new item
 Kiko is already published and has users. Do not create a new item: a new item
