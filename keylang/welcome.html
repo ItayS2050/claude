@@ -55,7 +55,12 @@
     .lang-card.selected.uk { border-color: #facc15; background: #422006; }
     .lang-card.selected.ko { border-color: #22d3ee; background: #083344; }
     .lang-card.selected.el { border-color: #818cf8; background: #1e1b4b; }
-    .lang-icon { font-size: 28px; flex-shrink: 0; }
+    .lang-icon {
+      flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; letter-spacing: .04em;
+      color: #0f172a; background: #64748b;
+    }
     .lang-info { flex: 1; }
     .lang-name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
     .lang-example { font-size: 12px; color: #64748b; margin-top: 2px; }
@@ -95,7 +100,7 @@
     <div class="question">Select your language(s)</div>
     <div class="lang-grid">
       <div class="lang-card" id="card-he" data-lang="he">
-        <div class="lang-icon">🇮🇱</div>
+        <div class="lang-icon" style="background:#3b82f6">IL</div>
         <div class="lang-info">
           <div class="lang-name">Hebrew</div>
           <div class="lang-example">Typed <em>akuo</em> but meant <strong>שלום</strong></div>
@@ -103,7 +108,7 @@
         <div class="lang-check" id="check-he"></div>
       </div>
       <div class="lang-card ru" id="card-ru" data-lang="ru">
-        <div class="lang-icon">🇷🇺</div>
+        <div class="lang-icon" style="background:#a855f7">RU</div>
         <div class="lang-info">
           <div class="lang-name">Russian</div>
           <div class="lang-example">Typed <em>ghbdtn</em> but meant <strong>привет</strong></div>
@@ -111,7 +116,7 @@
         <div class="lang-check" id="check-ru"></div>
       </div>
       <div class="lang-card ar" id="card-ar" data-lang="ar">
-        <div class="lang-icon">🇸🇦</div>
+        <div class="lang-icon" style="background:#f59e0b">SA</div>
         <div class="lang-info">
           <div class="lang-name">Arabic</div>
           <div class="lang-example">Typed <em>ahlan</em> but meant <strong>اهلان</strong></div>
@@ -119,7 +124,7 @@
         <div class="lang-check" id="check-ar"></div>
       </div>
       <div class="lang-card uk" id="card-uk" data-lang="uk">
-        <div class="lang-icon">🇺🇦</div>
+        <div class="lang-icon" style="background:#facc15">UA</div>
         <div class="lang-info">
           <div class="lang-name">Ukrainian</div>
           <div class="lang-example">Typed <em>ghbdsn</em> but meant <strong>привіт</strong></div>
@@ -127,7 +132,7 @@
         <div class="lang-check" id="check-uk"></div>
       </div>
       <div class="lang-card ko" id="card-ko" data-lang="ko">
-        <div class="lang-icon">🇰🇷</div>
+        <div class="lang-icon" style="background:#22d3ee">KR</div>
         <div class="lang-info">
           <div class="lang-name">Korean</div>
           <div class="lang-example">Typed <em>dkssud</em> but meant <strong>안녕</strong></div>
@@ -135,7 +140,7 @@
         <div class="lang-check" id="check-ko"></div>
       </div>
       <div class="lang-card el" id="card-el" data-lang="el">
-        <div class="lang-icon">🇬🇷</div>
+        <div class="lang-icon" style="background:#818cf8">GR</div>
         <div class="lang-info">
           <div class="lang-name">Greek</div>
           <div class="lang-example">Typed <em>geia</em> but meant <strong>γεια</strong></div>

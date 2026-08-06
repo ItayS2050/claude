@@ -83,6 +83,8 @@
       display:flex;align-items:center;gap:7px;transition:all .12s}
     .tab:hover{background:#fff;color:var(--ink)}
     .tab[aria-selected="true"]{background:var(--ink);color:#fff}
+    .tab-badge{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+      font-size:9.5px;font-weight:900;letter-spacing:.03em;color:#12111a;background:#cfcce0}
     .demo-body{padding:28px}
     .field-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
       color:var(--ink-3);margin-bottom:9px;display:flex;align-items:center;gap:8px}
@@ -119,7 +121,8 @@
       box-shadow:var(--shadow);transition:transform .14s ease, box-shadow .14s ease}
     .lang:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
     .lang-top{display:flex;align-items:center;gap:11px;margin-bottom:18px}
-    .lang-flag{font-size:24px}
+    .lang-flag{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+      font-size:12px;font-weight:900;letter-spacing:.04em;color:#12111a;background:#cfcce0}
     .lang-name{font-weight:800;font-size:17px;letter-spacing:-.01em}
     .lang-mean{margin-left:auto;font-size:13px;color:var(--ink-3)}
     .row{display:flex;align-items:center;gap:12px;padding:9px 0}
@@ -471,12 +474,14 @@
   // Every "typed" string below was produced by running the extension's own
   // converters over the native text — this is literally what Kiko would show.
   const LANGS = [
-    {code:'he', flag:'🇮🇱', name:'Hebrew',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'hello', rtl:true},
-    {code:'ru', flag:'🇷🇺', name:'Russian',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'hi'},
-    {code:'uk', flag:'🇺🇦', name:'Ukrainian', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'hi'},
-    {code:'ko', flag:'🇰🇷', name:'Korean',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'hi'},
-    {code:'el', flag:'🇬🇷', name:'Greek',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'hi'},
-    {code:'ar', flag:'🇸🇦', name:'Arabic',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'hello', rtl:true}
+    // Deliberate letter badges, not flag emoji — Windows has never shipped flag
+    // glyphs and silently falls back to bare letters, so we draw them ourselves.
+    {code:'he', badge:'IL', tint:'#8fc0ff', name:'Hebrew',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'hello', rtl:true},
+    {code:'ru', badge:'RU', tint:'#d3aef9', name:'Russian',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'hi'},
+    {code:'uk', badge:'UA', tint:'#fbe08a', name:'Ukrainian', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'hi'},
+    {code:'ko', badge:'KR', tint:'#93e7f5', name:'Korean',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'hi'},
+    {code:'el', badge:'GR', tint:'#b9bdfa', name:'Greek',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'hi'},
+    {code:'ar', badge:'SA', tint:'#fbd08a', name:'Arabic',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'hello', rtl:true}
   ];
 
   // -- hero demo ------------------------------------------------------------
@@ -485,7 +490,7 @@
     const b = document.createElement('button');
     b.className = 'tab'; b.type = 'button'; b.setAttribute('role','tab');
     b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
-    b.innerHTML = `<span>${l.flag}</span>${l.name}`;
+    b.innerHTML = `<span class="tab-badge" style="background:${l.tint}">${l.badge}</span>${l.name}`;
     b.addEventListener('click', () => select(i));
     tabs.appendChild(b);
   });
@@ -513,7 +518,7 @@
   document.getElementById('langcards').innerHTML = LANGS.map(l => `
     <div class="lang">
       <div class="lang-top">
-        <span class="lang-flag">${l.flag}</span>
+        <span class="lang-flag" style="background:${l.tint}">${l.badge}</span>
         <span class="lang-name">${l.name} ↔ English</span>
         <span class="lang-mean">"${l.mean}"</span>
       </div>

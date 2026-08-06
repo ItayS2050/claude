@@ -73,7 +73,12 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
 .grid { display:grid; grid-template-columns:repeat(2,minmax(0,440px)); gap:16px 26px; }
 .row { display:flex; align-items:center; gap:16px; background:#1e293b;
   border-radius:12px; padding:18px 22px; border-left:4px solid var(--c); }
-.flag { font-size:30px; }
+/* Letter badges rather than flag emoji: Windows draws no flag glyphs and
+   silently degrades them to bare letter pairs. Draw them ourselves so the
+   screenshot matches what every user actually sees. */
+.flag { flex:0 0 auto; width:40px; height:40px; border-radius:11px; background:var(--c);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:800; letter-spacing:.04em; color:#0f172a; }
 .pair { flex:1; }
 .name { font-size:17px; font-weight:700; color:#e2e8f0; }
 .ex { font-size:15px; color:#64748b; margin-top:3px; font-family:ui-monospace,monospace; }
@@ -83,17 +88,17 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
 <h1><img src="icon128.png" alt="" width="42" height="42" style="border-radius:11px;vertical-align:-7px"> Six languages, both directions</h1>
 <div class="sub">Kiko reads what you typed and what you meant — then fixes it in one click.</div>
 <div class="grid">
-  <div class="row" style="--c:#3b82f6"><span class="flag">🇮🇱</span><div class="pair">
+  <div class="row" style="--c:#3b82f6"><span class="flag">IL</span><div class="pair">
     <div class="name">Hebrew ↔ English</div><div class="ex">akuo → <b>שלום</b></div></div></div>
-  <div class="row" style="--c:#a855f7"><span class="flag">🇷🇺</span><div class="pair">
+  <div class="row" style="--c:#a855f7"><span class="flag">RU</span><div class="pair">
     <div class="name">Russian ↔ English</div><div class="ex">ghbdtn → <b>привет</b></div></div></div>
-  <div class="row" style="--c:#facc15"><span class="flag">🇺🇦</span><div class="pair">
+  <div class="row" style="--c:#facc15"><span class="flag">UA</span><div class="pair">
     <div class="name">Ukrainian ↔ English</div><div class="ex">ghbdsn → <b>привіт</b></div></div></div>
-  <div class="row" style="--c:#22d3ee"><span class="flag">🇰🇷</span><div class="pair">
+  <div class="row" style="--c:#22d3ee"><span class="flag">KR</span><div class="pair">
     <div class="name">Korean ↔ English</div><div class="ex">dkssud → <b>안녕</b></div></div></div>
-  <div class="row" style="--c:#818cf8"><span class="flag">🇬🇷</span><div class="pair">
+  <div class="row" style="--c:#818cf8"><span class="flag">GR</span><div class="pair">
     <div class="name">Greek ↔ English</div><div class="ex">geia → <b>γεια</b></div></div></div>
-  <div class="row" style="--c:#f59e0b"><span class="flag">🇸🇦</span><div class="pair">
+  <div class="row" style="--c:#f59e0b"><span class="flag">SA</span><div class="pair">
     <div class="name">Arabic ↔ English</div><div class="ex">lvpfh → <b>مرحبا</b></div></div></div>
 </div>
 <div class="foot">30 days free · No account · Nothing leaves your browser</div>
@@ -116,7 +121,10 @@ h1 img{width:60px;height:60px;border-radius:15px}
 .rows{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;width:100%}
 .row{display:flex;align-items:center;gap:14px;background:#1e293b;border-radius:13px;
   padding:16px 18px;border-left:5px solid var(--c)}
-.flag{font-size:27px}
+/* Letter badges, not flag emoji — Windows renders no flag glyphs. */
+.flag{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--c);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;letter-spacing:.04em;color:#0f172a}
 .name{font-size:19px;font-weight:700;color:#e2e8f0;flex:1}
 .ex{font-size:18px;color:#64748b;font-family:ui-monospace,monospace}
 .ex b{color:var(--c);font-family:inherit}
@@ -125,12 +133,12 @@ h1 img{width:60px;height:60px;border-radius:15px}
 <h1><img src="icon128.png" alt=""> Six languages, both directions</h1>
 <div class="sub">Typed in the wrong keyboard layout? Fixed in one click.</div>
 <div class="rows">
-  <div class="row" style="--c:#3b82f6"><span class="flag">&#127470;&#127473;</span><span class="name">Hebrew</span><span class="ex">akuo &rarr; <b>&#1513;&#1500;&#1493;&#1501;</b></span></div>
-  <div class="row" style="--c:#a855f7"><span class="flag">&#127479;&#127482;</span><span class="name">Russian</span><span class="ex">ghbdtn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1077;&#1090;</b></span></div>
-  <div class="row" style="--c:#facc15"><span class="flag">&#127482;&#127462;</span><span class="name">Ukrainian</span><span class="ex">ghbdsn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1110;&#1090;</b></span></div>
-  <div class="row" style="--c:#22d3ee"><span class="flag">&#127472;&#127479;</span><span class="name">Korean</span><span class="ex">dkssud &rarr; <b>&#50504;&#45397;</b></span></div>
-  <div class="row" style="--c:#818cf8"><span class="flag">&#127468;&#127479;</span><span class="name">Greek</span><span class="ex">geia &rarr; <b>&#947;&#949;&#953;&#945;</b></span></div>
-  <div class="row" style="--c:#f59e0b"><span class="flag">&#127480;&#127462;</span><span class="name">Arabic</span><span class="ex">lvpfh &rarr; <b>&#1605;&#1585;&#1581;&#1576;&#1575;</b></span></div>
+  <div class="row" style="--c:#3b82f6"><span class="flag">IL</span><span class="name">Hebrew</span><span class="ex">akuo &rarr; <b>&#1513;&#1500;&#1493;&#1501;</b></span></div>
+  <div class="row" style="--c:#a855f7"><span class="flag">RU</span><span class="name">Russian</span><span class="ex">ghbdtn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1077;&#1090;</b></span></div>
+  <div class="row" style="--c:#facc15"><span class="flag">UA</span><span class="name">Ukrainian</span><span class="ex">ghbdsn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1110;&#1090;</b></span></div>
+  <div class="row" style="--c:#22d3ee"><span class="flag">KR</span><span class="name">Korean</span><span class="ex">dkssud &rarr; <b>&#50504;&#45397;</b></span></div>
+  <div class="row" style="--c:#818cf8"><span class="flag">GR</span><span class="name">Greek</span><span class="ex">geia &rarr; <b>&#947;&#949;&#953;&#945;</b></span></div>
+  <div class="row" style="--c:#f59e0b"><span class="flag">SA</span><span class="name">Arabic</span><span class="ex">lvpfh &rarr; <b>&#1605;&#1585;&#1581;&#1576;&#1575;</b></span></div>
 </div>
 <div class="foot">30 days free, then $5/month</div>
 </body></html>"""
