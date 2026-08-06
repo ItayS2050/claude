@@ -31,6 +31,18 @@ for f in "${FILES[@]}"; do
   [[ -f "$f" ]] || { echo "missing: $f" >&2; exit 1; }
 done
 
+# The Web Store rejects the upload outright on these, after you have already
+# waited through it. Cheaper to fail here.
+python3 - <<'PY'
+import json, sys
+m = json.load(open('manifest.json'))
+limits = {'description': 132, 'name': 75, 'short_name': 12}
+bad = [f"{k}: {len(m[k])} chars, limit {v}"
+       for k, v in limits.items() if k in m and len(m[k]) > v]
+if bad:
+    sys.exit('manifest exceeds Web Store limits —\n  ' + '\n  '.join(bad))
+PY
+
 mkdir -p dist
 rm -f "$OUT"
 zip -q "$OUT" "${FILES[@]}"

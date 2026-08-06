@@ -3,8 +3,8 @@
 ## Extension name
 Kiko – Multilingual Keyboard Layout Fixer
 
-## Short description (max 132 chars — 128 chars)
-Typed in the wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic mix-ups and fixes them.
+## Short description (max 132 chars — 130 chars)
+Wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic typing mix-ups and fixes them in one click.
 
 ## Full description (paste this into the store)
 
@@ -148,7 +148,7 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 
 **2. Store listing tab**
 - Title: `Kiko – Multilingual Keyboard Layout Fixer`
-- Summary: the short description above (128 chars, under the 132 limit)
+- Summary: the short description above (130 chars, under the 132 limit)
 - Description: the full description above
 - Category: Productivity
 - Language: English
