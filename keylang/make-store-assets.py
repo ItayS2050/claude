@@ -80,7 +80,7 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
 .ex b { color:var(--c); font-family:inherit; }
 .foot { margin-top:44px; font-size:15px; color:#475569; }
 </style></head><body>
-<h1>🦜 Six languages, both directions</h1>
+<h1><img src="icon128.png" alt="" width="42" height="42" style="border-radius:11px;vertical-align:-7px"> Six languages, both directions</h1>
 <div class="sub">Kiko reads what you typed and what you meant — then fixes it in one click.</div>
 <div class="grid">
   <div class="row" style="--c:#3b82f6"><span class="flag">🇮🇱</span><div class="pair">
@@ -96,7 +96,7 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
   <div class="row" style="--c:#f59e0b"><span class="flag">🇸🇦</span><div class="pair">
     <div class="name">Arabic ↔ English</div><div class="ex">lvpfh → <b>مرحبا</b></div></div></div>
 </div>
-<div class="foot">Free · No account · Nothing leaves your browser</div>
+<div class="foot">30 days free · No account · Nothing leaves your browser</div>
 </body></html>"""
 
 # The real popup, with chrome.storage stubbed so popup.js renders realistic state.
