@@ -55,8 +55,7 @@ Productivity
 English
 
 ## Privacy policy URL
-Required before submission. Host `privacy.html` publicly and paste the URL here.
-(See "Hosting the privacy policy" below.)
+`https://get-kiko.com/privacy.html` — live.
 
 ---
 
@@ -99,7 +98,7 @@ promo mockups, and this file.
 
 ## Before you submit
 - [ ] `./build.sh` run, `dist/kiko-4.4.0.zip` exists
-- [ ] Privacy policy hosted, URL copied
+- [x] Privacy policy live at https://get-kiko.com/privacy.html
 - [ ] Screenshots ready — 1280×800, between 1 and 5 of them
 - [ ] Version in `manifest.json` is higher than the currently published one
 
