@@ -99,6 +99,40 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
 <div class="foot">30 days free · No account · Nothing leaves your browser</div>
 </body></html>"""
 
+
+# Square product image for the Lemon Squeezy listing. Storefronts crop hard, and
+# a 1400x560 marquee loses its edges; a square survives any crop.
+PRODUCT_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1200px;height:1200px;background:#0f172a;color:#e2e8f0;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px}
+img.logo{width:120px;height:120px;border-radius:30px;margin-bottom:26px}
+h1{font-size:62px;font-weight:800;color:#7dd3fc;letter-spacing:-.03em;text-align:center;line-height:1.08}
+.sub{font-size:26px;color:#94a3b8;margin:16px 0 48px;text-align:center}
+.rows{display:grid;gap:14px;width:100%}
+.row{display:flex;align-items:center;gap:20px;background:#1e293b;border-radius:16px;
+  padding:22px 26px;border-left:6px solid var(--c)}
+.flag{font-size:36px}
+.name{font-size:24px;font-weight:700;color:#e2e8f0;flex:1}
+.ex{font-size:23px;color:#64748b;font-family:ui-monospace,monospace}
+.ex b{color:var(--c);font-family:inherit}
+.foot{margin-top:48px;font-size:25px;color:#7dd3fc;font-weight:600}
+</style></head><body>
+<img class="logo" src="icon128.png" alt="">
+<h1>Six languages, both directions</h1>
+<div class="sub">Typed in the wrong keyboard layout? Fixed in one click.</div>
+<div class="rows">
+  <div class="row" style="--c:#3b82f6"><span class="flag">&#127470;&#127473;</span><span class="name">Hebrew</span><span class="ex">akuo &rarr; <b>&#1513;&#1500;&#1493;&#1501;</b></span></div>
+  <div class="row" style="--c:#a855f7"><span class="flag">&#127479;&#127482;</span><span class="name">Russian</span><span class="ex">ghbdtn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1077;&#1090;</b></span></div>
+  <div class="row" style="--c:#facc15"><span class="flag">&#127482;&#127462;</span><span class="name">Ukrainian</span><span class="ex">ghbdsn &rarr; <b>&#1087;&#1088;&#1080;&#1074;&#1110;&#1090;</b></span></div>
+  <div class="row" style="--c:#22d3ee"><span class="flag">&#127472;&#127479;</span><span class="name">Korean</span><span class="ex">dkssud &rarr; <b>&#50504;&#45397;</b></span></div>
+  <div class="row" style="--c:#818cf8"><span class="flag">&#127468;&#127479;</span><span class="name">Greek</span><span class="ex">geia &rarr; <b>&#947;&#949;&#953;&#945;</b></span></div>
+  <div class="row" style="--c:#f59e0b"><span class="flag">&#127480;&#127462;</span><span class="name">Arabic</span><span class="ex">lvpfh &rarr; <b>&#1605;&#1585;&#1581;&#1576;&#1575;</b></span></div>
+</div>
+<div class="foot">30 days free, then $5/month</div>
+</body></html>"""
+
 # The real popup, with chrome.storage stubbed so popup.js renders realistic state.
 POPUP_STUB = """<script>
 window.chrome = {
@@ -200,6 +234,10 @@ def main():
     frame.write_text(POPUP_FRAME, encoding="utf-8")
     shoot(frame, OUT / "shot4-popup.png", 1280, 800)
 
+    prod = tmp / "product-square.html"
+    prod.write_text(PRODUCT_PAGE, encoding="utf-8")
+    shoot(prod, OUT / "product-1200.png", 1200, 1200)
+
     langs = tmp / "shot5-languages.html"
     langs.write_text(LANGS_PAGE, encoding="utf-8")
     shoot(langs, OUT / "shot5-languages.png", 1280, 800)
@@ -213,7 +251,6 @@ def main():
         # minimum window width, so at 440px wide the toast anchors to a wider
         # viewport and hangs off the edge. Making body the containing block
         # pins it to the tile itself.
-        tile = tile.replace("Hebrew \u2194 English", "6 languages")
         tile = tile.replace("</style>",
                             f"  body {{ position: relative; width: {w}px; }}\n"
                             "  .toast-top { font-size: 8px; }\n  </style>")
