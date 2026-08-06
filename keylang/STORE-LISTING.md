@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Kiko v4.4.0
+# Chrome Web Store Listing — Kiko v4.4.1
 
 ## Extension name
 Kiko – Multilingual Keyboard Layout Fixer
@@ -88,8 +88,13 @@ delayed when these are vague — the text below is what to paste in.
 
 # SUBMISSION CHECKLIST
 
+## Run the tests first
+`node test-detection.js` from the `keylang/` folder. 38 assertions covering all
+six languages, the two-word minimum, false positives on natural English, and
+per-language gating. Every case is there because something was actually broken.
+
 ## Build the package
-Run `./build.sh` from the `keylang/` folder. It produces `dist/kiko-4.4.0.zip`
+Run `./build.sh` from the `keylang/` folder. It produces `dist/kiko-4.4.1.zip`
 containing only the files the extension actually needs — dev files, mockups and
 marketing pages are excluded.
 
@@ -97,10 +102,10 @@ Do **not** zip the folder by hand: it would ship `test.html`, the screenshot and
 promo mockups, and this file.
 
 ## Before you submit
-- [ ] `./build.sh` run, `dist/kiko-4.4.0.zip` exists
+- [ ] `./build.sh` run, `dist/kiko-4.4.1.zip` exists
 - [x] Privacy policy live at https://get-kiko.com/privacy.html
 - [ ] Screenshots ready — 1280×800, between 1 and 5 of them
-- [ ] Version in `manifest.json` (4.4.0) is higher than the published one
+- [ ] Version in `manifest.json` (4.4.1) is higher than the published one
 
 ## Hosting the site + privacy policy (GitHub Pages)
 The website now lives in `docs/` at the repo root — landing page plus the three
@@ -139,8 +144,8 @@ Kiko is already published and has users. Do not create a new item: a new item
 gets a new extension ID, and every existing install stays on the old one.
 
 1. https://chrome.google.com/webstore/devconsole → open the **existing Kiko item**
-2. Package → **Upload new package** → `dist/kiko-4.4.0.zip`
-   (4.4.0 must be higher than the published version, or it is rejected)
+2. Package → **Upload new package** → `dist/kiko-4.4.1.zip`
+   (4.4.1 must be higher than the published version, or it is rejected)
 3. Store listing tab → replace description, summary and screenshots
 4. Privacy tab → single purpose, the permission justifications, data usage none,
    privacy URL `https://get-kiko.com/privacy.html`
@@ -148,7 +153,7 @@ gets a new extension ID, and every existing install stays on the old one.
    subscription; over-declaring is safe, under-declaring is the violation)
 6. Submit → 1–3 business days
 
-Existing users get 4.4.0 automatically once it is approved.
+Existing users get 4.4.1 automatically once it is approved.
 
 ---
 
@@ -177,7 +182,7 @@ they click through.
 
 The dashboard splits the listing across four tabs. Everything you need is above.
 
-**1. Package** — upload `dist/kiko-4.4.0.zip` first; the version is read from it.
+**1. Package** — upload `dist/kiko-4.4.1.zip` first; the version is read from it.
 
 **2. Store listing tab**
 - Title: `Kiko – Multilingual Keyboard Layout Fixer`
