@@ -100,27 +100,29 @@ h1 { font-size:46px; color:#7dd3fc; margin-bottom:8px; font-weight:800; }
 </body></html>"""
 
 
-# Square product image for the Lemon Squeezy listing. Storefronts crop hard, and
-# a 1400x560 marquee loses its edges; a square survives any crop.
+# Storefront product image. Landscape, because Lemon Squeezy crops to a wide
+# panel — a square loses its top and bottom, which decapitated the parrot. The
+# logo sits inline with the headline so there is no element stranded at an edge
+# for a crop to find.
 PRODUCT_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{width:1200px;height:1200px;background:#0f172a;color:#e2e8f0;overflow:hidden;
+body{width:1200px;height:800px;background:#0f172a;color:#e2e8f0;overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px}
-img.logo{width:120px;height:120px;border-radius:30px;margin-bottom:26px}
-h1{font-size:62px;font-weight:800;color:#7dd3fc;letter-spacing:-.03em;text-align:center;line-height:1.08}
-.sub{font-size:26px;color:#94a3b8;margin:16px 0 48px;text-align:center}
-.rows{display:grid;gap:14px;width:100%}
-.row{display:flex;align-items:center;gap:20px;background:#1e293b;border-radius:16px;
-  padding:22px 26px;border-left:6px solid var(--c)}
-.flag{font-size:36px}
-.name{font-size:24px;font-weight:700;color:#e2e8f0;flex:1}
-.ex{font-size:23px;color:#64748b;font-family:ui-monospace,monospace}
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 70px}
+h1{font-size:50px;font-weight:800;color:#7dd3fc;letter-spacing:-.03em;text-align:center;
+  line-height:1.1;display:flex;align-items:center;gap:18px}
+h1 img{width:60px;height:60px;border-radius:15px}
+.sub{font-size:21px;color:#94a3b8;margin:12px 0 30px;text-align:center}
+.rows{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;width:100%}
+.row{display:flex;align-items:center;gap:14px;background:#1e293b;border-radius:13px;
+  padding:16px 18px;border-left:5px solid var(--c)}
+.flag{font-size:27px}
+.name{font-size:19px;font-weight:700;color:#e2e8f0;flex:1}
+.ex{font-size:18px;color:#64748b;font-family:ui-monospace,monospace}
 .ex b{color:var(--c);font-family:inherit}
-.foot{margin-top:48px;font-size:25px;color:#7dd3fc;font-weight:600}
+.foot{margin-top:30px;font-size:21px;color:#7dd3fc;font-weight:600}
 </style></head><body>
-<img class="logo" src="icon128.png" alt="">
-<h1>Six languages, both directions</h1>
+<h1><img src="icon128.png" alt=""> Six languages, both directions</h1>
 <div class="sub">Typed in the wrong keyboard layout? Fixed in one click.</div>
 <div class="rows">
   <div class="row" style="--c:#3b82f6"><span class="flag">&#127470;&#127473;</span><span class="name">Hebrew</span><span class="ex">akuo &rarr; <b>&#1513;&#1500;&#1493;&#1501;</b></span></div>
@@ -236,7 +238,7 @@ def main():
 
     prod = tmp / "product-square.html"
     prod.write_text(PRODUCT_PAGE, encoding="utf-8")
-    shoot(prod, OUT / "product-1200.png", 1200, 1200)
+    shoot(prod, OUT / "product-1200.png", 1200, 800)
 
     langs = tmp / "shot5-languages.html"
     langs.write_text(LANGS_PAGE, encoding="utf-8")
