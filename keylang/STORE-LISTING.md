@@ -112,18 +112,21 @@ legal pages. To publish:
    `https://itays2050.github.io/claude/privacy.html`
 3. Paste that into the Chrome listing. Done — no domain required.
 
-### Once get-kiko.com is bought
-1. Create `docs/CNAME` containing exactly `get-kiko.com`
-2. At the registrar, point the apex at GitHub Pages with four A records:
-   `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
-   (and a CNAME for `www` → `itays2050.github.io`)
-3. Settings → Pages → Custom domain → `get-kiko.com` → Enforce HTTPS
-4. Swap `homepage_url` in `manifest.json` to `https://get-kiko.com`
-5. Set up a `hello@get-kiko.com` forwarder and replace `itay@selltech.io`
-   across `docs/*.html`
+### Domain (get-kiko.com) — do these in order
+DNS **first**, then Pages. Enabling Pages while the CNAME points at a domain
+that does not resolve takes the site offline, privacy policy included.
 
-Do **not** add the CNAME before the domain resolves — Pages will redirect the
-github.io URL to a dead domain and take your privacy policy offline with it.
+1. At the registrar, four A records on the apex:
+   `185.199.108.153` · `185.199.109.153` · `185.199.110.153` · `185.199.111.153`
+   plus a CNAME for `www` → `itays2050.github.io`
+2. Wait for it to resolve (`dig get-kiko.com` returns those IPs)
+3. Settings → Pages → Source `main` / `/docs`, Custom domain `get-kiko.com`,
+   tick Enforce HTTPS
+4. Create a **`hello@get-kiko.com` forwarder** at the registrar. That address is
+   on every legal page and Chrome reviewers use it — it must receive mail.
+
+Stuck on DNS and need the privacy URL today? Delete `docs/CNAME`, enable Pages,
+and the site serves instantly at `https://itays2050.github.io/claude/`.
 
 ### Two placeholders to fill after publishing
 - `docs/index.html` — `WEBSTORE_URL` at the bottom of the file. The extension ID
