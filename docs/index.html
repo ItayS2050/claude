@@ -166,6 +166,11 @@
     .plan-name{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
     .plan-price{font-size:52px;font-weight:900;letter-spacing:-.04em;margin:14px 0 2px;line-height:1}
     .plan-price span{font-size:17px;font-weight:600;color:var(--ink-3);letter-spacing:0}
+    .plan-alt{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink-2);
+      background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+      padding:5px 13px;margin:0 0 12px}
+    .plan-alt b{color:var(--ink);font-weight:700}
+    .plan-alt em{font-style:normal;color:var(--ok);font-weight:700}
     .plan-sub{color:var(--ink-2);font-size:15px;min-height:44px}
     .plan ul{list-style:none;margin:22px 0 26px;display:grid;gap:11px}
     .plan li{display:flex;gap:10px;font-size:15px;color:var(--ink-2);align-items:flex-start}
@@ -379,6 +384,7 @@
         <div class="badge">First 30 days free</div>
         <div class="plan-name">Individual</div>
         <div class="plan-price">$5<span>/month</span></div>
+        <div class="plan-alt">or <b>$40/year</b> — <em>two months free</em></div>
         <div class="plan-sub">Everything Kiko does, on all your Chrome profiles.</div>
         <ul>
           <li>All six language pairs, both directions</li>
@@ -388,7 +394,8 @@
           <li>Nothing leaves your device</li>
         </ul>
         <a class="btn btn-primary" href="#" data-webstore>Start free — no card</a>
-        <div class="plan-note">30 days free, then $5/month. Cancel anytime.<br>
+        <div class="plan-note">30 days free, then $5/month or $40/year — you choose at checkout.
+          Cancel anytime.<br>
           <a href="#" data-checkout style="color:var(--brand);font-weight:600">Already using Kiko? Subscribe →</a></div>
       </div>
 
@@ -417,8 +424,9 @@
     </div>
     <div class="faq">
       <details open><summary>What happens after 30 days?</summary>
-        <p>Kiko asks you to subscribe for $5/month. Nothing is charged during the trial and no card
-          is needed to start — if you don't subscribe, detection simply stops.</p></details>
+        <p>Kiko asks you to subscribe — $5/month, or $40 for the year if you'd rather pay once and
+          save two months. Nothing is charged during the trial and no card is needed to start — if
+          you don't subscribe, detection simply stops.</p></details>
       <details><summary>Does my typing get sent anywhere?</summary>
         <p>No. There is no server. Detection runs inside your browser and the words Kiko learns are
           stored locally on your machine. Read the <a href="privacy.html" style="color:var(--brand);font-weight:600">privacy policy</a>.</p></details>

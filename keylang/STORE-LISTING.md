@@ -44,7 +44,7 @@ Kiko is not a dictionary lookup — it scores every word against the letter patt
 
 No account. No sign-up. No servers. Every conversion runs inside your browser, and your learned word lists live in local storage and never leave your device. Kiko has no backend to send anything to.
 
-**Free for 30 days. Then $5/month.**
+**Free for 30 days. Then $5/month, or $40/year — two months free.**
 
 ---
 
@@ -224,40 +224,44 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 **4. Distribution tab**
 - Visibility: Public
 - Regions: all
-- Pricing: Free to install. **Declare in-app purchases** — the site now advertises
-  a 30-day trial then $5/month, so the listing must say so or it contradicts
-  your own terms. Do not submit as "no in-app purchases" while the website
-  sells a subscription.
+- Pricing: Free to install. **Declare in-app purchases** — the site advertises a
+  30-day trial then $5/month or $40/year, so the listing must say so or it
+  contradicts your own terms. Do not submit as "no in-app purchases" while the
+  website sells a subscription.
 
 **5. Submit for review** — usually 1–3 business days. Broad host permissions
 (`<all_urls>`) push it toward the longer end.
 
 ---
 
-# PAYMENTS (built in 4.5.0, not yet live)
+# PAYMENTS (built in 4.5.0, awaiting submission)
 
 Lemon Squeezy, chosen because its licence keys are a built-in feature: the
 per-key **activation limit is the seat count**, so the 5-seat team plan needs no
 code of ours. Their licence endpoints take no API key and are meant to be called
 from a client, so there is no server in the loop.
 
-## Ship 4.4.1 first
-4.4.1 has no payment code and declares no data collection — submit that today.
-4.5.0 cannot ship until the Lemon Squeezy product exists, because the checkout
-URL is still a placeholder.
+## Status
+4.4.1 is live in the store — six languages, no payment code, no data collection
+declared. 4.5.0 is built and tested but not yet submitted.
 
-## What you set up in Lemon Squeezy
-1. Store → verify the account (needs the live site, which get-kiko.com now is)
-2. Product **Kiko Individual** — $5/month subscription, **no trial in Lemon Squeezy**
-   - Enable **licence keys**, activation limit **1**
-   - The extension owns the 30-day trial and takes no card for it. Configuring a
-     trial here too would stack them: someone subscribing on day 5 would get 30
-     more free days. Charge immediately at checkout.
-3. Product **Kiko Team** — $36/seat/year
+The Lemon Squeezy store is verified and the whole chain has been exercised for
+real: checkout → licence key → **Activate** in the popup → subscription active.
+
+## What is set up in Lemon Squeezy
+1. Product **Kiko** — one product, two variants, and the buyer picks at checkout:
+   - **Monthly** — $5/month
+   - **Annual** — $40/year, which is $20 less than paying monthly
+   - **No trial configured in Lemon Squeezy.** The extension owns the trial and
+     takes no card for it. A trial here too would stack them: someone
+     subscribing on day 5 would get free days on top. Charge at checkout.
+   - **Licence keys** enabled, activation limit **1**
+   - The checkout preselects whichever variant is **first** in the variant list.
+2. Product **Kiko Team** — $36/seat/year
    - Enable **licence keys**, activation limit = seats sold (minimum 5)
-4. Copy each checkout URL
 
-## Then two constants, same value
+## Two constants, same value
+Both hold the **product** link, which opens with both variants:
 - `docs/index.html` → `CHECKOUT_URL`
 - `keylang/popup.js` → `CHECKOUT_URL`
 
@@ -279,15 +283,20 @@ Product description, when they ask when you charge:
 > Kiko is a browser extension that detects when someone has typed with the wrong
 > keyboard layout active — Hebrew, Russian, Ukrainian, Korean, Greek or Arabic
 > typed while the keyboard was in English, or the reverse — and corrects the text
-> in one click. We sell it as a $5/month subscription, plus a $36/seat/year team
-> plan, through our website get-kiko.com and the Chrome Web Store; customers use
-> it free for 30 days without entering any payment details, and are charged
-> immediately at checkout when they choose to subscribe.
+> in one click. We sell it as a $5/month or $40/year subscription, plus a
+> $36/seat/year team plan, through our website get-kiko.com and the Chrome Web
+> Store; customers use it free for 30 days without entering any payment details,
+> and are charged immediately at checkout when they choose to subscribe.
 
 ## What the extension does
-- Trial is 30 days from the `firstInstall` stamp. That stamp is written on
-  update too, so the users you have today start their 30 days when 4.4.1
-  reaches them, not retroactively from whenever they installed.
+- Trial runs from the `firstInstall` stamp, which is written on update as well
+  as on install, so it exists for everyone already running 4.4.x.
+- **Two trial lengths, split on the version in that stamp.** Anything below
+  4.5.0 was a free build, so those users get **60 days**; installs on 4.5.0 or
+  later get the advertised **30**. Without the split, the users you have today
+  would meet the paywall part-way through a countdown that started before there
+  was a price — their stamps date from when 4.4.0 reached them in August. An
+  unversioned stamp counts as new, so clearing storage cannot buy more time.
 - `background.js` owns entitlement and writes it to storage; content.js and the
   popup only read it, so there is no second copy of the logic.
 - A stored key is re-validated at most once a day. If the check fails, the last
