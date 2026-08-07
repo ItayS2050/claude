@@ -62,11 +62,13 @@ function loadContentScript() {
 
 function loadComputeEntitlement() {
   const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
-  const fn = src.slice(src.indexOf('function computeEntitlement'),
-                       src.indexOf('async function refreshEntitlement'));
+  // Take the constants along with the functions. Restating them here once let
+  // the copy drift from the real ones, which is the one thing these tests are
+  // supposed to catch.
+  const block = src.slice(src.indexOf('const TRIAL_DAYS'),
+                          src.indexOf('async function refreshEntitlement'));
   const ctx = vm.createContext({});
-  return vm.runInContext(
-    'const TRIAL_DAYS=30, DAY_MS=86400000, RECHECK_MS=86400000, GRACE_MS=7*86400000;\n' + fn + ';computeEntitlement', ctx);
+  return vm.runInContext(block + ';computeEntitlement', ctx);
 }
 
 const kiko = loadContentScript();
@@ -172,6 +174,28 @@ console.log('Trial and licence entitlement');
      { entitled: false, state: 'expired' });
   eq('licence revoked',    computeEntitlement(day(400), { valid: false, checkedAt: now }, now),
      { entitled: false, state: 'expired' });
+
+  // Users stamped on a pre-paywall build get 60 days, not 30 — their clock had
+  // already been running since 4.4.0 shipped, before anyone mentioned a price.
+  const on = (n, version) => ({ at: now - n * DAY, version });
+  eq('4.4.0 user, day 20',  computeEntitlement(on(20, '4.4.0'), null, now),
+     { entitled: true,  state: 'trial', daysLeft: 40 });
+  eq('4.4.1 user, day 45',  computeEntitlement(on(45, '4.4.1'), null, now),
+     { entitled: true,  state: 'trial', daysLeft: 15 });
+  eq('4.4.1 user, day 60',  computeEntitlement(on(60, '4.4.1'), null, now),
+     { entitled: false, state: 'expired', daysLeft: 0 });
+  eq('4.1.7 user, day 45',  computeEntitlement(on(45, '4.1.7'), null, now),
+     { entitled: true,  state: 'trial', daysLeft: 15 });
+  // Anyone who arrives on the paywall build itself gets the advertised 30.
+  eq('4.5.0 install, day 20', computeEntitlement(on(20, '4.5.0'), null, now),
+     { entitled: true,  state: 'trial', daysLeft: 10 });
+  eq('4.5.0 install, day 45', computeEntitlement(on(45, '4.5.0'), null, now),
+     { entitled: false, state: 'expired', daysLeft: 0 });
+  eq('4.6.0 install, day 45', computeEntitlement(on(45, '4.6.0'), null, now),
+     { entitled: false, state: 'expired', daysLeft: 0 });
+  // An unversioned stamp must not silently hand out the longer trial.
+  eq('stamp without version', computeEntitlement(day(45), null, now),
+     { entitled: false, state: 'expired', daysLeft: 0 });
 }
 
 console.log('An expired trial stops detection');

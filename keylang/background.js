@@ -63,7 +63,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // a host permission would disable the extension for every current user until
 // they re-approved it.
 
-const TRIAL_DAYS   = 30;
+const TRIAL_DAYS   = 30;           // what the site, the listing and the popup promise
+const LEGACY_DAYS  = 60;           // for people who were already here when Kiko was free
+const PAYWALL_VER  = '4.5.0';      // the first build that can withhold anything
 const DAY_MS       = 86400000;
 const RECHECK_MS   = DAY_MS;       // don't hit the API more than once a day
 const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
@@ -76,12 +78,28 @@ function computeEntitlement(firstInstall, licence, now = Date.now()) {
     return { entitled: true, state: 'licensed', daysLeft: null };
   }
   const start    = (firstInstall && firstInstall.at) || now;
-  const daysLeft = TRIAL_DAYS - Math.floor((now - start) / DAY_MS);
+  const total    = isLegacyUser(firstInstall) ? LEGACY_DAYS : TRIAL_DAYS;
+  const daysLeft = total - Math.floor((now - start) / DAY_MS);
   return {
     entitled: daysLeft > 0,
     state: daysLeft > 0 ? 'trial' : 'expired',
     daysLeft: Math.max(0, daysLeft),
   };
+}
+
+// Kiko was free through 4.4.x, and the install stamp predates the paywall, so
+// for those users the clock had already been running for weeks before anyone
+// told them there was one. Give them double the runway rather than expiring
+// people who never agreed to a trial. New installs get the advertised 30 days.
+function isLegacyUser(firstInstall) {
+  const stamped = firstInstall && firstInstall.version;
+  if (!stamped) return false;   // no stamp: treat as new, which is the safe promise
+  const got  = String(stamped).split('.').map(n => parseInt(n, 10) || 0);
+  const gate = PAYWALL_VER.split('.').map(Number);
+  for (let i = 0; i < gate.length; i++) {
+    if ((got[i] || 0) !== gate[i]) return (got[i] || 0) < gate[i];
+  }
+  return false;                 // exactly the paywall version: a new user
 }
 
 async function refreshEntitlement({ force = false } = {}) {
