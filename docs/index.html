@@ -466,7 +466,8 @@
   // Set once the Web Store assigns an extension ID. Every "Add to Chrome"
   // button on the page reads from this one constant.
   const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/alibejcaklfjcbjmncgbhpdichpblnkl';
-  // Lemon Squeezy checkout, $5/month. Same value as CHECKOUT_URL in keylang/popup.js.
+  // Lemon Squeezy product checkout — offers both plans, $5/month and $40/year,
+  // and the buyer chooses. Same value as CHECKOUT_URL in keylang/popup.js.
   const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
   document.querySelectorAll('[data-checkout]').forEach(a => { a.href = CHECKOUT_URL; });
   document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });

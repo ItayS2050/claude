@@ -68,7 +68,9 @@ function renderWordList(containerId, words, type, onRemove) {
   });
 }
 
-// Lemon Squeezy checkout for the $5/month plan.
+// Lemon Squeezy checkout. This is the product link, not a single variant: it
+// opens with both plans and the buyer picks — $5/month or $40/year. Whichever
+// variant sits first in the product's variant list is the one preselected.
 const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
 
 // ── Trial / licence banner ────────────────────────────────────
