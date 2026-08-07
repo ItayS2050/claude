@@ -203,7 +203,7 @@ they click through.
 
 The dashboard splits the listing across four tabs. Everything you need is above.
 
-**1. Package** — upload `dist/kiko-4.4.1.zip` first; the version is read from it.
+**1. Package** — upload `dist/kiko-4.5.0.zip` first; the version is read from it.
 
 **2. Store listing tab**
 - Title: `Kiko – Multilingual Keyboard Layout Fixer`
@@ -217,7 +217,13 @@ The dashboard splits the listing across four tabs. Everything you need is above.
 **3. Privacy tab** — the one that holds up reviews
 - Single purpose: *"Detect and correct keyboard-layout mistakes in text fields."*
 - A justification for **every** permission — copy them from the section above
-- Data usage: tick nothing. Kiko collects no user data
+- Data usage: **tick Authentication information** — and nothing else. 4.5.0 sends
+  the licence key you paste to Lemon Squeezy to validate it, which is exactly what
+  that category covers. Everything else still applies: no typing, no browsing
+  history, no personal data ever leaves the device. Then certify the three
+  statements — not sold to third parties, not used outside the core function, not
+  used for creditworthiness — all three are true.
+  (4.4.1 and earlier ticked nothing, correctly; they had no payment code.)
 - Certify the disclosures are accurate
 - Privacy policy URL — required, must be publicly reachable
 
