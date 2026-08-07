@@ -55,7 +55,8 @@ function loadContentScript() {
   // duplicate-injection guard, which is illegal at true top level.
   return vm.runInContext(
     '(function () {\n' + src +
-    '\nreturn { analyzeText, setLangs: o => { enabledLangs = o; },' +
+    '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones,' +
+    '         setLangs: o => { enabledLangs = o; },' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
 }
@@ -196,6 +197,38 @@ console.log('Trial and licence entitlement');
   // An unversioned stamp must not silently hand out the longer trial.
   eq('stamp without version', computeEntitlement(day(45), null, now),
      { entitled: false, state: 'expired', daysLeft: 0 });
+}
+
+console.log('Trial notice milestones');
+{
+  const { dueTrialMilestone: due, spendTrialMilestones: spend } = kiko;
+  const is = (label, got, want) => {
+    if (got === want || JSON.stringify(got) === JSON.stringify(want)) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${JSON.stringify(want)}`);
+    console.log(`        actual   ${JSON.stringify(got)}`);
+  };
+
+  is('day 20 — too early, say nothing', due(20, {}), undefined);
+  is('day 8 — still early',             due(8,  {}), undefined);
+  is('day 7 — the first warning',       due(7,  {}), 7);
+  is('day 4 — still the 7-day one',     due(4,  {}), 7);
+  is('day 1 — the last-day warning',    due(1,  {}), 1);
+  is('day 7 already given',             due(4,  { d7: true }), undefined);
+  // Away for a week: the urgent one wins, not the stale one.
+  is('day 1, nothing given yet',        due(1,  {}), 1);
+  is('both already given',              due(1,  { d7: true, d1: true }), undefined);
+
+  is('showing day 7 spends only day 7', spend(7, {}), { d7: true });
+  // Showing the last-day notice retires the 7-day one too, so a user who was
+  // away does not get a second, now-pointless warning afterwards.
+  is('showing day 1 spends both',       spend(1, {}), { d7: true, d1: true });
+  is('spending keeps what was there',   spend(1, { d7: true }), { d7: true, d1: true });
+
+  // The whole nag behaviour must be switchable off without touching anything
+  // else — the expiry notice is separate and stays.
+  is('no milestone is ever due at 0',   due(0, { d7: true, d1: true }), undefined);
 }
 
 console.log('An expired trial stops detection');

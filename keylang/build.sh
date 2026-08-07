@@ -8,7 +8,8 @@ VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['versio
 OUT="dist/kiko-${VERSION}.zip"
 
 # Files the extension loads at runtime. manifest.json references the first four
-# and welcome.html opens on install. The legal pages are NOT here: nothing in
+# welcome.html opens on install and whats-new.html on the paywall update.
+# The legal pages are NOT here: nothing in
 # the extension links to them, they live on the website (docs/).
 FILES=(
   manifest.json
@@ -20,6 +21,8 @@ FILES=(
   popup.js
   welcome.html
   welcome.js
+  whats-new.html
+  whats-new.js
   icon16.png
   icon48.png
   icon128.png

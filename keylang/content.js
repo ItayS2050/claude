@@ -404,6 +404,18 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
 
 loadLearned();
 
+// One trial check per page, once the page has settled. Top frame only, and
+// only if this tab is actually in front — otherwise a dozen background tabs
+// each raise the same notice the moment the trial ticks over.
+setTimeout(() => {
+  try {
+    if (!isLive()) return;
+    if (window.top !== window) return;
+    if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
+    maybeShowTrialNotice();
+  } catch {}
+}, 5000);
+
 // ── Common English words (used for Case 1 fallback detection) ────────────────
 const COMMON_EN_WORDS = new Set([
   'the','a','an','in','on','at','to','of','is','it','be','as','by','or','do',
@@ -2299,6 +2311,117 @@ function showReviewToast() {
   activeToast = toast;
   const t = setTimeout(() => { if (activeToast === toast) snooze(); }, 9000);
   toast.addEventListener('mouseenter', () => clearTimeout(t));
+}
+
+// ── Trial notices ─────────────────────────────────────────────
+// The trial used to live only in the popup, so the first thing a user learned
+// about it was detection going quiet. These are the three moments worth
+// interrupting for, and each fires once, ever.
+//
+// TRIAL_NAG_DAYS is the whole of the "we warned you" behaviour: empty it and
+// only the expiry notice remains, which is the one that has to exist — silence
+// reads as broken software, and people uninstall broken software.
+const TRIAL_NAG_DAYS  = [7, 1];
+const KIKO_CHECKOUT   = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
+
+// Smallest milestone reached but not yet used. Someone who closes the laptop on
+// day 9 and opens it on day 1 should get "last day", not a stale warning about
+// next week — so the urgent one wins and the passed one is spent silently.
+function dueTrialMilestone(daysLeft, seen = {}) {
+  return TRIAL_NAG_DAYS
+    .filter(n => daysLeft <= n && !seen[`d${n}`])
+    .sort((a, b) => a - b)[0];
+}
+
+// Every milestone at or above the one being shown, so a single absence costs
+// one interruption rather than queueing several.
+function spendTrialMilestones(due, seen = {}) {
+  const next = { ...seen };
+  TRIAL_NAG_DAYS.filter(n => n >= due).forEach(n => { next[`d${n}`] = true; });
+  return next;
+}
+
+function showTrialToast({ title, body, cta, accent, onClose }) {
+  if (activeToast) return false;
+  injectStyles();
+  const toast = document.createElement('div');
+  toast.id = 'kld-toast';
+  toast.style.borderColor = accent;
+  toast.innerHTML = `
+    <div class="kld-header">
+      <span>🦜</span>
+      <span style="flex:1;color:${accent};font-weight:700">${escapeHtml(title)}</span>
+      <button class="kld-btn kld-dismiss" id="kld-tr-x">✕</button>
+    </div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.5">${escapeHtml(body)}</div>
+    <div class="kld-actions">
+      <button class="kld-btn kld-primary" id="kld-tr-go" style="background:${accent}">${escapeHtml(cta)}</button>
+      <button class="kld-btn kld-reject" id="kld-tr-later">Not now</button>
+    </div>
+  `;
+  toast.querySelectorAll('button').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
+
+  const close = () => {
+    toast.remove();
+    if (activeToast === toast) activeToast = null;
+    if (onClose) onClose();
+  };
+  toast.querySelector('#kld-tr-go').addEventListener('click', () => {
+    close();
+    window.open(KIKO_CHECKOUT, '_blank');
+  });
+  toast.querySelector('#kld-tr-x').addEventListener('click', close);
+  toast.querySelector('#kld-tr-later').addEventListener('click', close);
+
+  applyPos(toast);
+  makeDraggable(toast);
+  (document.body || document.documentElement).appendChild(toast);
+  activeToast = toast;
+  // Longer than a detection toast. This one is worth reading, and unlike a fix
+  // suggestion there is nothing the user is mid-way through typing.
+  const t = setTimeout(() => { if (activeToast === toast) close(); }, 14000);
+  toast.addEventListener('mouseenter', () => clearTimeout(t));
+  return true;
+}
+
+async function maybeShowTrialNotice() {
+  try {
+    const d = await chrome.storage.local.get(['entitlement', 'trialNotices']);
+    const ent = d.entitlement;
+    if (!ent || ent.state === 'licensed') return;
+    const seen = d.trialNotices || {};
+
+    if (ent.state === 'expired') {
+      if (seen.expired) return;
+      const shown = showTrialToast({
+        title:  'Your free trial has ended',
+        body:   'Kiko has stopped correcting layout mistakes. Your learned words are '
+              + 'safe — subscribing switches detection straight back on.',
+        cta:    'Keep Kiko',
+        accent: '#f87171',
+      });
+      if (shown) {
+        await chrome.storage.local.set({ trialNotices: { ...seen, expired: true } });
+      }
+      return;
+    }
+
+    if (ent.state !== 'trial' || typeof ent.daysLeft !== 'number') return;
+    const due = dueTrialMilestone(ent.daysLeft, seen);
+    if (due === undefined) return;
+
+    const shown = showTrialToast({
+      title:  ent.daysLeft === 1 ? 'Last day of your free trial'
+                                 : `${ent.daysLeft} days left of your free trial`,
+      body:   'After that Kiko stops correcting layout mistakes. $5/month, or $40 '
+            + 'for the year. Nothing has been charged so far.',
+      cta:    'See the plans',
+      accent: '#fbbf24',
+    });
+    if (shown) {
+      await chrome.storage.local.set({ trialNotices: spendTrialMilestones(due, seen) });
+    }
+  } catch {}
 }
 
 async function maybeShowReviewToast() {

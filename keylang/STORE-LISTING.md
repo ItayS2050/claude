@@ -310,6 +310,26 @@ Product description, when they ask when you charge:
   has paid.
 - The gate fails **open**: if the service worker has not run or storage is
   unreadable, detection stays on.
+
+## How users are told (4.5.1)
+4.5.0 gated detection but announced nothing: no badge, no message, and
+`welcome.html` opens on install only. A user would have found out when
+detection went quiet, which reads as broken software rather than an expired
+trial. 4.5.1 adds four notices, all local, no new permissions:
+
+1. **`whats-new.html`** opens once on update, for pre-4.5.0 installs only,
+   gated on the version in the `firstInstall` stamp and a `paywallNotice` flag.
+   Not `details.previousVersion` — that reads 4.5.0 for anyone who already took
+   that update, and would skip exactly the people it is for.
+2. **Expiry toast**, once ever. The important one: it turns silence into an
+   explanation with a Subscribe button.
+3. **Toolbar badge** — days remaining in amber over the last 7, red `!` when
+   expired, nothing at all otherwise.
+4. **Milestone toasts** at day 7 and day 1. `TRIAL_NAG_DAYS` in content.js is
+   the whole of this behaviour; empty the array and only 1–3 remain.
+
+Passing several milestones during one absence spends them together, so a user
+who was away for a fortnight gets one notice, not a queue of them.
 - No new permissions. The API host is already covered by `<all_urls>` — adding a
   host permission would disable the extension for every existing user until they
   re-approved it.

@@ -37,6 +37,24 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
   } catch {}
 
+  // Tell the people who installed Kiko when it was free that it now costs
+  // something. They agreed to no such thing, and an auto-update that silently
+  // starts a countdown is not an announcement. Everyone who installs from here
+  // on sees the price on the listing and on welcome.html, so this is for the
+  // earlier crowd only, exactly once, keyed off the version in their stamp
+  // rather than details.previousVersion — which says 4.5.0 for anyone who has
+  // already taken that update and would miss them entirely.
+  if (details.reason === 'update') {
+    try {
+      const { firstInstall, paywallNotice } =
+        await chrome.storage.local.get(['firstInstall', 'paywallNotice']);
+      if (!paywallNotice && isLegacyUser(firstInstall)) {
+        await chrome.storage.local.set({ paywallNotice: { shownAt: Date.now() } });
+        chrome.tabs.create({ url: chrome.runtime.getURL('whats-new.html') });
+      }
+    } catch {}
+  }
+
   await refreshEntitlement({ force: true });
 
   // Re-inject content.js into all existing tabs so users don't need to refresh
@@ -135,7 +153,31 @@ async function refreshEntitlement({ force = false } = {}) {
 
   const entitlement = computeEntitlement(firstInstall, licence);
   try { await chrome.storage.local.set({ entitlement }); } catch {}
+  updateBadge(entitlement);
   return entitlement;
+}
+
+// ── Toolbar badge ─────────────────────────────────────────────
+// Until now the trial existed only inside the popup, which hardly anyone
+// opens. A number on the icon costs nothing, needs no permission, and means
+// the last week can't pass unnoticed.
+const BADGE_WARN_DAYS = 7;
+
+function updateBadge(ent) {
+  try {
+    if (ent && ent.state === 'expired') {
+      chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
+      chrome.action.setBadgeText({ text: '!' });
+      return;
+    }
+    if (ent && ent.state === 'trial' && ent.daysLeft != null && ent.daysLeft <= BADGE_WARN_DAYS) {
+      chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+      chrome.action.setBadgeText({ text: String(ent.daysLeft) });
+      return;
+    }
+    // Licensed, or plenty of time left: no badge at all.
+    chrome.action.setBadgeText({ text: '' });
+  } catch {}
 }
 
 async function activateLicence(key) {
