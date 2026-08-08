@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kiko — Fix wrong-keyboard-layout typing in Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic</title>
-  <meta name="description" content="Typed a whole sentence in the wrong keyboard layout? Kiko catches it the moment it happens and fixes it in one click. Six languages. Free for 30 days.">
-  <link rel="icon" href="icon128.png">
-  <link rel="canonical" href="https://get-kiko.com/">
+  <title>Kiko — 자판이 영문일 때 잘못 친 글자 고치기: 한국어, 히브리어, 러시아어, 우크라이나어, 그리스어, 아랍어</title>
+  <meta name="description" content="한글 자판인 줄 알고 한 문단을 다 쳤나요? Kiko가 그 순간을 바로 알아채고 클릭 한 번으로 고쳐 줍니다. 6개 언어. 30일 무료.">
+  <link rel="icon" href="../icon128.png">
+  <link rel="canonical" href="https://get-kiko.com/ko/">
   <link rel="alternate" hreflang="en" href="https://get-kiko.com/">
   <link rel="alternate" hreflang="he" href="https://get-kiko.com/he/">
   <link rel="alternate" hreflang="ru" href="https://get-kiko.com/ru/">
   <link rel="alternate" hreflang="ko" href="https://get-kiko.com/ko/">
   <link rel="alternate" hreflang="x-default" href="https://get-kiko.com/">
-  <meta property="og:title" content="Kiko — the keyboard layout mistake, fixed">
-  <meta property="og:description" content="Six languages, both directions, one click. Free for 30 days.">
+  <meta property="og:title" content="Kiko — 자판 바꾸는 걸 잊었을 때">
+  <meta property="og:description" content="6개 언어, 양방향, 클릭 한 번. 30일 무료.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -243,44 +243,44 @@
 
 <nav>
   <div class="wrap nav-in">
-    <a class="logo" href="#top"><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px"> Kiko</a>
+    <a class="logo" href="#top"><img src="../icon128.png" alt="" width="30" height="30" style="border-radius:8px"> Kiko</a>
     <div class="nav-links">
-      <a href="#languages">Languages</a>
-      <a href="#works">Where it works</a>
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
+      <a href="#languages">언어</a>
+      <a href="#works">어디서 작동하나요</a>
+      <a href="#how">작동 방식</a>
+      <a href="#pricing">요금</a>
+      <a href="#faq">자주 묻는 질문</a>
     </div>
     <div class="langsw" id="langsw"></div>
-    <a class="btn btn-primary btn-sm" href="#" data-webstore>Add to Chrome</a>
+    <a class="btn btn-primary btn-sm" href="#" data-webstore>Chrome에 추가</a>
   </div>
 </nav>
 
 <div id="top" class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><img src="icon128.png" alt="" width="17" height="17" style="border-radius:5px"> <b>6 languages</b> · both directions · free for 30 days</div>
-      <h1>Your keyboard was in the <span class="hl">wrong language</span> again.</h1>
-      <p class="lede">Again. Three sentences in, you look up, and it's all nonsense. Kiko catches
-        that exact moment and puts it right — in the field you're typing in, in one click.</p>
+      <div class="pill"><img src="../icon128.png" alt="" width="17" height="17" style="border-radius:5px"> <b>6개 언어</b> · 양방향 · 30일 무료</div>
+      <h1>또 자판이 <span class="hl">영문이었네요.</span> </h1>
+      <p class="lede">또 그랬습니다. 세 문장쯤 치고 화면을 보니 전부 알아볼 수 없는 글자. Kiko는 바로 그 순간을
+        잡아내 고쳐 줍니다. 지금 치고 있는 그 입력창에서, 클릭 한 번으로.</p>
       <div class="hero-cta">
-        <a class="btn btn-primary" href="#" data-webstore>Add to Chrome — it's free</a>
-        <a class="btn btn-ghost" href="#how">See how it works</a>
+        <a class="btn btn-primary" href="#" data-webstore>Chrome에 추가 — 무료</a>
+        <a class="btn btn-ghost" href="#how">작동 방식 보기</a>
       </div>
-      <div class="cta-note">Free for 30 days, then $5/month · No card to start</div>
+      <div class="cta-note">30일 무료, 이후 월 $5 · 카드 등록 없이 시작</div>
     </div>
 
     <div class="demo">
       <div class="demo-tabs" role="tablist" id="tabs"></div>
       <div class="demo-body">
-        <div class="field-label">What you typed</div>
+        <div class="field-label">입력한 내용</div>
         <div class="field"><span id="typed"></span><span class="caret"></span></div>
         <div class="toast">
           <div class="toast-head">⌨️ <span id="toast-msg"></span></div>
           <div class="toast-fix" id="fixed"></div>
           <div class="toast-btns">
             <span class="tb tb-fix" id="fixbtn"></span>
-            <span class="tb tb-no">Not right</span>
+            <span class="tb tb-no">아니에요</span>
           </div>
         </div>
         <div class="gloss" id="gloss"></div>
@@ -292,10 +292,10 @@
 <section id="languages">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Six languages</div>
-      <h2>Every script that shares your keyboard.</h2>
-      <p class="lede">If your keyboard switches between English and one of these, Kiko already
-        handles it — in both directions. Here's the same greeting in each.</p>
+      <div class="eyebrow">6개 언어</div>
+      <h2>자판을 함께 쓰는 모든 문자.</h2>
+      <p class="lede">영문과 아래 언어 사이를 오가며 입력한다면 Kiko가 이미
+        양방향으로 처리합니다. 같은 인사말을 각 언어로 보여 드릴게요.</p>
     </div>
     <div class="langs" id="langcards"></div>
   </div>
@@ -305,31 +305,31 @@
 <section id="works">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Where it works</div>
-      <h2>Every text field in your browser.</h2>
-      <p class="lede">Kiko attaches to the field you are typing in, whatever the site is built
-        with — plain inputs, rich editors, the lot.</p>
+      <div class="eyebrow">어디서 작동하나요</div>
+      <h2>브라우저의 모든 입력창.</h2>
+      <p class="lede">사이트가 무엇으로 만들어졌든 Kiko는 지금 입력 중인 창에
+        붙습니다 — 일반 입력창, 리치 에디터, 전부.</p>
     </div>
     <div class="works">
-      <div><span class="tick">&check;</span><div><b>Webmail</b>
-        <span class="sub">Compose windows, subject lines, replies.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Chat and messaging on the web</b>
-        <span class="sub">Message boxes in browser-based chat apps.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Search boxes</b>
-        <span class="sub">Any search field, on any site.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Forms and comments</b>
-        <span class="sub">Contact forms, comment boxes, reviews, support tickets.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Document and rich-text editors</b>
-        <span class="sub">Online docs, note apps, CMS and blog editors.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Admin panels and CRMs</b>
-        <span class="sub">The internal tools you live in all day.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>웹메일</b>
+        <span class="sub">작성 창, 제목 줄, 답장.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>웹 채팅과 메신저</b>
+        <span class="sub">브라우저에서 쓰는 채팅 앱의 메시지 입력창.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>검색창</b>
+        <span class="sub">어느 사이트든, 모든 검색창.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>양식과 댓글</b>
+        <span class="sub">문의 양식, 댓글창, 리뷰, 고객센터 문의.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>문서 및 리치 텍스트 편집기</b>
+        <span class="sub">온라인 문서, 메모 앱, CMS와 블로그 편집기.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>관리자 페이지와 CRM</b>
+        <span class="sub">하루 종일 붙어 있는 사내 도구들.</span></div></div>
     </div>
     <div class="desk">
       <span class="big">&#128187;</span>
       <div>
-        <b>Prefer the desktop app for something?</b>
-        <p>Kiko lives in Chrome, so open that app's web version in a tab and it is there with you —
-          same account, same conversations, plus the layout fixing.</p>
+        <b>데스크톱 앱을 쓰고 계신가요?</b>
+        <p>Kiko는 Chrome 안에 있습니다. 그 앱의 웹 버전을 탭으로 열면 함께 따라옵니다 —
+          같은 계정, 같은 대화에 자판 교정까지.</p>
       </div>
     </div>
   </div>
@@ -338,29 +338,29 @@
 <section class="sec-warm" id="how">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">How it works</div>
-      <h2>You type. Kiko watches. One click.</h2>
+      <div class="eyebrow">작동 방식</div>
+      <h2>입력하세요. Kiko가 봅니다. 클릭 한 번.</h2>
     </div>
     <div class="steps">
       <div class="step">
         <div class="step-n">1</div>
-        <h3>Type anywhere</h3>
-        <p>Any website you open in Chrome — search boxes, forms, comment fields, most webmail and rich-text editors. A few apps run editors that reject changes from anything but their own code — if you hit one, tell us and we will look at it.</p>
+        <h3>어디서든 입력</h3>
+        <p>Chrome에서 여는 모든 웹사이트 — 검색창, 양식, 댓글창, 대부분의 웹메일과 리치 텍스트 편집기. 일부 앱은 자체 코드 외의 변경을 거부하는 편집기를 씁니다. 그런 곳을 만나면 알려 주세요, 살펴보겠습니다.</p>
       </div>
       <div class="step">
         <div class="step-n">2</div>
-        <h3>It spots the mismatch</h3>
-        <p>The moment your text stops making sense in one layout and starts making sense in another.</p>
+        <h3>어긋난 순간을 알아챕니다</h3>
+        <p>지금 자판으로는 말이 안 되는데 다른 자판으로는 말이 되는, 바로 그 순간.</p>
       </div>
       <div class="step">
         <div class="step-n">3</div>
-        <h3>One click fixes it</h3>
-        <p>The corrected text replaces the nonsense in place. No retyping, no copy-paste.</p>
+        <h3>클릭 한 번이면 끝</h3>
+        <p>고쳐진 글이 그 자리에서 바로 바뀝니다. 다시 칠 필요도, 복사할 필요도 없습니다.</p>
       </div>
       <div class="step">
         <div class="step-n">4</div>
-        <h3>It learns you</h3>
-        <p>Wrong call? Tell it once. That word never gets flagged again. It gets quieter over time.</p>
+        <h3>당신을 배웁니다</h3>
+        <p>잘못 짚었나요? 한 번만 알려 주세요. 그 단어는 다시 지적하지 않습니다. 쓸수록 조용해집니다.</p>
       </div>
     </div>
   </div>
@@ -369,22 +369,22 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <div class="eyebrow">Built to disappear</div>
-      <h2>Fast, quiet, out of your way.</h2>
+      <div class="eyebrow">보이지 않도록 만들었습니다</div>
+      <h2>빠르고, 조용하고, 방해하지 않습니다.</h2>
     </div>
     <div class="feats">
-      <div class="feat"><div class="feat-i">⚡</div><div><h3>Real-time</h3>
-        <p>Catches mistakes as you type. Nothing to select, nothing to press.</p></div></div>
-      <div class="feat"><div class="feat-i">🎯</div><div><h3>Not a dictionary</h3>
-        <p>Scores every word against each language's letter patterns, so it catches words no list contains.</p></div></div>
-      <div class="feat"><div class="feat-i">🔕</div><div><h3>Never nags</h3>
-        <p>Long sessions collapse to a small bubble instead of a popup. Mute any site with one click.</p></div></div>
+      <div class="feat"><div class="feat-i">⚡</div><div><h3>실시간</h3>
+        <p>입력하는 동안 바로 잡아냅니다. 선택할 것도, 누를 것도 없습니다.</p></div></div>
+      <div class="feat"><div class="feat-i">🎯</div><div><h3>사전이 아닙니다</h3>
+        <p>각 언어의 글자 패턴에 맞춰 모든 단어를 점수화하므로, 어떤 목록에도 없는 단어까지 잡아냅니다.</p></div></div>
+      <div class="feat"><div class="feat-i">🔕</div><div><h3>귀찮게 하지 않습니다</h3>
+        <p>오래 쓰면 팝업 대신 작은 방울로 접힙니다. 어느 사이트든 클릭 한 번으로 끌 수 있습니다.</p></div></div>
       <div class="feat"><div class="feat-i">⌨️</div><div><h3>Alt + Shift + K</h3>
-        <p>Scan the whole field, or convert whatever text you've selected, on demand.</p></div></div>
-      <div class="feat"><div class="feat-i">🎚️</div><div><h3>Your languages only</h3>
-        <p>Turn on the ones you type. The rest never run.</p></div></div>
-      <div class="feat"><div class="feat-i">🧠</div><div><h3>Remembers corrections</h3>
-        <p>Every "not right" is stored locally and respected forever.</p></div></div>
+        <p>입력창 전체를 검사하거나, 선택한 글자만 변환 — 원할 때 바로.</p></div></div>
+      <div class="feat"><div class="feat-i">🎚️</div><div><h3>쓰는 언어만</h3>
+        <p>쓰는 언어만 켜세요. 나머지는 아예 실행되지 않습니다.</p></div></div>
+      <div class="feat"><div class="feat-i">🧠</div><div><h3>고친 것을 기억합니다</h3>
+        <p>"아니에요"는 모두 기기에 저장되어 계속 존중됩니다.</p></div></div>
     </div>
   </div>
 </section>
@@ -392,10 +392,10 @@
 <section class="sec-soft">
   <div class="wrap">
     <div class="privacy">
-      <h2>Your typing never leaves your computer.</h2>
-      <p>Kiko has no server to send anything to. Every detection and correction runs inside your
-        browser, and the words it learns live in local storage on your machine. No account,
-        no sign-up, no analytics, no tracking.</p>
+      <h2>입력한 내용은 컴퓨터를 떠나지 않습니다.</h2>
+      <p>Kiko에는 무언가를 보낼 서버가 없습니다. 모든 인식과 교정은
+        브라우저 안에서 이루어지고, 배운 단어는 기기 안에만 저장됩니다. 계정도,
+        가입도, 분석도, 추적도 없습니다.</p>
     </div>
   </div>
 </section>
@@ -403,43 +403,43 @@
 <section id="pricing">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Pricing</div>
-      <h2>Free for a month. Then $5.</h2>
-      <p class="lede">Use it properly first. If it hasn't saved you enough retyping to be worth
-        five dollars by day 30, don't keep it.</p>
+      <div class="eyebrow">요금</div>
+      <h2>한 달 무료. 이후 $5.</h2>
+      <p class="lede">먼저 제대로 써 보세요. 30일이 지나도 5달러만큼 다시 치는 수고를
+        덜어 주지 못했다면, 그만 쓰셔도 됩니다.</p>
     </div>
     <div class="plans">
       <div class="plan hero-plan">
-        <div class="badge">First 30 days free</div>
-        <div class="plan-name">Individual</div>
-        <div class="plan-price">$5<span>/month</span></div>
-        <div class="plan-alt">or <b>$40/year</b> — <em>two months free</em></div>
-        <div class="plan-sub">Everything Kiko does, on all your Chrome profiles.</div>
+        <div class="badge">첫 30일 무료</div>
+        <div class="plan-name">개인</div>
+        <div class="plan-price">$5<span>/월</span></div>
+        <div class="plan-alt">또는 <b>연 $40</b> — <em>두 달 무료</em></div>
+        <div class="plan-sub">Kiko의 모든 기능을, 모든 Chrome 프로필에서.</div>
         <ul>
-          <li>All six language pairs, both directions</li>
-          <li>Detection on every website</li>
-          <li>Full-field scan and selection convert</li>
-          <li>Learns your words, forever</li>
-          <li>Nothing leaves your device</li>
+          <li>6개 언어쌍 전부, 양방향</li>
+          <li>모든 웹사이트에서 인식</li>
+          <li>입력창 전체 검사와 선택 영역 변환</li>
+          <li>당신의 단어를 계속 기억</li>
+          <li>기기 밖으로 나가는 것 없음</li>
         </ul>
-        <a class="btn btn-primary" href="#" data-webstore>Start free — no card</a>
-        <div class="plan-note">30 days free, then $5/month or $40/year — you choose at checkout.
-          Cancel anytime.<br>
-          <a href="#" data-checkout style="color:var(--brand);font-weight:600">Already using Kiko? Subscribe →</a></div>
+        <a class="btn btn-primary" href="#" data-webstore>무료로 시작 — 카드 없이</a>
+        <div class="plan-note">30일 무료, 이후 월 $5 또는 연 $40 — 결제 시 선택합니다.
+          언제든 해지.<br>
+          <a href="#" data-checkout style="color:var(--brand);font-weight:600">이미 쓰고 계신가요? 구독하기 →</a></div>
       </div>
 
       <div class="plan">
-        <div class="plan-name">Team</div>
-        <div class="plan-price">$36<span>/seat/year</span></div>
-        <div class="plan-sub">Minimum 5 seats, invoiced annually. One invoice, no per-person cards.</div>
+        <div class="plan-name">팀</div>
+        <div class="plan-price">$36<span>/1인 연간</span></div>
+        <div class="plan-sub">최소 5석, 연 1회 청구. 청구서 하나로, 개인별 카드 등록 없이.</div>
         <ul>
-          <li>Everything in Individual, per seat</li>
-          <li>Billed once a year, to the company</li>
-          <li>Still zero data off your machines</li>
-          <li>Help getting your team set up</li>
+          <li>개인 요금제의 모든 것을 1인당</li>
+          <li>연 1회, 회사로 청구</li>
+          <li>여전히 기기 밖으로 나가는 데이터 없음</li>
+          <li>팀 설정 지원</li>
         </ul>
-        <a class="btn btn-ghost" href="mailto:hello@get-kiko.com?subject=Kiko%20for%20teams">Talk to us</a>
-        <div class="plan-note">Reply within one business day.</div>
+        <a class="btn btn-ghost" href="mailto:hello@get-kiko.com?subject=Kiko%20for%20teams">문의하기</a>
+        <div class="plan-note">영업일 기준 1일 이내 답변.</div>
       </div>
     </div>
   </div>
@@ -448,67 +448,67 @@
 <section class="sec-warm" id="faq">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Questions</div>
-      <h2>The things people ask.</h2>
+      <div class="eyebrow">질문</div>
+      <h2>많이 묻는 것들.</h2>
     </div>
     <div class="faq">
-      <details open><summary>What happens after 30 days?</summary>
-        <p>Kiko asks you to subscribe — $5/month, or $40 for the year if you'd rather pay once and
-          save two months. Nothing is charged during the trial and no card is needed to start — if
-          you don't subscribe, detection simply stops.</p></details>
-      <details><summary>How do I cancel?</summary>
+      <details open><summary>30일이 지나면 어떻게 되나요?</summary>
+        <p>구독을 안내합니다 — 월 $5, 또는 한 번에 결제하고 두 달을 아끼고 싶다면 연 $40.
+          무료 기간에는 아무것도 청구되지 않고 카드도 필요 없습니다. 구독하지 않으면
+          인식이 멈출 뿐입니다.</p></details>
+      <details><summary>어떻게 해지하나요?</summary>
         <p>At <a href="https://app.lemonsqueezy.com/my-orders" style="color:var(--brand);font-weight:600">app.lemonsqueezy.com/my-orders</a> —
-          enter the email you paid with and cancel in two clicks. You don't need to ask us, and
-          there's no retention call. Full refund within 14 days if you change your mind.</p></details>
-      <details><summary>Does my typing get sent anywhere?</summary>
-        <p>No. There is no server. Detection runs inside your browser and the words Kiko learns are
-          stored locally on your machine. Read the <a href="privacy.html" style="color:var(--brand);font-weight:600">privacy policy</a>.</p></details>
-      <details><summary>Why does it need access to every site?</summary>
-        <p>Because you might mistype in any text field — your inbox, a search box, an admin panel.
-          There is no fixed list of places to watch. Kiko reads only the field you are typing in,
-          analyses it in memory, and discards it.</p></details>
-      <details><summary>Will it flag normal English words?</summary>
-        <p>Rarely — it needs several consecutive suspicious words before it says anything. When it
-          does get one wrong, click "Not right" and it never flags that word again.</p></details>
-      <details><summary>Does it work the other way round?</summary>
-        <p>Yes. Typed English while your keyboard was still in Hebrew, Korean or Greek? Kiko reads
-          the gibberish and turns it back into English.</p></details>
-      <details><summary>Does it work with apps I use on the desktop?</summary>
-        <p>Kiko works on any website you open in Chrome, and that includes the web version of
-          nearly every desktop app — same account, same messages. Open it in a tab and Kiko is
-          there. Standalone desktop applications run outside the browser, so no browser extension
-          can reach them.</p></details>
-      <details><summary>Which browsers?</summary>
-        <p>Chrome today, and Chromium browsers like Edge, Brave and Arc. Firefox and Safari are on
-          the list.</p></details>
+          결제한 이메일을 입력하면 두 번의 클릭으로 해지됩니다. 저희에게 연락할 필요도 없고,
+          붙잡는 전화도 없습니다. 마음이 바뀌면 14일 이내 전액 환불.</p></details>
+      <details><summary>입력한 내용이 어디론가 전송되나요?</summary>
+        <p>아니요. 서버 자체가 없습니다. 인식은 브라우저 안에서 이루어지고, 배운 단어는
+          기기에만 저장됩니다. 자세한 내용은 <a href="../privacy.html" style="color:var(--brand);font-weight:600">개인정보처리방침</a>.</p></details>
+      <details><summary>왜 모든 사이트 권한이 필요한가요?</summary>
+        <p>어느 입력창에서든 잘못 칠 수 있기 때문입니다 — 메일함, 검색창, 관리자 페이지.
+          미리 정해 둘 목록이 없습니다. Kiko는 지금 입력 중인 창만 읽고,
+          메모리에서 분석한 뒤 바로 버립니다.</p></details>
+      <details><summary>평범한 영어 단어도 지적하나요?</summary>
+        <p>거의 없습니다 — 의심스러운 단어가 연달아 몇 개는 나와야 말을 겁니다. 그래도
+          틀렸다면 "아니에요"를 누르세요. 그 단어는 다시 지적하지 않습니다.</p></details>
+      <details><summary>반대 방향도 되나요?</summary>
+        <p>됩니다. 자판이 한글, 히브리어, 그리스어인 채로 영어를 치셨나요? Kiko가 그 글자를 읽어
+          영어로 되돌립니다.</p></details>
+      <details><summary>데스크톱 앱에서도 되나요?</summary>
+        <p>Kiko는 Chrome에서 여는 모든 웹사이트에서 작동하며, 여기에는 거의 모든 데스크톱 앱의
+          웹 버전이 포함됩니다 — 같은 계정, 같은 메시지. 탭으로 열면 Kiko도
+          함께 있습니다. 독립 실행형 데스크톱 프로그램은 브라우저 밖에서 돌기 때문에 어떤 확장 프로그램도
+          닿을 수 없습니다.</p></details>
+      <details><summary>어떤 브라우저를 지원하나요?</summary>
+        <p>현재 Chrome과 Edge, Brave, Arc 같은 Chromium 브라우저. Firefox와 Safari도
+          예정에 있습니다.</p></details>
     </div>
   </div>
 </section>
 
 <div class="final wrap">
-  <h2>Stop retyping whole sentences.</h2>
-  <p class="lede">Install it, forget it's there, and notice how often it quietly saves you.</p>
-  <a class="btn btn-primary" href="#" data-webstore>Add to Chrome — free for 30 days</a>
+  <h2>문장을 통째로 다시 치는 일, 이제 그만.</h2>
+  <p class="lede">설치하고 잊어버리세요. 얼마나 자주 조용히 구해 주는지 알게 될 겁니다.</p>
+  <a class="btn btn-primary" href="#" data-webstore>Chrome에 추가 — 30일 무료</a>
 </div>
 
 <footer>
   <div class="wrap foot-in">
-    <div><img src="icon128.png" alt="" width="18" height="18" style="border-radius:5px;vertical-align:-4px"> <b style="color:var(--ink-2)">Kiko</b> · © 2026 · Keyboard layout fixer</div>
+    <div><img src="../icon128.png" alt="" width="18" height="18" style="border-radius:5px;vertical-align:-4px"> <b style="color:var(--ink-2)">Kiko</b> · © 2026 · 자판 교정 도구</div>
     <div class="foot-links">
-      <a href="support.html">Support</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Terms</a>
-      <a href="refund.html">Refunds</a>
+      <a href="../support.html">고객지원</a>
+      <a href="../privacy.html">개인정보</a>
+      <a href="../terms.html">이용약관</a>
+      <a href="../refund.html">환불</a>
       <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a>
     </div>
   </div>
 </footer>
 
 <script>
-  // Set once the Web Store assigns an extension ID. Every "Add to Chrome"
+  // Set once the Web Store assigns an extension ID. Every "Chrome에 추가"
   // button on the page reads from this one constant.
   const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/alibejcaklfjcbjmncgbhpdichpblnkl';
-  // Lemon Squeezy product checkout — offers both plans, $5/month and $40/year,
+  // Lemon Squeezy product checkout — offers both plans, $5/월 and 연 $40,
   // and the buyer chooses. Same value as CHECKOUT_URL in keylang/popup.js.
   const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
   document.querySelectorAll('[data-checkout]').forEach(a => { a.href = CHECKOUT_URL; });
@@ -533,12 +533,12 @@
   const LANGS = [
     // Deliberate letter badges, not flag emoji — Windows has never shipped flag
     // glyphs and silently falls back to bare letters, so we draw them ourselves.
-    {code:'he', badge:'IL', tint:'#8fc0ff', name:'Hebrew',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'hello', rtl:true},
-    {code:'ru', badge:'RU', tint:'#d3aef9', name:'Russian',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'hi'},
-    {code:'uk', badge:'UA', tint:'#fbe08a', name:'Ukrainian', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'hi'},
-    {code:'ko', badge:'KR', tint:'#93e7f5', name:'Korean',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'hi'},
-    {code:'el', badge:'GR', tint:'#b9bdfa', name:'Greek',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'hi'},
-    {code:'ar', badge:'SA', tint:'#fbd08a', name:'Arabic',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'hello', rtl:true}
+    {code:'he', badge:'IL', tint:'#8fc0ff', name:'히브리어',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'안녕하세요', rtl:true},
+    {code:'ru', badge:'RU', tint:'#d3aef9', name:'러시아어',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'안녕'},
+    {code:'uk', badge:'UA', tint:'#fbe08a', name:'우크라이나어', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'안녕'},
+    {code:'ko', badge:'KR', tint:'#93e7f5', name:'한국어',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'안녕'},
+    {code:'el', badge:'GR', tint:'#b9bdfa', name:'그리스어',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'안녕'},
+    {code:'ar', badge:'SA', tint:'#fbd08a', name:'아랍어',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'안녕하세요', rtl:true}
   ];
 
   // -- hero demo ------------------------------------------------------------
@@ -556,13 +556,13 @@
     const l = LANGS[i];
     [...tabs.children].forEach((b, n) => b.setAttribute('aria-selected', n === i ? 'true' : 'false'));
     document.getElementById('typed').textContent = l.typed;
-    document.getElementById('toast-msg').textContent = `Wrong layout? Looks like ${l.name}:`;
+    document.getElementById('toast-msg').textContent = `자판이 잘못됐나요? ${l.name} 같습니다:`;
     const fx = document.getElementById('fixed');
     fx.textContent = l.native;
     fx.className = 'toast-fix' + (l.rtl ? ' rtl' : '');
-    document.getElementById('fixbtn').textContent = `Fix → ${l.name}`;
+    document.getElementById('fixbtn').textContent = `고치기 → ${l.name}`;
     document.getElementById('gloss').innerHTML =
-      `<b>${l.native}</b> — "${l.roman}", ${l.mean} in ${l.name}. On a US layout those keys come out as <b>${l.typed}</b>.`;
+      `<b>${l.native}</b> — "${l.roman}", ${l.mean} (${l.name}). 미국 자판에서는 이 키들이 이렇게 나옵니다: <b>${l.typed}</b>.`;
   }
   select(0);
 
@@ -576,22 +576,22 @@
     <div class="lang">
       <div class="lang-top">
         <span class="lang-flag" style="background:${l.tint}">${l.badge}</span>
-        <span class="lang-name">${l.name} ↔ English</span>
+        <span class="lang-name">${l.name} ↔ 영어</span>
         <span class="lang-mean">"${l.mean}"</span>
       </div>
       <div class="row">
-        <span class="row-k">Meant</span>
+        <span class="row-k">의도</span>
         <span class="row-v native${l.rtl ? ' rtl' : ''}">${l.native}</span>
         <span class="lang-mean">${l.roman}</span>
       </div>
       <div class="row got">
-        <span class="row-k">Got</span>
+        <span class="row-k">결과</span>
         <span class="row-v">${l.typed}</span>
       </div>
       <div class="row fixed">
         <span class="row-k">Kiko</span>
         <span class="row-v native${l.rtl ? ' rtl' : ''}">${l.native}</span>
-        <span class="lang-mean">one click</span>
+        <span class="lang-mean">클릭 한 번</span>
       </div>
     </div>`).join('');
 </script>

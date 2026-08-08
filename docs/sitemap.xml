@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://get-kiko.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://get-kiko.com/"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://get-kiko.com/he/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://get-kiko.com/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://get-kiko.com/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://get-kiko.com/"/>
+  </url>
+  <url><loc>https://get-kiko.com/he/</loc></url>
+  <url><loc>https://get-kiko.com/ru/</loc></url>
+  <url><loc>https://get-kiko.com/ko/</loc></url>
+  <url><loc>https://get-kiko.com/support.html</loc></url>
+  <url><loc>https://get-kiko.com/privacy.html</loc></url>
+  <url><loc>https://get-kiko.com/terms.html</loc></url>
+  <url><loc>https://get-kiko.com/refund.html</loc></url>
+</urlset>

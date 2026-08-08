@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /activate.html
+
+Sitemap: https://get-kiko.com/sitemap.xml
