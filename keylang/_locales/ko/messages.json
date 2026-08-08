@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Kiko – 자판 오타 교정기",
+    "description": "Extension name, shown in the Web Store and chrome://extensions"
+  },
+  "extDescription": {
+    "message": "자판 바꾸는 걸 잊으셨나요? Kiko가 히브리어·러시아어·우크라이나어·한국어·그리스어·아랍어 오타를 찾아 클릭 한 번으로 고쳐 줍니다.",
+    "description": "Short description, shown under the name in search results"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Kiko – Multilingual Keyboard Layout Fixer",
+    "description": "Extension name, shown in the Web Store and chrome://extensions"
+  },
+  "extDescription": {
+    "message": "Wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic typing mix-ups and fixes them in one click.",
+    "description": "Short description, shown under the name in search results"
+  }
+}

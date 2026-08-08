@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Kiko – исправление раскладки клавиатуры",
+    "description": "Extension name, shown in the Web Store and chrome://extensions"
+  },
+  "extDescription": {
+    "message": "Не та раскладка? Kiko найдёт и в один клик исправит текст на русском, украинском, иврите, корейском, греческом, арабском.",
+    "description": "Short description, shown under the name in search results"
+  }
+}

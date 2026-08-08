@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Kiko – תיקון הקלדה בפריסת מקלדת שגויה",
+    "description": "Extension name, shown in the Web Store and chrome://extensions"
+  },
+  "extDescription": {
+    "message": "שכחת להחליף שפה? Kiko תופס הקלדה בעברית, רוסית, אוקראינית, קוריאנית, יוונית וערבית בפריסה הלא נכונה ומתקן בלחיצה.",
+    "description": "Short description, shown under the name in search results"
+  }
+}
