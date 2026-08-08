@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiko – Help and Support</title>
+  <link rel="icon" href="icon128.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#12111a; --ink-2:#4a4860; --ink-3:#807d95;
+      --line:#e8e6f0; --bg-soft:#f6f5fb; --brand:#ff4f5a; --brand-dark:#e63946;
+      --ok:#12b886; --r:16px;
+      --shadow:0 1px 2px rgba(18,17,26,.04), 0 12px 32px rgba(18,17,26,.07);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      color:var(--ink); line-height:1.65; -webkit-font-smoothing:antialiased;
+      background:
+        radial-gradient(900px 420px at 80% -10%, #ffe9e6 0%, transparent 60%),
+        radial-gradient(700px 380px at 5% 0%, #eef0ff 0%, transparent 55%), #fff;
+      min-height:100vh; padding:52px 24px 80px;
+    }
+    .wrap{max-width:720px;margin:0 auto}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;
+      letter-spacing:-.03em;margin-bottom:32px;text-decoration:none;color:var(--ink)}
+    .logo img{border-radius:8px}
+    h1{font-size:clamp(30px,5vw,42px);line-height:1.1;letter-spacing:-.03em;font-weight:900;
+      margin-bottom:12px}
+    .lede{font-size:18px;color:var(--ink-2);margin-bottom:14px}
+    .promise{display:inline-flex;align-items:center;gap:8px;background:#e7f8f1;
+      border:1px solid #b6ead8;color:#0b7357;border-radius:999px;padding:7px 15px;
+      font-size:14.5px;font-weight:600;margin-bottom:40px}
+    h2{font-size:21px;letter-spacing:-.02em;margin:40px 0 14px;font-weight:800}
+    .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);
+      padding:22px 24px;box-shadow:var(--shadow);margin-bottom:14px}
+    .card b{display:block;font-size:16.5px;margin-bottom:4px;letter-spacing:-.01em}
+    .card p{color:var(--ink-2);font-size:15.5px}
+    p{font-size:15.5px;color:var(--ink-2);margin-bottom:12px}
+    a{color:var(--brand);font-weight:600;text-decoration:none}
+    a:hover{text-decoration:underline}
+    ol,ul{margin:0 0 12px 20px}
+    li{color:var(--ink-2);font-size:15.5px;margin-bottom:7px}
+    code{background:var(--bg-soft);border:1px solid var(--line);border-radius:6px;
+      padding:2px 7px;font-size:14.5px;font-family:ui-monospace,'SF Mono',Menlo,monospace}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;
+      font-size:16px;padding:13px 24px;border-radius:999px;background:var(--brand);color:#fff;
+      text-decoration:none;box-shadow:0 8px 22px rgba(255,79,90,.32);margin-top:6px}
+    .btn:hover{background:var(--brand-dark);text-decoration:none}
+    .note{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r);
+      padding:18px 20px;font-size:15px;color:var(--ink-2);margin:14px 0}
+    footer{margin-top:52px;padding-top:26px;border-top:1px solid var(--line);
+      font-size:14.5px;color:var(--ink-3)}
+    footer a{color:var(--ink-3);font-weight:500;margin-right:16px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="logo" href="index.html"><img src="icon128.png" alt="" width="30" height="30"> Kiko</a>
+
+  <h1>Help and support</h1>
+  <p class="lede">A real person reads every message. There is no ticket system and no bot.</p>
+  <div class="promise">✉︎ hello@get-kiko.com — we reply within one business day</div>
+
+  <h2>Report a problem</h2>
+
+  <div class="card">
+    <b>Kiko corrected something it shouldn't have</b>
+    <p>Click <b>Not right</b> on the toast. That word is remembered and never flagged
+      again — no need to report it. If it keeps happening on a word you've already
+      rejected, that's a bug, so tell us.</p>
+  </div>
+
+  <div class="card">
+    <b>Kiko isn't detecting anything</b>
+    <p>Check the language is switched on in the popup — each one is a separate toggle,
+      and a language that's off never runs. Kiko also needs two consecutive
+      wrong-layout words before it speaks, which stops it firing on ordinary English.</p>
+  </div>
+
+  <div class="card">
+    <b>Something else</b>
+    <p>Use <b>Report a problem</b> at the bottom of the Kiko popup. It opens an email
+      with your version and settings already filled in, which saves a round trip.
+      It never includes anything you've typed.</p>
+  </div>
+
+  <h2>Billing and your subscription</h2>
+
+  <div class="card">
+    <b>Cancel your subscription</b>
+    <p>Go to <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">app.lemonsqueezy.com/my-orders</a>,
+      enter the email you paid with, and follow the link they send you. Cancel from
+      there in two clicks. No need to ask us, and no retention call.</p>
+    <p>Cancelling stops future charges. You keep Kiko until the end of the period
+      you've already paid for.</p>
+  </div>
+
+  <div class="card">
+    <b>Get a refund</b>
+    <p>Within 14 days of paying, email us and we refund in full, no questions asked.
+      After that, see the <a href="refund.html">refund policy</a> — if Kiko is broken
+      for you and we can't fix it, you get your money back.</p>
+  </div>
+
+  <div class="card">
+    <b>Find your licence key or receipt</b>
+    <p>Both are in the confirmation email from Lemon Squeezy, and in
+      <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">your orders</a>.
+      Lost the email? Send us the address you paid with and we'll resend it.</p>
+  </div>
+
+  <div class="card">
+    <b>Move Kiko to another computer</b>
+    <p>Each licence activates on one machine. Install Kiko on the new one and paste
+      the same key — if it says the activation limit is reached, email us and we'll
+      release the old one. No charge for that.</p>
+  </div>
+
+  <h2>Who you're buying from</h2>
+  <p>Kiko is sold through <b>Lemon Squeezy</b>, which acts as the merchant of record.
+    They handle the payment, the invoice and any sales tax or VAT, and they appear on
+    your card statement — not us. Billing questions can go to either of us.</p>
+
+  <div class="note">
+    <b>Your typing never reaches us.</b> Detection runs entirely inside your browser
+    and the words Kiko learns stay on your machine. That means we genuinely cannot
+    look at your text to debug something — so the more you can describe what happened,
+    the faster we'll fix it. See the <a href="privacy.html">privacy policy</a>.
+  </div>
+
+  <h2>Still stuck?</h2>
+  <p>Email <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a>. Include what you
+    were typing in, which language, and what you expected. Screenshots help.</p>
+  <a class="btn" href="mailto:hello@get-kiko.com?subject=Kiko%20support">Email support</a>
+
+  <footer>
+    <a href="index.html">Home</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="refund.html">Refunds</a>
+    <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a>
+  </footer>
+</div>
+</body>
+</html>

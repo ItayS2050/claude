@@ -179,6 +179,12 @@
       padding: 6px 11px; font-size: 11px; font-weight: 700; cursor: pointer;
     }
     .key-row button:hover { background: #475569; }
+    .help-links { display: grid; gap: 1px; background: #1e293b; border-radius: 8px; overflow: hidden; }
+    .help-links a {
+      display: block; padding: 8px 11px; background: #0f172a;
+      color: #94a3b8; font-size: 12px; text-decoration: none;
+    }
+    .help-links a:hover { background: #1e293b; color: #e2e8f0; }
     .key-msg { margin-top: 7px; font-size: 11px; }
     .key-msg.err { color: #fca5a5; }
     .key-msg.ok  { color: #86efac; }
@@ -186,7 +192,7 @@
 </head>
 <body>
   <h1><img src="icon48.png" alt="" width="22" height="22" style="border-radius:6px"> Kiko</h1>
-  <div class="version">v4.5.1 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
+  <div class="version">v4.5.2 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
 
 
   <div class="ent" id="ent-box" style="display:none">
@@ -386,9 +392,21 @@
 
   <hr class="divider">
   <button class="reset-btn" id="reset-btn">Reset all learned data</button>
-  <div class="shortcut">Alt + Shift + K · Scan or convert selected text on any page</div>
+
+  <h2>Help</h2>
+  <div class="help-links">
+    <a href="#" id="help-report">🐞 Report a problem</a>
+    <a href="https://get-kiko.com/support.html" target="_blank" rel="noopener">💬 Help and support</a>
+    <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener"
+       id="help-billing">🧾 Manage or cancel subscription</a>
+    <a href="https://get-kiko.com/privacy.html" target="_blank" rel="noopener">🔒 Privacy</a>
+    <a href="https://get-kiko.com/terms.html" target="_blank" rel="noopener">📄 Terms</a>
+    <a href="https://get-kiko.com/refund.html" target="_blank" rel="noopener">↩️ Refunds</a>
+  </div>
+
+  <div class="shortcut" style="margin-top:12px">Alt + Shift + K · Scan or convert selected text on any page</div>
   <div class="shortcut" style="margin-top:4px">Works on any website with a text field</div>
-  <div class="shortcut" style="margin-top:6px">Kiko v4.5.1</div>
+  <div class="shortcut" style="margin-top:6px">Kiko v4.5.2</div>
 
   <script src="popup.js"></script>
 </body>

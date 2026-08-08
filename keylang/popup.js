@@ -318,6 +318,51 @@ document.getElementById('site-toggle').addEventListener('change', (e) => {
   });
 });
 
+// ── Report a problem ──────────────────────────────────────────
+// Pre-fills the version and settings, because "it isn't working" with no
+// version attached costs a round trip every time.
+//
+// What it must never carry: the learned word lists. Those are things the user
+// typed, and the whole promise is that their text stays on their machine —
+// mailing it to support would break that promise in the very feature meant to
+// help them. Counts only.
+document.getElementById('help-report').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.storage.local.get(
+    [...ALL_LEARNED_KEYS, 'entitlement', 'enabledLangs'],
+    (d) => {
+      const langs = d.enabledLangs || {};
+      const on    = Object.keys(langs).filter(k => langs[k]);
+      const stats = d.stats || {};
+      const ent   = d.entitlement || {};
+      const learnedCount = ALL_LEARNED_KEYS
+        .filter(k => k.startsWith('learned'))
+        .reduce((n, k) => n + ((d[k] || []).length), 0);
+
+      const body = [
+        'Tell us what happened — what you were typing, on which site,',
+        'and what you expected instead.',
+        '',
+        '',
+        '',
+        '--- please leave the lines below, they help us debug ---',
+        `Kiko ${chrome.runtime.getManifest().version}`,
+        `Languages on: ${on.length ? on.join(', ') : 'none'}`,
+        `Status: ${ent.state || 'unknown'}${ent.daysLeft != null ? ` (${ent.daysLeft} days left)` : ''}`,
+        `Detected ${stats.detected || 0} · converted ${stats.converted || 0} · rejected ${stats.rejected || 0}`,
+        `Learned words: ${learnedCount}`,
+        navigator.userAgent,
+      ].join('\n');
+
+      chrome.tabs.create({
+        url: 'mailto:hello@get-kiko.com'
+           + '?subject=' + encodeURIComponent('Kiko problem report')
+           + '&body='    + encodeURIComponent(body),
+      });
+    }
+  );
+});
+
 // Load on open
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   try {
