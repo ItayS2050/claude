@@ -192,16 +192,16 @@
 </head>
 <body>
   <h1><img src="icon48.png" alt="" width="22" height="22" style="border-radius:6px"> Kiko</h1>
-  <div class="version">v4.5.2 · Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</div>
+  <div class="version">v4.6.0 · <span data-i18n="langLine">Hebrew, Russian, Ukrainian, Korean, Greek &amp; Arabic ↔ English</span></div>
 
 
   <div class="ent" id="ent-box" style="display:none">
     <b id="ent-title"></b>
     <span id="ent-body"></span>
-    <a class="ent-cta" id="ent-cta" href="#" target="_blank" rel="noopener">Subscribe — $5/month or $40/year</a>
+    <a class="ent-cta" id="ent-cta" href="#" target="_blank" rel="noopener" data-i18n="entCta">Subscribe — $5/month or $40/year</a>
     <div class="key-row">
-      <input id="key-input" type="text" placeholder="Already paid? Paste licence key" />
-      <button id="key-btn">Activate</button>
+      <input id="key-input" type="text" placeholder="Already paid? Paste licence key" data-i18n-placeholder="keyPlaceholder" />
+      <button id="key-btn" data-i18n="keyActivate">Activate</button>
     </div>
     <div class="key-msg" id="key-msg"></div>
   </div>
@@ -209,78 +209,78 @@
   <div class="stats">
     <div class="stat">
       <div class="stat-num" id="s-detected">0</div>
-      <div class="stat-lbl">Detected</div>
+      <div class="stat-lbl" data-i18n="statDetected">Detected</div>
     </div>
     <div class="stat converted">
       <div class="stat-num" id="s-converted">0</div>
-      <div class="stat-lbl">Converted</div>
+      <div class="stat-lbl" data-i18n="statConverted">Converted</div>
     </div>
     <div class="stat rejected">
       <div class="stat-num" id="s-rejected">0</div>
-      <div class="stat-lbl">Rejected</div>
+      <div class="stat-lbl" data-i18n="statRejected">Rejected</div>
     </div>
   </div>
 
-  <h2>Learned — Hebrew keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langHebrew__">Learned — Hebrew keyboard words</h2>
   <div class="word-list" id="hebrew-words"></div>
   <div class="add-row">
-    <input id="add-hebrew-input" type="text" placeholder="Add word manually…" />
-    <button id="add-hebrew-btn">Add</button>
+    <input id="add-hebrew-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-hebrew-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Excluded (English) words</h2>
+  <h2 data-i18n="learnedExcluded">Learned — Excluded (English) words</h2>
   <div class="word-list" id="english-words"></div>
   <div class="add-row">
-    <input id="add-english-input" type="text" placeholder="Add word to exclude…" />
-    <button id="add-english-btn">Add</button>
+    <input id="add-english-input" type="text" placeholder="Add word to exclude…" data-i18n-placeholder="addWordExclude" />
+    <button id="add-english-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Russian keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langRussian__">Learned — Russian keyboard words</h2>
   <div class="word-list" id="russian-words"></div>
   <div class="add-row">
-    <input id="add-russian-input" type="text" placeholder="Add Russian keyboard word…" />
-    <button id="add-russian-btn">Add</button>
+    <input id="add-russian-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-russian-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Ukrainian keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langUkrainian__">Learned — Ukrainian keyboard words</h2>
   <div class="word-list" id="ukrainian-words"></div>
   <div class="add-row">
-    <input id="add-ukrainian-input" type="text" placeholder="Add Ukrainian keyboard word…" />
-    <button id="add-ukrainian-btn">Add</button>
+    <input id="add-ukrainian-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-ukrainian-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Korean keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langKorean__">Learned — Korean keyboard words</h2>
   <div class="word-list" id="korean-words"></div>
   <div class="add-row">
-    <input id="add-korean-input" type="text" placeholder="Add Korean keyboard word…" />
-    <button id="add-korean-btn">Add</button>
+    <input id="add-korean-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-korean-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Greek keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langGreek__">Learned — Greek keyboard words</h2>
   <div class="word-list" id="greek-words"></div>
   <div class="add-row">
-    <input id="add-greek-input" type="text" placeholder="Add Greek keyboard word…" />
-    <button id="add-greek-btn">Add</button>
+    <input id="add-greek-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-greek-btn" data-i18n="addBtn">Add</button>
   </div>
 
-  <h2>Learned — Arabic keyboard words</h2>
+  <h2 data-i18n="learnedFor|__langArabic__">Learned — Arabic keyboard words</h2>
   <div class="word-list" id="arabic-words"></div>
   <div class="add-row">
-    <input id="add-arabic-input" type="text" placeholder="Add Arabic keyboard word…" />
-    <button id="add-arabic-btn">Add</button>
+    <input id="add-arabic-input" type="text" placeholder="Add word manually…" data-i18n-placeholder="addWord" />
+    <button id="add-arabic-btn" data-i18n="addBtn">Add</button>
   </div>
 
   <hr class="divider">
 
   <div class="paused-banner" id="paused-banner">
-    ⚠️ Auto-detection is <strong>OFF</strong> — Kiko won't show any popups.
-    <button id="reenable-btn">Re-enable auto-detection</button>
+    ⚠️ <span data-i18n="pausedBanner">Auto-detection is OFF — Kiko won't show any popups.</span>
+    <button id="reenable-btn" data-i18n="reEnable">Re-enable auto-detection</button>
   </div>
 
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">Auto-detection</div>
-      <div class="toggle-sub">Show popup when wrong layout detected</div>
+      <div class="toggle-label" data-i18n="autoDetect">Auto-detection</div>
+      <div class="toggle-sub" data-i18n="autoDetectSub">Show popup when wrong layout detected</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="detection-toggle" checked>
@@ -290,11 +290,11 @@
 
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔔 Sound alert</div>
-      <div class="toggle-sub">Play a soft ding when wrong layout detected</div>
+      <div class="toggle-label">🔔 <span data-i18n="soundAlert">Sound alert</span></div>
+      <div class="toggle-sub" data-i18n="soundAlertSub">Play a soft ding when wrong layout detected</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button id="test-sound-btn" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer">Test</button>
+      <button id="test-sound-btn" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer" data-i18n="soundTest">Test</button>
       <label class="switch">
         <input type="checkbox" id="sound-toggle" checked>
         <span class="slider"></span>
@@ -302,11 +302,11 @@
     </div>
   </div>
 
-  <h2 style="margin-top:14px">Languages</h2>
+  <h2 style="margin-top:14px" data-i18n="sectionLanguages">Languages</h2>
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">🔤 Hebrew ↔ English</div>
-      <div class="toggle-sub">Detect Hebrew keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langHebrew__">Hebrew ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langHebrew__">Detect Hebrew keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-he-toggle" checked>
@@ -315,8 +315,8 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔤 Russian ↔ English</div>
-      <div class="toggle-sub">Detect Russian keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langRussian__">Russian ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langRussian__">Detect Russian keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-ru-toggle" checked>
@@ -325,8 +325,8 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔤 Ukrainian ↔ English</div>
-      <div class="toggle-sub">Detect Ukrainian keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langUkrainian__">Ukrainian ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langUkrainian__">Detect Ukrainian keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-uk-toggle" checked>
@@ -335,8 +335,8 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔤 Korean ↔ English</div>
-      <div class="toggle-sub">Detect Korean keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langKorean__">Korean ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langKorean__">Detect Korean keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-ko-toggle" checked>
@@ -345,8 +345,8 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔤 Greek ↔ English</div>
-      <div class="toggle-sub">Detect Greek keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langGreek__">Greek ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langGreek__">Detect Greek keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-el-toggle" checked>
@@ -355,8 +355,8 @@
   </div>
   <div class="toggle-row" style="margin-top:8px">
     <div>
-      <div class="toggle-label">🔤 Arabic ↔ English</div>
-      <div class="toggle-sub">Detect Arabic keyboard layout mistakes</div>
+      <div class="toggle-label">🔤 <span data-i18n="toggleLangLabel|__langArabic__">Arabic ↔ English</span></div>
+      <div class="toggle-sub" data-i18n="toggleLangSub|__langArabic__">Detect Arabic keyboard layout mistakes</div>
     </div>
     <label class="switch">
       <input type="checkbox" id="lang-ar-toggle" checked>
@@ -364,10 +364,10 @@
     </label>
   </div>
 
-  <h2 style="margin-top:14px">This site</h2>
+  <h2 style="margin-top:14px" data-i18n="sectionThisSite">This site</h2>
   <div class="toggle-row" id="site-row">
     <div>
-      <div class="toggle-label">🌐 Active on this site</div>
+      <div class="toggle-label">🌐 <span data-i18n="activeOnSite">Active on this site</span></div>
       <div class="toggle-sub" id="site-hostname">—</div>
     </div>
     <label class="switch">
@@ -379,35 +379,36 @@
   <div class="review-nudge" id="review-nudge">
     <div class="review-nudge-top">
       <div class="review-nudge-text">
-        <strong>Enjoying Kiko? ⭐</strong><br>
-        A quick review helps others find it and keeps us motivated to improve!
+        <strong><span data-i18n="reviewAsk">Enjoying Kiko?</span> ⭐</strong><br>
+        <span data-i18n="reviewBody">A quick review helps others find it and keeps us motivated to improve!</span>
       </div>
       <button class="review-nudge-close" id="review-nudge-close" title="Dismiss">✕</button>
     </div>
     <div class="review-nudge-actions">
-      <button class="review-nudge-btn" id="review-nudge-rate">Rate Kiko ⭐</button>
-      <button class="review-nudge-later" id="review-nudge-later">Maybe later</button>
+      <button class="review-nudge-btn" id="review-nudge-rate"><span data-i18n="reviewRate">Rate Kiko</span> ⭐</button>
+      <button class="review-nudge-later" id="review-nudge-later" data-i18n="reviewLater">Maybe later</button>
     </div>
   </div>
 
   <hr class="divider">
-  <button class="reset-btn" id="reset-btn">Reset all learned data</button>
+  <button class="reset-btn" id="reset-btn" data-i18n="resetAll">Reset all learned data</button>
 
-  <h2>Help</h2>
+  <h2 data-i18n="sectionHelp">Help</h2>
   <div class="help-links">
-    <a href="#" id="help-report">🐞 Report a problem</a>
-    <a href="https://get-kiko.com/support.html" target="_blank" rel="noopener">💬 Help and support</a>
+    <a href="#" id="help-report">🐞 <span data-i18n="helpReport">Report a problem</span></a>
+    <a href="https://get-kiko.com/support.html" target="_blank" rel="noopener">💬 <span data-i18n="helpSupport">Help and support</span></a>
     <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener"
-       id="help-billing">🧾 Manage or cancel subscription</a>
-    <a href="https://get-kiko.com/privacy.html" target="_blank" rel="noopener">🔒 Privacy</a>
-    <a href="https://get-kiko.com/terms.html" target="_blank" rel="noopener">📄 Terms</a>
-    <a href="https://get-kiko.com/refund.html" target="_blank" rel="noopener">↩️ Refunds</a>
+       id="help-billing">🧾 <span data-i18n="helpBilling">Manage or cancel subscription</span></a>
+    <a href="https://get-kiko.com/privacy.html" target="_blank" rel="noopener">🔒 <span data-i18n="helpPrivacy">Privacy</span></a>
+    <a href="https://get-kiko.com/terms.html" target="_blank" rel="noopener">📄 <span data-i18n="helpTerms">Terms</span></a>
+    <a href="https://get-kiko.com/refund.html" target="_blank" rel="noopener">↩️ <span data-i18n="helpRefunds">Refunds</span></a>
   </div>
 
-  <div class="shortcut" style="margin-top:12px">Alt + Shift + K · Scan or convert selected text on any page</div>
-  <div class="shortcut" style="margin-top:4px">Works on any website with a text field</div>
-  <div class="shortcut" style="margin-top:6px">Kiko v4.5.2</div>
+  <div class="shortcut" style="margin-top:12px" data-i18n="shortcutScan">Alt + Shift + K · Scan or convert selected text on any page</div>
+  <div class="shortcut" style="margin-top:4px" data-i18n="worksAnywhere">Works on any website with a text field</div>
+  <div class="shortcut" style="margin-top:6px">Kiko v4.6.0</div>
 
+  <script src="i18n.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

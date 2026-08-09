@@ -247,6 +247,49 @@ function sendFeedback(words, action, type) {
   } catch {}
 }
 
+// ── Localisation ──────────────────────────────────────────────
+// Every call carries the English that used to be hard-coded here as its
+// fallback, so a missing key degrades to the previous behaviour rather than
+// to an empty button — and a locale we have not translated yet simply reads
+// as it always did.
+function t(key, subs, fallback) {
+  try {
+    const s = chrome.i18n.getMessage(key, subs);
+    if (s) return s;
+  } catch {}
+  return fallback !== undefined ? fallback : '';
+}
+
+// Direction of the interface, which is a different question from the
+// direction of the text being fixed: a Hebrew speaker correcting English
+// still wants the toast laid out right to left.
+const UI_RTL = t('uiDir', null, 'ltr') === 'rtl';
+
+const LANG_MSG_KEY = {
+  English: 'langEnglish', Hebrew: 'langHebrew', Russian: 'langRussian',
+  Ukrainian: 'langUkrainian', Korean: 'langKorean', Greek: 'langGreek',
+  Arabic: 'langArabic',
+};
+
+// Thirty-odd detection sites build their labels as English literals. Rather
+// than thread a language code through every one of them, read the language
+// back out of the message they already produce. If a name turns up that has
+// no translation the detection is returned untouched, so a new language shows
+// English labels instead of blanks — test-i18n.js fails the build in that
+// case, so it should never reach anyone.
+function localiseDetection(d) {
+  const m = /Looks like ([A-Za-z]+):/.exec(d.message || '');
+  const key = m && LANG_MSG_KEY[m[1]];
+  if (!key) return d;
+  const lang = t(key, null, m[1]);
+  return {
+    ...d,
+    message:     t('toastLooksLike', [lang], d.message),
+    btnLabel:    t('toastFix',       [lang], d.btnLabel),
+    rejectLabel: t('toastReject',    [lang], d.rejectLabel),
+  };
+}
+
 // ── Storage & learned data ────────────────────────────────────
 let learnedHebrew   = new Set();
 let learnedEnglish  = new Set();
@@ -2102,6 +2145,7 @@ function showToast(element, detection, forceShow = false) {
     if (detection.words.length < lastDetection.words.length) return;
   }
 
+  detection          = localiseDetection(detection);
   lastDetection      = detection;
   lastElement        = element;
   dismissedSignature = null;
@@ -2116,12 +2160,13 @@ function showToast(element, detection, forceShow = false) {
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
+  if (UI_RTL) toast.dir = 'rtl';
   toast.innerHTML = `
     <div class="kld-header">
       <span>⌨️</span>
       <span style="flex:1">${escapeHtml(detection.message)}</span>
-      <button class="kld-btn kld-sound-btn" title="Toggle sound">${soundEnabled ? '🔔' : '🔕'}</button>
-      <button class="kld-btn kld-dismiss" title="Dismiss (Esc)">✕</button>
+      <button class="kld-btn kld-sound-btn" title="${escapeHtml(t('toastSoundTitle', null, 'Toggle sound'))}">${soundEnabled ? '🔔' : '🔕'}</button>
+      <button class="kld-btn kld-dismiss" title="${escapeHtml(t('toastDismiss', null, 'Dismiss (Esc)'))}">✕</button>
     </div>
     <div class="kld-preview">
       <div class="kld-preview-orig">${escapeHtml(truncatePreview(detection.original))}</div>
@@ -2132,8 +2177,8 @@ function showToast(element, detection, forceShow = false) {
       <button class="kld-btn kld-reject">${escapeHtml(detection.rejectLabel)}</button>
     </div>
     <div class="kld-footer">
-      <span>Drag · Alt+Shift+K to scan field</span>
-      <button class="kld-pause-btn" title="Pause auto-detection">⏸ Pause Kiko</button>
+      <span>${escapeHtml(t('toastFooter', null, 'Drag · Alt+Shift+K to scan field'))}</span>
+      <button class="kld-pause-btn" title="${escapeHtml(t('toastPauseTitle', null, 'Pause auto-detection'))}">⏸ ${escapeHtml(t('toastPause', null, 'Pause Kiko'))}</button>
     </div>
   `;
 
@@ -2346,6 +2391,7 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
   injectStyles();
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
+  if (UI_RTL) toast.dir = 'rtl';
   toast.style.borderColor = accent;
   toast.innerHTML = `
     <div class="kld-header">
@@ -2356,7 +2402,7 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
     <div style="font-size:12px;color:#94a3b8;line-height:1.5">${escapeHtml(body)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary" id="kld-tr-go" style="background:${accent}">${escapeHtml(cta)}</button>
-      <button class="kld-btn kld-reject" id="kld-tr-later">Not now</button>
+      <button class="kld-btn kld-reject" id="kld-tr-later">${escapeHtml(t('notNow', null, 'Not now'))}</button>
     </div>
   `;
   toast.querySelectorAll('button').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
@@ -2394,10 +2440,11 @@ async function maybeShowTrialNotice() {
     if (ent.state === 'expired') {
       if (seen.expired) return;
       const shown = showTrialToast({
-        title:  'Your free trial has ended',
-        body:   'Kiko has stopped correcting layout mistakes. Your learned words are '
-              + 'safe — subscribing switches detection straight back on.',
-        cta:    'Keep Kiko',
+        title:  t('trialEndedTitle', null, 'Your free trial has ended'),
+        body:   t('trialEndedBody', null,
+                  'Kiko has stopped correcting layout mistakes. Your learned words are '
+                  + 'safe — subscribing switches detection straight back on.'),
+        cta:    t('trialEndedCta', null, 'Keep Kiko'),
         accent: '#f87171',
       });
       if (shown) {
@@ -2411,11 +2458,14 @@ async function maybeShowTrialNotice() {
     if (due === undefined) return;
 
     const shown = showTrialToast({
-      title:  ent.daysLeft === 1 ? 'Last day of your free trial'
-                                 : `${ent.daysLeft} days left of your free trial`,
-      body:   'After that Kiko stops correcting layout mistakes. $5/month, or $40 '
-            + 'for the year. Nothing has been charged so far.',
-      cta:    'See the plans',
+      title:  ent.daysLeft === 1
+                ? t('trialLastDayTitle', null, 'Last day of your free trial')
+                : t('trialLeftTitle', [String(ent.daysLeft)],
+                    `${ent.daysLeft} days left of your free trial`),
+      body:   t('trialBody', null,
+                'After that Kiko stops correcting layout mistakes. $5/month, or $40 '
+                + 'for the year. Nothing has been charged so far.'),
+      cta:    t('trialCta', null, 'See the plans'),
       accent: '#fbbf24',
     });
     if (shown) {
@@ -2461,8 +2511,8 @@ function showHint() {
   const wcLabel = wc >= 5 ? `${wc} words ${dir}` : escapeHtml(lastDetection.converted.slice(0, 22) + (lastDetection.converted.length > 22 ? '…' : ''));
   hintEl.innerHTML = `
     <span>⌨️</span>
-    <span class="kld-hint-text" title="Click to open fix">${wcLabel}</span>
-    <button class="kld-hint-close" title="Dismiss">✕</button>
+    <span class="kld-hint-text" title="${escapeHtml(t('hintOpen', null, 'Click to open fix'))}">${wcLabel}</span>
+    <button class="kld-hint-close" title="${escapeHtml(t('hintDismiss', null, 'Dismiss'))}">✕</button>
   `;
 
   hintEl.addEventListener('click', e => {
@@ -2637,7 +2687,7 @@ function convertSelection(text, sel) {
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.innerHTML = `
-    <div class="kld-header"><span>⌨️</span><span style="flex:1">${escapeHtml(detection.message)}</span><button class="kld-btn kld-dismiss" title="Dismiss">✕</button></div>
+    <div class="kld-header"><span>⌨️</span><span style="flex:1">${escapeHtml(detection.message)}</span><button class="kld-btn kld-dismiss" title="${escapeHtml(t('hintDismiss', null, 'Dismiss'))}">✕</button></div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>

@@ -392,6 +392,26 @@ per-key **activation limit is the seat count**, so the 5-seat team plan needs no
 code of ours. Their licence endpoints take no API key and are meant to be called
 from a client, so there is no server in the loop.
 
+## Interface languages (4.6.0)
+The listing and the website were translated before the extension itself was,
+which meant a Korean user read a Korean description, installed, and met an
+English welcome screen and an English Subscribe button. The promise and the
+product did not match, which is worse than not translating the listing at all.
+
+4.6.0 puts the interface in the same three languages. `make-locales.py` holds
+every string as one table, four columns side by side — a missing translation
+is a visible gap in a column rather than something a user finds. Re-run it
+after any edit; it writes `_locales/*/messages.json`.
+
+`test-i18n.js` checks both directions: every key the code asks for exists in
+every locale, and every key a locale defines is referenced somewhere. It also
+catches a `$PLACEHOLDER$` used without being declared, which Chrome renders
+literally rather than substituting.
+
+Hebrew flips the whole interface to RTL, driven by the `uiDir` message — the
+direction of the interface is a separate question from the direction of the
+text being corrected.
+
 ## Status
 4.4.1 is live in the store — six languages, no payment code, no data collection
 declared. 4.5.0 is built and tested but not yet submitted.

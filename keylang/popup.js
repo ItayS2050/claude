@@ -56,13 +56,17 @@ function renderWordList(containerId, words, type, onRemove) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
   if (words.length === 0) {
-    container.innerHTML = '<span class="empty">None yet</span>';
+    container.textContent = '';
+    const empty = document.createElement('span');
+    empty.className = 'empty';
+    empty.textContent = t('emptyList', null, 'None yet');
+    container.appendChild(empty);
     return;
   }
   words.forEach(word => {
     const tag = document.createElement('div');
     tag.className = `word-tag ${type}`;
-    tag.innerHTML = `<span>${word}</span><button title="Remove">✕</button>`;
+    tag.innerHTML = `<span>${word}</span><button title="${t('removeWord', null, 'Remove')}">✕</button>`;
     tag.querySelector('button').addEventListener('click', () => onRemove(word));
     container.appendChild(tag);
   });
@@ -72,6 +76,16 @@ function renderWordList(containerId, words, type, onRemove) {
 // opens with both plans and the buyer picks — $5/month or $40/year. Whichever
 // variant sits first in the product's variant list is the one preselected.
 const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
+
+// Same fallback rule as content.js: the English that used to be hard-coded
+// here is passed in, so a missing key reads as it always did.
+function t(key, subs, fallback) {
+  try {
+    const s = chrome.i18n.getMessage(key, subs);
+    if (s) return s;
+  } catch {}
+  return fallback !== undefined ? fallback : '';
+}
 
 // ── Trial / licence banner ────────────────────────────────────
 function renderEntitlement(ent) {
@@ -87,19 +101,23 @@ function renderEntitlement(ent) {
   cta.href = CHECKOUT_URL;
 
   if (ent.state === 'licensed') {
-    title.textContent = 'Subscription active';
-    body.textContent  = 'Thanks — every language is unlocked.';
+    title.textContent = t('entLicensedTitle', null, 'Subscription active');
+    body.textContent  = t('entLicensedBody', null, 'Thanks — every language is unlocked.');
     cta.style.display = 'none';
     keys.style.display = 'none';
   } else if (ent.state === 'trial') {
     const d = ent.daysLeft;
-    title.textContent = d === 1 ? 'Last day of your free trial' : `${d} days left in your free trial`;
-    body.textContent  = 'Everything works. Subscribe any time to keep it after the trial.';
+    title.textContent = d === 1
+      ? t('entTrialLastDay', null, 'Last day of your free trial')
+      : t('entTrialTitle', [String(d)], `${d} days left in your free trial`);
+    body.textContent  = t('entTrialBody', null,
+      'Everything works. Subscribe any time to keep it after the trial.');
     cta.style.display = 'block';
     keys.style.display = 'flex';
   } else {
-    title.textContent = 'Your free trial has ended';
-    body.textContent  = 'Detection is paused. Your learned words are safe — subscribe to switch it back on.';
+    title.textContent = t('entExpiredTitle', null, 'Your free trial has ended');
+    body.textContent  = t('entExpiredBody', null,
+      'Detection is paused. Your learned words are safe — subscribe to switch it back on.');
     cta.style.display = 'block';
     keys.style.display = 'flex';
   }

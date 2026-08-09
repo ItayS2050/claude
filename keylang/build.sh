@@ -19,6 +19,7 @@ FILES=(
   offscreen.js
   popup.html
   popup.js
+  i18n.js
   welcome.html
   welcome.js
   whats-new.html

@@ -94,68 +94,69 @@
 <body>
   <div class="card">
     <div class="logo"><img src="icon128.png" alt="Kiko" width="64" height="64" style="border-radius:16px"></div>
-    <h1>Welcome to Kiko</h1>
-    <p class="subtitle">Kiko watches what you type and fixes wrong-layout mistakes in one click.<br>First — which language(s) do you type in?</p>
+    <h1 data-i18n="welcomeTitle">Welcome to Kiko</h1>
+    <p class="subtitle"><span data-i18n="welcomeSub">Kiko watches what you type and fixes wrong-layout mistakes in one click.</span><br><span data-i18n="welcomeAsk">First — which language(s) do you type in?</span></p>
 
-    <div class="question">Select your language(s)</div>
+    <div class="question" data-i18n="welcomeSelect">Select your language(s)</div>
     <div class="lang-grid">
       <div class="lang-card" id="card-he" data-lang="he">
         <div class="lang-icon" style="background:#3b82f6">IL</div>
         <div class="lang-info">
-          <div class="lang-name">Hebrew</div>
-          <div class="lang-example">Typed <em>akuo</em> but meant <strong>שלום</strong></div>
+          <div class="lang-name" data-i18n="langHebrew">Hebrew</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;akuo&lt;/em&gt;|&lt;strong&gt;שלום&lt;/strong&gt;">Typed <em>akuo</em> but meant <strong>שלום</strong></div>
         </div>
         <div class="lang-check" id="check-he"></div>
       </div>
       <div class="lang-card ru" id="card-ru" data-lang="ru">
         <div class="lang-icon" style="background:#a855f7">RU</div>
         <div class="lang-info">
-          <div class="lang-name">Russian</div>
-          <div class="lang-example">Typed <em>ghbdtn</em> but meant <strong>привет</strong></div>
+          <div class="lang-name" data-i18n="langRussian">Russian</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;ghbdtn&lt;/em&gt;|&lt;strong&gt;привет&lt;/strong&gt;">Typed <em>ghbdtn</em> but meant <strong>привет</strong></div>
         </div>
         <div class="lang-check" id="check-ru"></div>
       </div>
       <div class="lang-card ar" id="card-ar" data-lang="ar">
         <div class="lang-icon" style="background:#f59e0b">SA</div>
         <div class="lang-info">
-          <div class="lang-name">Arabic</div>
-          <div class="lang-example">Typed <em>ahlan</em> but meant <strong>اهلان</strong></div>
+          <div class="lang-name" data-i18n="langArabic">Arabic</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;ahlan&lt;/em&gt;|&lt;strong&gt;اهلان&lt;/strong&gt;">Typed <em>ahlan</em> but meant <strong>اهلان</strong></div>
         </div>
         <div class="lang-check" id="check-ar"></div>
       </div>
       <div class="lang-card uk" id="card-uk" data-lang="uk">
         <div class="lang-icon" style="background:#facc15">UA</div>
         <div class="lang-info">
-          <div class="lang-name">Ukrainian</div>
-          <div class="lang-example">Typed <em>ghbdsn</em> but meant <strong>привіт</strong></div>
+          <div class="lang-name" data-i18n="langUkrainian">Ukrainian</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;ghbdsn&lt;/em&gt;|&lt;strong&gt;привіт&lt;/strong&gt;">Typed <em>ghbdsn</em> but meant <strong>привіт</strong></div>
         </div>
         <div class="lang-check" id="check-uk"></div>
       </div>
       <div class="lang-card ko" id="card-ko" data-lang="ko">
         <div class="lang-icon" style="background:#22d3ee">KR</div>
         <div class="lang-info">
-          <div class="lang-name">Korean</div>
-          <div class="lang-example">Typed <em>dkssud</em> but meant <strong>안녕</strong></div>
+          <div class="lang-name" data-i18n="langKorean">Korean</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;dkssud&lt;/em&gt;|&lt;strong&gt;안녕&lt;/strong&gt;">Typed <em>dkssud</em> but meant <strong>안녕</strong></div>
         </div>
         <div class="lang-check" id="check-ko"></div>
       </div>
       <div class="lang-card el" id="card-el" data-lang="el">
         <div class="lang-icon" style="background:#818cf8">GR</div>
         <div class="lang-info">
-          <div class="lang-name">Greek</div>
-          <div class="lang-example">Typed <em>geia</em> but meant <strong>γεια</strong></div>
+          <div class="lang-name" data-i18n="langGreek">Greek</div>
+          <div class="lang-example" data-i18n-html="welcomeExample|&lt;em&gt;geia&lt;/em&gt;|&lt;strong&gt;γεια&lt;/strong&gt;">Typed <em>geia</em> but meant <strong>γεια</strong></div>
         </div>
         <div class="lang-check" id="check-el"></div>
       </div>
     </div>
 
-    <button class="btn" id="start-btn" disabled>Let's go →</button>
-    <p class="note">You can change this any time from the Kiko popup.</p>
+    <button class="btn" id="start-btn" data-i18n="welcomeStart" disabled>Let's go →</button>
+    <p class="note" data-i18n="welcomeNote">You can change this any time from the Kiko popup.</p>
     <p style="text-align:center;margin-top:10px">
-      <button id="skip-btn" style="background:none;border:none;color:#475569;font-size:12px;cursor:pointer;text-decoration:underline">Skip — enable all languages for now</button>
+      <button id="skip-btn" style="background:none;border:none;color:#475569;font-size:12px;cursor:pointer;text-decoration:underline" data-i18n="welcomeSkip">Skip — enable all languages for now</button>
     </p>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="welcome.js"></script>
 </body>
 </html>

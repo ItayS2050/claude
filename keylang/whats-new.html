@@ -70,18 +70,18 @@
 <body>
   <div class="card">
     <div class="logo"><img src="icon128.png" alt="Kiko" width="56" height="56" style="border-radius:14px"></div>
-    <h1>Kiko is becoming a paid product</h1>
-    <p class="subtitle">You've been using it since before that was true, so this is the fair version.</p>
+    <h1 data-i18n="wnTitle">Kiko is becoming a paid product</h1>
+    <p class="subtitle" data-i18n="wnSub">You've been using it since before that was true, so this is the fair version.</p>
 
     <div class="banner">
-      <b id="headline">Your free period: 60 days</b>
-      <span id="sub">Nothing changes today. Nothing is charged. No card, no account.</span>
+      <b id="headline" data-i18n="wnBannerTitle">Your free period: 60 days</b>
+      <span id="sub" data-i18n="wnBannerSub">Nothing changes today. Nothing is charged. No card, no account.</span>
     </div>
 
-    <p>Kiko has been free the whole time you've had it. Keeping it going — six
+    <p data-i18n="wnBody1">Kiko has been free the whole time you've had it. Keeping it going — six
       languages now, more coming — is real work, so from this version it costs money.</p>
 
-    <p>You installed before there was a price, so you get <b>60 days</b> rather than the
+    <p data-i18n="wnBody2">You installed before there was a price, so you get 60 days rather than the
       30 a new user gets. Everything keeps working exactly as it does now for that
       whole time.</p>
 
@@ -90,27 +90,28 @@
     <div class="prices">
       <div class="price">
         <div class="n">$5<span>/month</span></div>
-        <div class="d">Cancel any time</div>
+        <div class="d" data-i18n="wnMonthly">Cancel any time</div>
       </div>
       <div class="price best">
         <div class="n">$40<span>/year</span></div>
-        <div class="d">Two months free</div>
+        <div class="d" data-i18n="wnAnnual">Two months free</div>
       </div>
     </div>
 
-    <a class="btn" id="sub-btn" href="#" target="_blank" rel="noopener">See the plans</a>
-    <button class="later" id="later-btn">Not now — remind me later</button>
+    <a class="btn" id="sub-btn" href="#" target="_blank" rel="noopener" data-i18n="trialCta">See the plans</a>
+    <button class="later" id="later-btn" data-i18n="wnRemind">Not now — remind me later</button>
 
     <hr>
 
-    <p class="small">Your learned words stay on your machine either way, and nothing you type
+    <p class="small" data-i18n="wnFoot1">Your learned words stay on your machine either way, and nothing you type
       has ever left your device. If you decide not to subscribe, detection stops and
       nothing is deleted.</p>
-    <p class="small">Questions, or the price doesn't work for you? Reply to
+    <p class="small"><span data-i18n="wnFoot2">Questions, or the price doesn't work for you? Reply to</span>
       <a href="mailto:hello@get-kiko.com" style="color:#7dd3fc">hello@get-kiko.com</a> —
-      we read everything.</p>
+      <span data-i18n="wnFoot3">we read everything.</span></p>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="whats-new.js"></script>
 </body>
 </html>

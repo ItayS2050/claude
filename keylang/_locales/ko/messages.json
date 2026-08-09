@@ -1,10 +1,358 @@
 {
   "extName": {
-    "message": "Kiko – 자판 오타 교정기",
-    "description": "Extension name, shown in the Web Store and chrome://extensions"
+    "message": "Kiko – 자판 오타 교정기"
   },
   "extDescription": {
-    "message": "자판 바꾸는 걸 잊으셨나요? Kiko가 히브리어·러시아어·우크라이나어·한국어·그리스어·아랍어 오타를 찾아 클릭 한 번으로 고쳐 줍니다.",
-    "description": "Short description, shown under the name in search results"
+    "message": "자판 바꾸는 걸 잊으셨나요? Kiko가 히브리어·러시아어·우크라이나어·한국어·그리스어·아랍어 오타를 찾아 클릭 한 번으로 고쳐 줍니다."
+  },
+  "uiDir": {
+    "message": "ltr"
+  },
+  "langLine": {
+    "message": "히브리어, 러시아어, 우크라이나어, 한국어, 그리스어, 아랍어 ↔ 영어"
+  },
+  "langEnglish": {
+    "message": "영어"
+  },
+  "langHebrew": {
+    "message": "히브리어"
+  },
+  "langRussian": {
+    "message": "러시아어"
+  },
+  "langUkrainian": {
+    "message": "우크라이나어"
+  },
+  "langKorean": {
+    "message": "한국어"
+  },
+  "langGreek": {
+    "message": "그리스어"
+  },
+  "langArabic": {
+    "message": "아랍어"
+  },
+  "toastLooksLike": {
+    "message": "자판이 잘못됐나요? $LANG$ 같습니다:",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastFix": {
+    "message": "$LANG$로 고치기",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastReject": {
+    "message": "$LANG$ 아니에요",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastFooter": {
+    "message": "드래그 가능 · Alt+Shift+K로 입력창 검사"
+  },
+  "toastPause": {
+    "message": "Kiko 일시중지"
+  },
+  "toastPauseTitle": {
+    "message": "자동 감지 일시중지"
+  },
+  "toastSoundTitle": {
+    "message": "소리 켜기/끄기"
+  },
+  "toastDismiss": {
+    "message": "닫기 (Esc)"
+  },
+  "hintOpen": {
+    "message": "클릭해서 수정 열기"
+  },
+  "hintDismiss": {
+    "message": "닫기"
+  },
+  "trialEndedTitle": {
+    "message": "무료 체험이 끝났습니다"
+  },
+  "trialEndedBody": {
+    "message": "Kiko가 자판 오타 교정을 멈췄습니다. 배운 단어는 그대로 있고, 구독하면 바로 다시 켜집니다."
+  },
+  "trialEndedCta": {
+    "message": "Kiko 계속 쓰기"
+  },
+  "trialLeftTitle": {
+    "message": "무료 체험 $DAYS$일 남았습니다",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "trialLastDayTitle": {
+    "message": "무료 체험 마지막 날입니다"
+  },
+  "trialBody": {
+    "message": "그 뒤로는 자판 교정이 멈춥니다. 월 $5 또는 연 $40. 지금까지 청구된 것은 없습니다."
+  },
+  "trialCta": {
+    "message": "요금제 보기"
+  },
+  "notNow": {
+    "message": "나중에"
+  },
+  "welcomeTitle": {
+    "message": "Kiko에 오신 것을 환영합니다"
+  },
+  "welcomeSub": {
+    "message": "Kiko는 입력을 지켜보다가 자판 오타를 클릭 한 번으로 고쳐 줍니다."
+  },
+  "welcomeAsk": {
+    "message": "먼저, 어떤 언어로 입력하시나요?"
+  },
+  "welcomeSelect": {
+    "message": "언어를 선택하세요"
+  },
+  "welcomeExample": {
+    "message": "$TYPED$라고 쳤지만 $MEANT$를 의도했죠",
+    "placeholders": {
+      "typed": {
+        "content": "$1"
+      },
+      "meant": {
+        "content": "$2"
+      }
+    }
+  },
+  "welcomeStart": {
+    "message": "시작하기 →"
+  },
+  "welcomeNote": {
+    "message": "이 설정은 Kiko 팝업에서 언제든 바꿀 수 있습니다."
+  },
+  "welcomeSkip": {
+    "message": "건너뛰기 — 일단 모든 언어 켜기"
+  },
+  "statDetected": {
+    "message": "감지"
+  },
+  "statConverted": {
+    "message": "교정"
+  },
+  "statRejected": {
+    "message": "거부"
+  },
+  "learnedFor": {
+    "message": "학습됨 — $LANG$ 자판 단어",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "learnedExcluded": {
+    "message": "학습됨 — 제외된 (영어) 단어"
+  },
+  "addWord": {
+    "message": "직접 단어 추가…"
+  },
+  "addBtn": {
+    "message": "추가"
+  },
+  "addWordExclude": {
+    "message": "제외할 단어 추가…"
+  },
+  "emptyList": {
+    "message": "아직 없음"
+  },
+  "sectionLanguages": {
+    "message": "언어"
+  },
+  "sectionThisSite": {
+    "message": "이 사이트"
+  },
+  "sectionHelp": {
+    "message": "도움말"
+  },
+  "toggleLangLabel": {
+    "message": "$LANG$ ↔ 영어",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toggleLangSub": {
+    "message": "$LANG$ 자판 오타 감지",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "activeOnSite": {
+    "message": "이 사이트에서 켜짐"
+  },
+  "resetAll": {
+    "message": "학습 데이터 모두 초기화"
+  },
+  "shortcutScan": {
+    "message": "Alt + Shift + K · 입력창 검사 또는 선택 영역 변환"
+  },
+  "worksAnywhere": {
+    "message": "텍스트 입력창이 있는 모든 사이트에서 작동"
+  },
+  "autoDetect": {
+    "message": "자동 감지"
+  },
+  "autoDetectSub": {
+    "message": "자판 오타가 감지되면 알림 표시"
+  },
+  "soundAlert": {
+    "message": "알림음"
+  },
+  "soundAlertSub": {
+    "message": "자판 오타가 감지되면 작은 소리로 알림"
+  },
+  "soundTest": {
+    "message": "테스트"
+  },
+  "pausedBanner": {
+    "message": "자동 감지가 꺼져 있습니다 — Kiko가 아무것도 표시하지 않습니다."
+  },
+  "reEnable": {
+    "message": "자동 감지 다시 켜기"
+  },
+  "reviewAsk": {
+    "message": "Kiko가 마음에 드시나요?"
+  },
+  "reviewBody": {
+    "message": "짧은 리뷰 하나가 다른 사람들에게 도움이 되고, 저희에게도 큰 힘이 됩니다."
+  },
+  "reviewRate": {
+    "message": "Kiko 평가하기"
+  },
+  "reviewLater": {
+    "message": "나중에"
+  },
+  "removeWord": {
+    "message": "삭제"
+  },
+  "entLicensedTitle": {
+    "message": "구독 중"
+  },
+  "entLicensedBody": {
+    "message": "감사합니다 — 모든 언어가 열려 있습니다."
+  },
+  "entTrialTitle": {
+    "message": "무료 체험 $DAYS$일 남음",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "entTrialLastDay": {
+    "message": "무료 체험 마지막 날"
+  },
+  "entTrialBody": {
+    "message": "모든 기능이 켜져 있습니다. 체험 후에도 쓰려면 언제든 구독하세요."
+  },
+  "entExpiredTitle": {
+    "message": "무료 체험이 끝났습니다"
+  },
+  "entExpiredBody": {
+    "message": "감지가 멈췄습니다. 배운 단어는 그대로이고, 구독하면 다시 켜집니다."
+  },
+  "entCta": {
+    "message": "구독 — 월 $5 또는 연 $40"
+  },
+  "keyPlaceholder": {
+    "message": "이미 결제하셨나요? 라이선스 키를 붙여넣으세요"
+  },
+  "keyActivate": {
+    "message": "활성화"
+  },
+  "wnTitle": {
+    "message": "Kiko가 유료로 전환됩니다"
+  },
+  "wnSub": {
+    "message": "그 전부터 써 오셨으니, 공정하게 가겠습니다."
+  },
+  "wnBannerTitle": {
+    "message": "무료 기간: 60일"
+  },
+  "wnBannerSub": {
+    "message": "오늘 달라지는 것은 없습니다. 청구도 없습니다. 카드도, 계정도 필요 없습니다."
+  },
+  "wnBody1": {
+    "message": "그동안 Kiko는 계속 무료였습니다. 지금 6개 언어, 앞으로 더 늘려 가며 유지하는 일은 실제 작업이라 이번 버전부터는 유료로 전환합니다."
+  },
+  "wnBody2": {
+    "message": "가격이 생기기 전에 설치하셨기 때문에, 신규 사용자의 30일이 아니라 60일을 드립니다. 그동안 모든 기능은 지금과 똑같이 작동합니다."
+  },
+  "wnMonthly": {
+    "message": "언제든 해지"
+  },
+  "wnAnnual": {
+    "message": "두 달 무료"
+  },
+  "wnRemind": {
+    "message": "나중에 — 다시 알려 주세요"
+  },
+  "wnFoot1": {
+    "message": "어느 쪽이든 배운 단어는 기기에 그대로 남고, 입력한 내용이 기기를 떠난 적은 없습니다. 구독하지 않으시면 감지만 멈출 뿐 삭제되는 것은 없습니다."
+  },
+  "wnFoot2": {
+    "message": "궁금한 점이 있거나 가격이 부담되시나요? 다음으로 알려 주세요:"
+  },
+  "wnFoot3": {
+    "message": "모두 읽습니다."
+  },
+  "wnLicensedTitle": {
+    "message": "이미 구독 중이십니다 — 감사합니다"
+  },
+  "wnLicensedSub": {
+    "message": "여기 내용은 해당되지 않습니다. 모든 언어가 계속 열려 있습니다."
+  },
+  "wnExpiredTitle": {
+    "message": "무료 기간이 끝났습니다"
+  },
+  "wnExpiredSub": {
+    "message": "감지가 멈췄습니다. 배운 단어는 안전하며 삭제된 것은 없습니다."
+  },
+  "wnDaysLeft": {
+    "message": "무료 기간 $DAYS$일 남았습니다",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "wnOneDayLeft": {
+    "message": "무료 기간 하루 남았습니다"
+  },
+  "helpReport": {
+    "message": "문제 신고"
+  },
+  "helpSupport": {
+    "message": "도움말 및 지원"
+  },
+  "helpBilling": {
+    "message": "구독 관리 또는 해지"
+  },
+  "helpPrivacy": {
+    "message": "개인정보"
+  },
+  "helpTerms": {
+    "message": "이용약관"
+  },
+  "helpRefunds": {
+    "message": "환불"
   }
 }

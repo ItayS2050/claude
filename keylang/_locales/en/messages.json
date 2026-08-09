@@ -1,10 +1,358 @@
 {
   "extName": {
-    "message": "Kiko – Multilingual Keyboard Layout Fixer",
-    "description": "Extension name, shown in the Web Store and chrome://extensions"
+    "message": "Kiko – Multilingual Keyboard Layout Fixer"
   },
   "extDescription": {
-    "message": "Wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic typing mix-ups and fixes them in one click.",
-    "description": "Short description, shown under the name in search results"
+    "message": "Wrong keyboard layout? Kiko catches Hebrew, Russian, Ukrainian, Korean, Greek & Arabic typing mix-ups and fixes them in one click."
+  },
+  "uiDir": {
+    "message": "ltr"
+  },
+  "langLine": {
+    "message": "Hebrew, Russian, Ukrainian, Korean, Greek & Arabic ↔ English"
+  },
+  "langEnglish": {
+    "message": "English"
+  },
+  "langHebrew": {
+    "message": "Hebrew"
+  },
+  "langRussian": {
+    "message": "Russian"
+  },
+  "langUkrainian": {
+    "message": "Ukrainian"
+  },
+  "langKorean": {
+    "message": "Korean"
+  },
+  "langGreek": {
+    "message": "Greek"
+  },
+  "langArabic": {
+    "message": "Arabic"
+  },
+  "toastLooksLike": {
+    "message": "Wrong layout? Looks like $LANG$:",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastFix": {
+    "message": "Fix → $LANG$",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastReject": {
+    "message": "Not $LANG$",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastFooter": {
+    "message": "Drag · Alt+Shift+K to scan field"
+  },
+  "toastPause": {
+    "message": "Pause Kiko"
+  },
+  "toastPauseTitle": {
+    "message": "Pause auto-detection"
+  },
+  "toastSoundTitle": {
+    "message": "Toggle sound"
+  },
+  "toastDismiss": {
+    "message": "Dismiss (Esc)"
+  },
+  "hintOpen": {
+    "message": "Click to open fix"
+  },
+  "hintDismiss": {
+    "message": "Dismiss"
+  },
+  "trialEndedTitle": {
+    "message": "Your free trial has ended"
+  },
+  "trialEndedBody": {
+    "message": "Kiko has stopped correcting layout mistakes. Your learned words are safe — subscribing switches detection straight back on."
+  },
+  "trialEndedCta": {
+    "message": "Keep Kiko"
+  },
+  "trialLeftTitle": {
+    "message": "$DAYS$ days left of your free trial",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "trialLastDayTitle": {
+    "message": "Last day of your free trial"
+  },
+  "trialBody": {
+    "message": "After that Kiko stops correcting layout mistakes. $5/month, or $40 for the year. Nothing has been charged so far."
+  },
+  "trialCta": {
+    "message": "See the plans"
+  },
+  "notNow": {
+    "message": "Not now"
+  },
+  "welcomeTitle": {
+    "message": "Welcome to Kiko"
+  },
+  "welcomeSub": {
+    "message": "Kiko watches what you type and fixes wrong-layout mistakes in one click."
+  },
+  "welcomeAsk": {
+    "message": "First — which language(s) do you type in?"
+  },
+  "welcomeSelect": {
+    "message": "Select your language(s)"
+  },
+  "welcomeExample": {
+    "message": "Typed $TYPED$ but meant $MEANT$",
+    "placeholders": {
+      "typed": {
+        "content": "$1"
+      },
+      "meant": {
+        "content": "$2"
+      }
+    }
+  },
+  "welcomeStart": {
+    "message": "Let's go →"
+  },
+  "welcomeNote": {
+    "message": "You can change this any time from the Kiko popup."
+  },
+  "welcomeSkip": {
+    "message": "Skip — enable all languages for now"
+  },
+  "statDetected": {
+    "message": "Detected"
+  },
+  "statConverted": {
+    "message": "Converted"
+  },
+  "statRejected": {
+    "message": "Rejected"
+  },
+  "learnedFor": {
+    "message": "Learned — $LANG$ keyboard words",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "learnedExcluded": {
+    "message": "Learned — excluded (English) words"
+  },
+  "addWord": {
+    "message": "Add word manually…"
+  },
+  "addBtn": {
+    "message": "Add"
+  },
+  "addWordExclude": {
+    "message": "Add word to exclude…"
+  },
+  "emptyList": {
+    "message": "Nothing yet"
+  },
+  "sectionLanguages": {
+    "message": "Languages"
+  },
+  "sectionThisSite": {
+    "message": "This site"
+  },
+  "sectionHelp": {
+    "message": "Help"
+  },
+  "toggleLangLabel": {
+    "message": "$LANG$ ↔ English",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "toggleLangSub": {
+    "message": "Detect $LANG$ keyboard layout mistakes",
+    "placeholders": {
+      "lang": {
+        "content": "$1"
+      }
+    }
+  },
+  "activeOnSite": {
+    "message": "Active on this site"
+  },
+  "resetAll": {
+    "message": "Reset all learned data"
+  },
+  "shortcutScan": {
+    "message": "Alt + Shift + K · Scan or convert selected text on any page"
+  },
+  "worksAnywhere": {
+    "message": "Works on any website with a text field"
+  },
+  "autoDetect": {
+    "message": "Auto-detection"
+  },
+  "autoDetectSub": {
+    "message": "Show popup when wrong layout detected"
+  },
+  "soundAlert": {
+    "message": "Sound alert"
+  },
+  "soundAlertSub": {
+    "message": "Play a soft ding when wrong layout detected"
+  },
+  "soundTest": {
+    "message": "Test"
+  },
+  "pausedBanner": {
+    "message": "Auto-detection is OFF — Kiko won't show any popups."
+  },
+  "reEnable": {
+    "message": "Re-enable auto-detection"
+  },
+  "reviewAsk": {
+    "message": "Enjoying Kiko?"
+  },
+  "reviewBody": {
+    "message": "A quick review helps others find it and keeps us motivated to improve!"
+  },
+  "reviewRate": {
+    "message": "Rate Kiko"
+  },
+  "reviewLater": {
+    "message": "Maybe later"
+  },
+  "removeWord": {
+    "message": "Remove"
+  },
+  "entLicensedTitle": {
+    "message": "Subscription active"
+  },
+  "entLicensedBody": {
+    "message": "Thanks — every language is unlocked."
+  },
+  "entTrialTitle": {
+    "message": "$DAYS$ days left in your free trial",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "entTrialLastDay": {
+    "message": "Last day of your free trial"
+  },
+  "entTrialBody": {
+    "message": "Everything works. Subscribe any time to keep it after the trial."
+  },
+  "entExpiredTitle": {
+    "message": "Your free trial has ended"
+  },
+  "entExpiredBody": {
+    "message": "Detection is paused. Your learned words are safe — subscribe to switch it back on."
+  },
+  "entCta": {
+    "message": "Subscribe — $5/month or $40/year"
+  },
+  "keyPlaceholder": {
+    "message": "Already paid? Paste licence key"
+  },
+  "keyActivate": {
+    "message": "Activate"
+  },
+  "wnTitle": {
+    "message": "Kiko is becoming a paid product"
+  },
+  "wnSub": {
+    "message": "You've been using it since before that was true, so this is the fair version."
+  },
+  "wnBannerTitle": {
+    "message": "Your free period: 60 days"
+  },
+  "wnBannerSub": {
+    "message": "Nothing changes today. Nothing is charged. No card, no account."
+  },
+  "wnBody1": {
+    "message": "Kiko has been free the whole time you've had it. Keeping it going — six languages now, more coming — is real work, so from this version it costs money."
+  },
+  "wnBody2": {
+    "message": "You installed before there was a price, so you get 60 days rather than the 30 a new user gets. Everything keeps working exactly as it does now for that whole time."
+  },
+  "wnMonthly": {
+    "message": "Cancel any time"
+  },
+  "wnAnnual": {
+    "message": "Two months free"
+  },
+  "wnRemind": {
+    "message": "Not now — remind me later"
+  },
+  "wnFoot1": {
+    "message": "Your learned words stay on your machine either way, and nothing you type has ever left your device. If you decide not to subscribe, detection stops and nothing is deleted."
+  },
+  "wnFoot2": {
+    "message": "Questions, or the price doesn't work for you? Reply to"
+  },
+  "wnFoot3": {
+    "message": "we read everything."
+  },
+  "wnLicensedTitle": {
+    "message": "You already subscribe — thank you"
+  },
+  "wnLicensedSub": {
+    "message": "Nothing here applies to you. Every language stays unlocked."
+  },
+  "wnExpiredTitle": {
+    "message": "Your free period has ended"
+  },
+  "wnExpiredSub": {
+    "message": "Detection is paused. Your learned words are safe and nothing was deleted."
+  },
+  "wnDaysLeft": {
+    "message": "$DAYS$ days left of your free period",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "wnOneDayLeft": {
+    "message": "One day left of your free period"
+  },
+  "helpReport": {
+    "message": "Report a problem"
+  },
+  "helpSupport": {
+    "message": "Help and support"
+  },
+  "helpBilling": {
+    "message": "Manage or cancel subscription"
+  },
+  "helpPrivacy": {
+    "message": "Privacy"
+  },
+  "helpTerms": {
+    "message": "Terms"
+  },
+  "helpRefunds": {
+    "message": "Refunds"
   }
 }
