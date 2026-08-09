@@ -60,6 +60,9 @@ function loadContentScript() {
   return vm.runInContext(
     '(function () {\n' + src +
     '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
+    '         learnHebrew: ws => ws.forEach(w => learnedHebrew.add(w)),' +
+    '         rejectWords: ws => ws.forEach(w => learnedEnglish.add(w)),' +
+    '         forgetLearned: () => { learnedHebrew.clear(); learnedEnglish.clear(); },' +
     '         setFocus: (f, tag) => { document.hasFocus = () => f;' +
     '                                 document.activeElement = tag ? { tagName: tag } : null; },' +
     '         setLangs: o => { enabledLangs = o; },' +
@@ -203,6 +206,56 @@ console.log('Trial and licence entitlement');
   // An unversioned stamp must not silently hand out the longer trial.
   eq('stamp without version', computeEntitlement(day(45), null, now),
      { entitled: false, state: 'expired', daysLeft: 0 });
+}
+
+console.log('A rejected word bridges a run instead of splitting it');
+{
+  // Reported from the wild. "cut" had been rejected once; every later Hebrew
+  // sentence containing it got fixed in half, leaving the rest as gibberish.
+  const HE = ['tueh', 'brtv', 'nv', 'eurv', 'gfahu'];
+  const phrase = 'tueh cut brtv nv eurv gfahu';
+  const both   = 'אוקי בוא נראה מה קורה עכשיו';
+
+  const conv = (input, rejected, learn = HE) => {
+    kiko.forgetLearned();
+    kiko.setLangs({ ...ALL });
+    kiko.learnHebrew(learn);
+    if (rejected) kiko.rejectWords(rejected);
+    const r = kiko.analyzeText(input);
+    return r ? r.converted : null;
+  };
+  const eq = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${want}`);
+    console.log(`        actual   ${got}`);
+  };
+
+  eq('nothing rejected: whole sentence', conv(phrase, null), both);
+  eq('rejected word mid-run is bridged', conv(phrase, ['cut']), both);
+
+  // The rejection still has to mean something. It may only ever bridge:
+  // nothing Hebrew follows, so the gap is dropped and the word stays English.
+  eq('rejected word trailing a run stays out',
+     conv('brtv nv eurv cut', ['cut']), 'נראה מה קורה');
+  eq('rejected word leading a run stays out',
+     conv('cut brtv nv eurv', ['cut']), 'נראה מה קורה');
+  // The bridge inherits PASSTHROUGH's limit of two words, so a longer stretch
+  // of rejected words is still treated as a genuine break in the sentence.
+  eq('two rejected words in a row are bridged',
+     conv('brtv nv cut cut eurv gfahu', ['cut']), 'נראה מה בוא בוא קורה עכשיו');
+  eq('three in a row is a real break',
+     conv('brtv nv cut cut cut eurv gfahu', ['cut']), 'קורה עכשיו');
+  // And a rejected word on its own is still just an English word.
+  eq('rejected word alone never fires', conv('cut', ['cut']), null);
+
+  // The bridge must depend on the word having been rejected. Without that
+  // condition an ordinary English word would be swallowed into any Hebrew run
+  // it happened to sit inside, which is the false positive this whole file
+  // exists to prevent.
+  eq('an ordinary English word still breaks the run',
+     conv('brtv nv meeting eurv gfahu', null), 'קורה עכשיו');
 }
 
 console.log('Only the frame being typed in shows the toast');

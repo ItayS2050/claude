@@ -991,6 +991,34 @@ function findRunSpan(text, firstWord, lastWord) {
   return text.slice(fi, li + lastWord.length);
 }
 
+// Does this map cleanly onto Hebrew letters, ignoring every learned
+// preference? wordCouldBeHebrew and mapsToHebrew both refuse a rejected word
+// outright, which is right when deciding whether to flag it — and wrong when
+// the only question is whether it plausibly belongs to a Hebrew run that
+// already exists around it.
+function couldTypeAsHebrew(word) {
+  const lower = word.toLowerCase();
+  if (!lower) return false;
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  return mapped.every(c => c !== undefined && HEBREW_RE.test(c));
+}
+
+// One "Not right" on a short word used to split every later sentence
+// containing it. Typing a six-word Hebrew phrase with a rejected word in the
+// middle produced a fix for the longer half and left the rest as gibberish
+// beside it — worse than not firing at all, because the result is a sentence
+// half in each script.
+//
+// So a rejected word may bridge two parts of a run: the words either side are
+// strong evidence the user is typing Hebrew, and outweigh a rejection made in
+// some other sentence. It can only ever bridge — the gap is discarded unless
+// more Hebrew follows it, so a rejected word cannot start a run, cannot end
+// one, and cannot appear alone. Those are the cases the rejection was for,
+// and they still hold.
+function bridgesRejectedWord(word) {
+  return learnedEnglish.has(word.toLowerCase()) && couldTypeAsHebrew(word);
+}
+
 function extractWords(text) {
   return text.trim().split(/\s+/)
     .map(w => w.replace(/^[?!()\[\]{}]+|[?!()\[\]{}]+$/g, ''))
@@ -1474,7 +1502,8 @@ function analyzeText(rawText, scanAll = false) {
       curGap = [];
       if (curRun.length === 0) curStartIdx = wi;
       curRun.push(w);
-    } else if (PASSTHROUGH.has(w.toLowerCase()) && curGap.length < 2 && curRun.length > 0) {
+    } else if (curRun.length > 0 && curGap.length < 2 &&
+               (PASSTHROUGH.has(w.toLowerCase()) || bridgesRejectedWord(w))) {
       curGap.push(w);
     } else {
       if (curRun.length > 0) allRuns.push({ words: [...curRun], startIdx: curStartIdx });
