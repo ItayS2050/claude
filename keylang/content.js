@@ -2107,8 +2107,36 @@ function playDetectionSound() {
 
 // ── Toast ─────────────────────────────────────────────────────
 
+// manifest.json sets all_frames, so a page with iframes is running a separate
+// copy of this script in each one, and each keeps its own activeToast. Nothing
+// coordinates them, so the same correction can appear two or three times over
+// — once per frame that happens to see the text.
+//
+// Rather than build cross-frame messaging, decide locally who is entitled to
+// speak. Only the frame the user is actually typing in should, and every path
+// that reaches showToast — typing, the recall bubble, Alt+Shift+K, the context
+// menu — runs in exactly that frame.
+function ownsTheToast() {
+  try {
+    // An unfocused window must stay quiet. Two windows on the same site each
+    // run this script, and only one of them has the caret.
+    if (!document.hasFocus()) return false;
+    // hasFocus() is also true for an ancestor of the focused frame, so it
+    // cannot tell a parent from its child on its own. When focus is inside a
+    // child frame the parent's activeElement is the frame element itself —
+    // that is the parent recognising the child should handle this, not it.
+    const active = document.activeElement;
+    if (active && (active.tagName === 'IFRAME' || active.tagName === 'FRAME')) return false;
+    return true;
+  } catch {
+    return true;   // never let this check be the reason a fix is withheld
+  }
+}
+
+
 function showToast(element, detection, forceShow = false) {
   if (!detectionEnabled) return;
+  if (!ownsTheToast()) return;
 
   const sig = detection.words.join('|');
 

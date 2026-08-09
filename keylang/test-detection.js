@@ -40,6 +40,10 @@ function loadContentScript() {
     document: {
       addEventListener() {}, querySelectorAll: () => [], body: null, documentElement: {},
       createElement: () => ({ style: {}, addEventListener() {}, querySelector: () => ({ addEventListener() {} }) }),
+      // Which frame is in front, and where the caret is. ownsTheToast reads
+      // both to decide whether this copy of the script should speak.
+      hasFocus: () => true,
+      activeElement: null,
     },
     navigator: { userAgent: 'test' },
     MutationObserver: class { observe() {} disconnect() {} },
@@ -55,7 +59,9 @@ function loadContentScript() {
   // duplicate-injection guard, which is illegal at true top level.
   return vm.runInContext(
     '(function () {\n' + src +
-    '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones,' +
+    '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
+    '         setFocus: (f, tag) => { document.hasFocus = () => f;' +
+    '                                 document.activeElement = tag ? { tagName: tag } : null; },' +
     '         setLangs: o => { enabledLangs = o; },' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -197,6 +203,28 @@ console.log('Trial and licence entitlement');
   // An unversioned stamp must not silently hand out the longer trial.
   eq('stamp without version', computeEntitlement(day(45), null, now),
      { entitled: false, state: 'expired', daysLeft: 0 });
+}
+
+console.log('Only the frame being typed in shows the toast');
+{
+  // all_frames is on, so a page with iframes runs one copy of the script per
+  // frame, each with its own toast and no knowledge of the others. This is
+  // what stops the same correction appearing twice.
+  const cases = [
+    ['caret in this frame',        true,  null,       true ],
+    ['caret inside a child iframe', true, 'IFRAME',   false],
+    ['caret inside a child frame',  true, 'FRAME',    false],
+    ['window not focused',         false, null,       false],
+    ['caret in a textarea here',   true,  'TEXTAREA', true ],
+  ];
+  for (const [label, focused, tag, want] of cases) {
+    kiko.setFocus(focused, tag);
+    const got = kiko.ownsTheToast();
+    if (got === want) { pass++; continue; }
+    fail++;
+    console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
+  }
+  kiko.setFocus(true, null);
 }
 
 console.log('Trial notice milestones');
