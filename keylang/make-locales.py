@@ -8,8 +8,21 @@ a missing cell is visible here, where it is a blank in a column, rather than
 discovered by a user staring at an English button inside a Hebrew interface.
 
 Keys are referenced from popup.html, welcome.html, whats-new.html (via the
-data-i18n attribute) and content.js (via t()). test-i18n.js checks that every
-key used is defined and every key defined is used, in all four locales.
+data-i18n attribute) and content.js (via t()).
+
+UI_LOCALES decides which languages actually ship a translated interface.
+Everything not listed there ships only the two strings the Web Store reads —
+the name and the short description — so the listing is findable in that
+language while the extension itself stays in English.
+
+That works because Chrome falls back to default_locale for any message a
+locale does not define, and because every t() call in our code also carries
+its English as a fallback. Belt and braces: a Hebrew user with no Hebrew
+catalogue gets English, not blanks.
+
+The translations below are written and tested; they are simply not switched
+on. Adding "he" to UI_LOCALES and rebuilding is the whole of shipping the
+Hebrew interface, and removing it again is the whole of taking it back.
 """
 import io
 import json
@@ -17,6 +30,14 @@ import pathlib
 
 HERE = pathlib.Path(__file__).parent
 LOCALES = ("en", "he", "ru", "ko")
+
+# Languages whose interface we ship. Empty means listings only.
+# Do not add a language here until a native speaker has read the strings —
+# a wrong translation in a paid product costs more than an English one.
+UI_LOCALES = frozenset()
+
+# What every locale carries regardless: the two strings the Web Store reads.
+LISTING_KEYS = ("extName", "extDescription")
 
 # key: (en, he, ru, ko)
 M = {
@@ -325,8 +346,13 @@ def main():
     limits = {"extName": 75, "extDescription": 132}
     problems = []
     for i, code in enumerate(LOCALES):
+        # The default locale always carries everything: it is what every other
+        # locale falls back to.
+        full = (code == "en") or (code in UI_LOCALES)
         msgs = {}
         for key, texts in M.items():
+            if not full and key not in LISTING_KEYS:
+                continue
             text = texts[i]
             if not text:
                 problems.append(f"{code}: {key} is empty")
@@ -338,7 +364,8 @@ def main():
         d.mkdir(parents=True, exist_ok=True)
         (d / "messages.json").write_text(
             json.dumps(msgs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"  _locales/{code}/messages.json  {len(msgs)} strings")
+        kind = "full interface" if full else "listing only"
+        print(f"  _locales/{code}/messages.json  {len(msgs):>3} strings  ({kind})")
     if problems:
         raise SystemExit("problems:\n  " + "\n  ".join(problems))
 
