@@ -916,6 +916,69 @@ function wordCouldBeKorean(word) {
 // ── Helper functions ──────────────────────────────────────────
 function hasHebrew(t)          { return HEBREW_RE.test(t); }
 function hasArabic(t)          { return ARABIC_RE.test(t); }
+// Frequent Hebrew words. Hebrew was the first language Kiko supported and the
+// only one that never got a word list, which is why it was the only one that
+// could offer to convert a perfectly good sentence into gibberish: there was
+// no way to ask "is this already real Hebrew?", only "does the conversion look
+// vaguely English?" — and that question has a much worse answer rate.
+const COMMON_HE_WORDS = new Set([
+  // pronouns, particles, the connective tissue of any sentence
+  'של','את','עם','על','אל','לא','כן','זה','זו','זאת','אלה','הוא','היא','הם','הן',
+  'אני','אתה','את','אנחנו','אתם','אתן','שלי','שלך','שלו','שלה','שלנו','שלכם',
+  'יש','אין','כל','גם','אבל','או','כי','אם','אז','רק','עוד','כבר','לא','אף',
+  'מה','מי','איך','למה','איפה','מתי','כמה','איזה','כמו','ככה','לכן','אולי',
+  'בין','לפני','אחרי','מתחת','מעל','ליד','בתוך','מחוץ','אצל','בלי','ללא','לפי',
+  'כאן','שם','פה','הכל','כלום','משהו','מישהו','שום','דבר','עצמו',
+  // very common verbs
+  'יש','היה','הייתה','יהיה','להיות','צריך','צריכה','יכול','יכולה','רוצה','אפשר',
+  'אשמח','מקווה','חושב','חושבת','יודע','יודעת','מבין','מבינה','עושה','הולך',
+  'בא','בואי','בוא','נותן','לוקח','אומר','שואל','עונה','כותב','קורא','שומע',
+  'רואה','אוהב','מצרף','מצורף','שולח','מקבל','נראה','נשמע','סוגר','סגרה','פותח',
+  'להגיד','לעשות','לקבל','לשלוח','לבדוק','להוסיף','לצאת','להיכנס','לדבר',
+  // time
+  'שנה','יום','יומיים','שבוע','חודש','שעה','דקה','זמן','פעם','פעמיים','עכשיו',
+  'היום','מחר','אתמול','תמיד','לעולם','בבוקר','בערב','בלילה','אחר','הצהריים',
+  // frequent adjectives and quantifiers
+  'טוב','טובה','רע','גדול','גדולה','קטן','קטנה','חדש','חדשה','ישן','מלא','ריק',
+  'יותר','פחות','מאוד','קצת','הרבה','מעט','כמעט','בערך','בדיוק','ממש','לגמרי',
+  'נמוך','נמוכה','גבוה','גבוהה','זול','יקר','מהיר','איטי','קל','קשה','פשוט',
+  // courtesy and correspondence
+  'תודה','בבקשה','שלום','היי','אהלן','סליחה','בסדר','בטח','נכון','יופי','מצוין',
+  'ברכות','בהצלחה','נשמח','להתראות','ביי','מזל','טוב',
+  // words that turn up constantly in work email
+  'חברה','עבודה','לקוח','לקוחות','אנשים','איש','אישה','ילד','בית','משרד','צוות',
+  'כסף','מחיר','מחירים','עלות','תקציב','הצעה','הצעת','שאלה','תשובה','בעיה',
+  'פתרון','דוגמא','דוגמה','פרטים','מידע','קובץ','מסמך','פגישה','שיחה','מייל',
+  'כמובן','בהתאם','כמות','אפשרות','אפשרויות','משתנה','משתתפים','תלוי','כולל',
+  'לינה','נופש','אזור','פלוס','ברמת','רמה','סוג','חלק','שלב','תהליך','מערכת',
+]);
+
+// Hebrew glues its prepositions and articles onto the front of a word, so a
+// list of bare stems misses most real usage. Two letters covers the ordinary
+// combinations (וב, כש, מה…); beyond that the risk of a false stem grows.
+const HE_PREFIXES = ['ש','ה','ו','ב','כ','ל','מ','שה','שב','של','שכ','שא','וה','וב','ול','ומ','כש','לכ','מה','מב'];
+
+function isCommonHebrewWord(word) {
+  const w = word.replace(/[^\u0590-\u05FF]/g, '');
+  if (!w) return false;
+  if (COMMON_HE_WORDS.has(w)) return true;
+  for (const p of HE_PREFIXES) {
+    if (w.length > p.length + 1 && w.startsWith(p) && COMMON_HE_WORDS.has(w.slice(p.length))) return true;
+  }
+  return false;
+}
+
+// Is this run already good Hebrew? Two recognised words, or a third of them,
+// is enough — real wrong-layout text is the output of an English sentence
+// mapped through a Hebrew keyboard, and virtually never lands on several
+// genuine Hebrew words at once.
+function looksLikeRealHebrew(words) {
+  const he = words.filter(w => HEBREW_RE.test(w));
+  if (he.length < 2) return false;
+  const hits = he.filter(isCommonHebrewWord).length;
+  return hits >= 2 || hits / he.length >= 0.34;
+}
+
 function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
@@ -1126,6 +1189,19 @@ function analyzeText(rawText, scanAll = false) {
       if (converted.trim().length >= 3 && !hasHebrew(converted)) {
         // Suppress if user previously clicked "Not English" for these Hebrew words
         if (run1.some(w => HEBREW_RE.test(w) && learnedEnglish.has(w.toLowerCase()))) return null;
+
+        // The sentence is already Hebrew. Reported from the wild: a real email
+        // reading "כמובן שאפשר גם יותר נמוך ללא לינה - תלוי מה התקציב" was
+        // offered for conversion into "fnuci atpar do hu,r bnul kkt khbv",
+        // because the scoring below asks whether the output looks English and
+        // six of those words cleared it on vowel ratio alone. The one real
+        // English word it required was "do" — which is what גם converts to, so
+        // any Hebrew sentence containing גם was a candidate.
+        //
+        // Asking the opposite question is far more reliable, and it has to come
+        // first: offering to destroy someone's writing is the worst thing this
+        // extension can do.
+        if (looksLikeRealHebrew(run1)) return null;
 
         // Suppress if user already manually retyped the English right after the Hebrew mis-type
         const origIdx = text.indexOf(original);

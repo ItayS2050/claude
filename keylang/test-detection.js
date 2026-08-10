@@ -208,6 +208,31 @@ console.log('Trial and licence entitlement');
      { entitled: false, state: 'expired', daysLeft: 0 });
 }
 
+console.log('Real Hebrew is never offered for conversion into English');
+{
+  // Reported from the wild, mid-email to a customer. Kiko offered to turn
+  // "כמובן שאפשר גם יותר נמוך ללא לינה - תלוי מה התקציב" into
+  // "fnuci atpar do hu,r bnul kkt khbv" — six words cleared the English-
+  // likeness test on vowel ratio alone, and the single real English word it
+  // required was "do", which is what גם converts to.
+  //
+  // Offering to destroy what someone has written is the worst thing this
+  // extension can do, so these are the cases that matter most in this file.
+  [
+    'כמובן שאפשר גם יותר נמוך ללא לינה - תלוי מה התקציב',
+    'היי שרון, מצרף הצעה לדוגמא של חברה שסגרה אצלנו השבוע',
+    'ברמת המחירים כמובן שזה משתנה בהתאם לכמות משתתפים',
+    'נופש + לינה יכול לצאת לכם באזור ה1300-1500 פלוס מעמ',
+    'תודה רבה על ההצעה נבדוק ונחזור אליך',
+    'אני חושב שזה יכול להיות טוב גם בשבוע הבא',
+  ].forEach(s => check('real Hebrew: ' + s.slice(0, 30), s, null));
+
+  // And the case the feature exists for still has to work: English typed
+  // while the keyboard was left in Hebrew.
+  check('english on a hebrew keyboard', 'איק אקקאןמע ןד אםצםררםצ', 'hebrew_as_english');
+  check('english on a hebrew keyboard, 2', 'ישן טםו דקני אק כןךק', 'hebrew_as_english');
+}
+
 console.log('A rejected word bridges a run instead of splitting it');
 {
   // Reported from the wild. "cut" had been rejected once; every later Hebrew
