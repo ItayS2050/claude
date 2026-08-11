@@ -44,7 +44,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   // earlier crowd only, exactly once, keyed off the version in their stamp
   // rather than details.previousVersion — which says 4.5.0 for anyone who has
   // already taken that update and would miss them entirely.
-  if (details.reason === 'update') {
+  if (details.reason === 'update' && PAYWALL_ENABLED) {
     try {
       const { firstInstall, paywallNotice } =
         await chrome.storage.local.get(['firstInstall', 'paywallNotice']);
@@ -81,6 +81,20 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // a host permission would disable the extension for every current user until
 // they re-approved it.
 
+// Master switch for the paywall. False means everyone keeps working, the
+// trial never expires, and nobody is asked for money.
+//
+// Off right now because Lemon Squeezy declined the store, which leaves the
+// extension able to withhold a feature with no way for anyone to pay for it.
+// Detection stopping in October with a dead Subscribe button is the worst
+// outcome available, and far worse than earning nothing for a few weeks.
+//
+// There is no server, so entitlement can only be changed by shipping a build
+// through review. That is the whole reason this is a switch rather than
+// something to sort out later: turning the paywall back on will take days'
+// notice, and so does turning it off.
+const PAYWALL_ENABLED = false;
+
 const TRIAL_DAYS   = 30;           // what the site, the listing and the popup promise
 const LEGACY_DAYS  = 60;           // for people who were already here when Kiko was free
 const PAYWALL_VER  = '4.5.0';      // the first build that can withhold anything
@@ -90,6 +104,11 @@ const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 const LS_API       = 'https://api.lemonsqueezy.com/v1/licenses';
 
 function computeEntitlement(firstInstall, licence, now = Date.now()) {
+  // Paywall off: everyone is entitled, and the popup shows no countdown and
+  // no price. 'licensed' rather than a fake trial, because a trial implies a
+  // deadline we cannot currently honour either way.
+  if (!PAYWALL_ENABLED) return { entitled: true, state: 'licensed', daysLeft: null };
+
   // A licence that validated recently, or within the offline grace window,
   // entitles regardless of the trial. Fail toward letting people work.
   if (licence && licence.valid && now - (licence.checkedAt || 0) < RECHECK_MS + GRACE_MS) {

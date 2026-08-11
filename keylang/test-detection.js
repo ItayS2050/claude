@@ -70,19 +70,24 @@ function loadContentScript() {
     sandbox);
 }
 
-function loadComputeEntitlement() {
+function loadComputeEntitlement(paywallOn) {
   const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
   // Take the constants along with the functions. Restating them here once let
   // the copy drift from the real ones, which is the one thing these tests are
   // supposed to catch.
-  const block = src.slice(src.indexOf('const TRIAL_DAYS'),
-                          src.indexOf('async function refreshEntitlement'));
+  let block = src.slice(src.indexOf('const PAYWALL_ENABLED'),
+                        src.indexOf('async function refreshEntitlement'));
+  // The switch is off in the shipped file, so the trial rules below would
+  // never be reached. Both settings are exercised: the shipped one, and the
+  // one the rules exist for.
+  block = block.replace(/const PAYWALL_ENABLED = \w+;/, `const PAYWALL_ENABLED = ${paywallOn};`);
   const ctx = vm.createContext({});
   return vm.runInContext(block + ';computeEntitlement', ctx);
 }
 
 const kiko = loadContentScript();
-const computeEntitlement = loadComputeEntitlement();
+const computeEntitlement = loadComputeEntitlement(true);
+const entitlementPaywallOff = loadComputeEntitlement(false);
 const ALL = { he: true, ru: true, uk: true, ko: true, el: true, ar: true };
 const NONE = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
 
@@ -329,6 +334,26 @@ console.log('Only the frame being typed in shows the toast');
     console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
   }
   kiko.setFocus(true, null);
+}
+
+console.log('With the paywall switched off, nobody is ever gated');
+{
+  // Lemon Squeezy declined the store, so there is currently no way to pay.
+  // An extension that withholds a feature with a dead Subscribe button is
+  // worse than one that earns nothing, so PAYWALL_ENABLED is false and this
+  // is what every user gets regardless of when they installed.
+  const DAY = 86400000, now = Date.UTC(2026, 0, 31);
+  [
+    ['a brand new install',        { at: now, version: '4.6.5' }],
+    ['someone 400 days in',        { at: now - 400 * DAY, version: '4.6.5' }],
+    ['a pre-paywall install',      { at: now - 400 * DAY, version: '4.4.1' }],
+    ['no install stamp at all',    null],
+  ].forEach(([label, stamp]) => {
+    const got = entitlementPaywallOff(stamp, null, now);
+    if (got.entitled === true && got.state === 'licensed') { pass++; return; }
+    fail++;
+    console.log(`  FAIL  paywall off, ${label}: ${JSON.stringify(got)}`);
+  });
 }
 
 console.log('Trial notice milestones');
