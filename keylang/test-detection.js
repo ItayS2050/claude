@@ -227,10 +227,24 @@ console.log('Real Hebrew is never offered for conversion into English');
     'אני חושב שזה יכול להיות טוב גם בשבוע הבא',
   ].forEach(s => check('real Hebrew: ' + s.slice(0, 30), s, null));
 
+  // Hebrew built from vocabulary the word list does not contain. These are the
+  // ones a list alone would miss and a bigram score has to carry — before
+  // hebrewScore existed, "המחשב שלי נשרף אתמול" had nothing to protect it.
+  [
+    'המחשב שלי נשרף אתמול ואני צריך לקנות חדש',
+    'הטלפון של המסעדה לא עונה כבר שעתיים',
+    'שמתי את המפתחות על השולחן במטבח',
+    'החתונה תתקיים בגינה של ההורים שלה',
+    'הספרייה באוניברסיטה סגורה בימי שישי',
+  ].forEach(s => check('unlisted Hebrew: ' + s.slice(0, 26), s, null));
+
   // And the case the feature exists for still has to work: English typed
-  // while the keyboard was left in Hebrew.
+  // while the keyboard was left in Hebrew. These score well below the
+  // threshold, which is what keeps the two apart.
   check('english on a hebrew keyboard', 'איק אקקאןמע ןד אםצםררםצ', 'hebrew_as_english');
   check('english on a hebrew keyboard, 2', 'ישן טםו דקני אק כןךק', 'hebrew_as_english');
+  check('english on a hebrew keyboard, 3', 'פךקשדק גם\'מךםשג איק ךשאקדא הקרדןםמ', 'hebrew_as_english');
+  check('english on a hebrew keyboard, 4', 'בשמ טםו דקמג צק איק שאאשביקג כןךק', 'hebrew_as_english');
 }
 
 console.log('A rejected word bridges a run instead of splitting it');
