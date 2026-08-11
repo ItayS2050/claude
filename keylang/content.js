@@ -1001,7 +1001,12 @@ function convertToUkrainian(t)   { return [...t].map(c => EN_TO_UK[c] || c).join
 function convertFromUkrainian(t) { return [...t].map(c => UK_TO_EN[c] || c).join(''); }
 function convertToArabic(t)    { return [...t].map(c => EN_TO_AR[c]  || c).join(''); }
 function convertFromArabic(t)  { return [...t].map(c => AR_TO_EN[c] || c).join(''); }
-function truncatePreview(text, maxWords = 9) {
+// The preview is the only thing a person has to go on before they press Fix.
+// Nine words used to be the cap, which cut an ordinary sentence in half and
+// asked them to approve the part they could not see. The toast wraps, so a
+// longer preview costs height, not legibility. The cap stays only to stop a
+// pasted paragraph from filling the screen.
+function truncatePreview(text, maxWords = 30) {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
   return words.slice(0, maxWords).join(' ') + ' …';

@@ -60,6 +60,7 @@ function loadContentScript() {
   return vm.runInContext(
     '(function () {\n' + src +
     '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
+    '         truncatePreview,' +
     '         learnHebrew: ws => ws.forEach(w => learnedHebrew.add(w)),' +
     '         rejectWords: ws => ws.forEach(w => learnedEnglish.add(w)),' +
     '         forgetLearned: () => { learnedHebrew.clear(); learnedEnglish.clear(); },' +
@@ -445,6 +446,37 @@ check('expired: korean silent',  'dkssud gksrnr', null);
 check('expired: hebrew silent',  'akuo nvhs ekhu', null);
 kiko.setEntitled(true);
 check('restored after paying',   'ghbdtn rfr',    'english_as_russian');
+
+console.log('The toast preview shows the whole sentence');
+{
+  const trunc = kiko.truncatePreview;
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${JSON.stringify(want)}`);
+    console.log(`        actual   ${JSON.stringify(got)}`);
+  };
+
+  // The sentence that started this: 11 words, cut after 9 by the old cap.
+  const real = 'how are you not able to read i dont get it';
+  is('ordinary sentence survives intact', trunc(real), real);
+
+  is('short text untouched',   trunc('shalom'), 'shalom');
+  is('exactly at the cap',     trunc(Array(30).fill('w').join(' ')),
+                               Array(30).fill('w').join(' '));
+  is('one over the cap trims', trunc(Array(31).fill('w').join(' ')),
+                               Array(30).fill('w').join(' ') + ' …');
+
+  // A pasted paragraph must still be bounded — that is the cap's only job now.
+  const long = trunc(Array(400).fill('word').join(' '));
+  is('a paragraph is still capped', long.split(/\s+/).length, 31);
+  is('capped text is marked as cut', long.endsWith('…'), true);
+
+  // Hebrew counts words the same way; nothing here is Latin-specific.
+  const he = 'שלום מה שלומך אני לא מצליח לקרוא את זה בכלל';
+  is('hebrew sentence survives intact', trunc(he), he);
+}
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
