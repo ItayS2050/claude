@@ -609,6 +609,16 @@ const EN_WORDS = new Set([
   'letter','bitter','butter','matter','button','bottom'
 ]);
 
+// The two English lists had drifted: eighteen words sat in COMMON_EN_WORDS and
+// not here, among them "go" and "do". Both map onto real Hebrew words — עם and
+// גם — so both passed wordCouldBeHebrew, and two adjacent words is the whole
+// minimum run. Typing "go do that" in plain English got an offer to convert it.
+//
+// Enforcing the containment rather than adding the three words keeps the lists
+// from parting again. Anything common enough to be scored as a common English
+// word must never be a candidate for wrong-layout text.
+for (const w of COMMON_EN_WORDS) EN_WORDS.add(w);
+
 // Short common words that act as bridges in a Hebrew-like run without counting toward threshold
 const PASSTHROUGH = new Set([
   'up','no','ok','hi','so','or','an','be','in','at','by','as','if',

@@ -139,6 +139,18 @@ console.log('Natural English stays silent');
   'what time does the meeting start tomorrow',
 ].forEach(s => check('english: ' + s.slice(0, 34), s, null));
 
+console.log('The two English word lists stay in step');
+{
+  // Reported from the wild: typing "go do that" in plain English got an offer
+  // to convert it to Hebrew. "go" and "do" were listed as common English words
+  // for scoring but missing from the list that decides what could be Hebrew,
+  // and both map onto real Hebrew words — עם and גם. Two adjacent words is the
+  // entire minimum run.
+  ['go do that', 'go do', 'lets go do that now', 'do go and check now',
+   'i need to go do this', 'bye bye everyone', 'why do you need these',
+  ].forEach(s => check('plain English: ' + s, s, null));
+}
+
 console.log('Disabled languages never run');
 check('ru off',  'ghbdtn rfr',    null, { langs: { ...NONE, ko: true } });
 check('uk off',  'ghbdsn ghbdsn', 'english_as_russian', { langs: { ...NONE, ru: true } });
