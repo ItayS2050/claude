@@ -70,6 +70,13 @@ function loadContentScript() {
     sandbox);
 }
 
+function loadLicenceProvider() {
+  const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  const block = src.slice(src.indexOf('const LICENCE_PROVIDER'),
+                          src.indexOf('function computeEntitlement'));
+  return vm.runInContext(block + ';LICENCE_PROVIDER', vm.createContext({}));
+}
+
 function loadComputeEntitlement(paywallOn) {
   const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
   // Take the constants along with the functions. Restating them here once let
@@ -334,6 +341,49 @@ console.log('Only the frame being typed in shows the toast');
     console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
   }
   kiko.setFocus(true, null);
+}
+
+console.log('The licence provider block is complete and reads its own shape');
+{
+  // Everything provider-specific lives in one object so that switching seller
+  // is a data change. This checks the object still has every part the rest of
+  // background.js calls, which is the thing that breaks when someone swaps a
+  // provider in a hurry.
+  const P = loadLicenceProvider();
+  const need = ['name', 'activateUrl', 'validateUrl', 'activateBody', 'validateBody',
+                'didActivate', 'isValid', 'instanceIdOf', 'statusOf', 'errorOf'];
+  need.forEach(k => {
+    if (P[k] !== undefined) { pass++; return; }
+    fail++; console.log(`  FAIL  LICENCE_PROVIDER is missing ${k}`);
+  });
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
+  };
+  // Both endpoints must be reachable without a secret. A provider needing an
+  // API key cannot be called from an extension, and adopting one means running
+  // a server — which is the decision this block exists to keep visible.
+  is('activate is https', P.activateUrl.startsWith('https://'), true);
+  is('validate is https', P.validateUrl.startsWith('https://'), true);
+  is('activate body carries the key', P.activateBody('K').license_key, 'K');
+  is('validate body carries the key', P.validateBody('K').license_key, 'K');
+  is('validate body omits a missing instance',
+     'instance_id' in P.validateBody('K'), false);
+  is('validate body includes a known instance',
+     P.validateBody('K', 'i1').instance_id, 'i1');
+
+  // The readers must be strict about success and forgiving about everything
+  // else: an unexpected response should never read as "activated" or "valid",
+  // and should never throw either.
+  is('activated only on a true flag', P.didActivate({ activated: true }), true);
+  is('missing flag is not activation', P.didActivate({}), false);
+  is('a string is not activation',     P.didActivate({ activated: 'yes' }), false);
+  is('valid only on a true flag',      P.isValid({ valid: true }), true);
+  is('missing flag is not valid',      P.isValid({}), false);
+  is('status falls back rather than throwing', P.statusOf({}), 'unknown');
+  is('instance id absent is undefined', P.instanceIdOf({}), undefined);
+  is('no error reads as null',          P.errorOf({}), null);
 }
 
 console.log('With the paywall switched off, nobody is ever gated');

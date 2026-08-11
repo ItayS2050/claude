@@ -101,7 +101,48 @@ const PAYWALL_VER  = '4.5.0';      // the first build that can withhold anything
 const DAY_MS       = 86400000;
 const RECHECK_MS   = DAY_MS;       // don't hit the API more than once a day
 const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
-const LS_API       = 'https://api.lemonsqueezy.com/v1/licenses';
+// ── Licence provider ──────────────────────────────────────────
+// Everything specific to whoever sells Kiko lives in this one object, because
+// it has already had to change once and will likely change again.
+//
+// The requirement that rules most providers out: activation and validation
+// have to be callable straight from the extension, with no secret key. A
+// secret in a content script is not a secret, and needing a server to hold
+// one would mean running a backend purely to check licences — the thing this
+// design exists to avoid. Lemon Squeezy, Polar, Creem and Gumroad all publish
+// client-callable licence endpoints; Paddle does not issue licence keys at
+// all, and adopting it means building that server.
+//
+// To move provider: change the four fields below and, if their JSON differs,
+// the two readers underneath. Nothing else in the extension knows who takes
+// the money.
+const LICENCE_PROVIDER = {
+  name:        'Lemon Squeezy',
+  activateUrl: 'https://api.lemonsqueezy.com/v1/licenses/activate',
+  validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
+
+  // Form fields the provider expects. Named here rather than inline so a
+  // provider using different parameter names is a data change, not a code one.
+  activateBody: (key) => ({ license_key: key, instance_name: 'kiko-browser' }),
+  validateBody: (key, instanceId) =>
+    instanceId ? { license_key: key, instance_id: instanceId } : { license_key: key },
+
+  // Readers for the provider's response shape.
+  //
+  // Each returns a plain answer to a plain question, so a provider that says
+  // { success: true } instead of { activated: true } is a one-line edit here
+  // and nothing else. Written defensively: a provider that changes its shape
+  // without warning must not be able to revoke a paying user's licence by
+  // returning something unexpected.
+  didActivate:  (d) => d.activated === true,
+  isValid:      (d) => d.valid === true,
+  instanceIdOf: (d) => d.instance && d.instance.id,
+  statusOf:     (d) => (d.license_key && d.license_key.status) || 'unknown',
+  // Providers put the useful message — "activation limit reached" and the like
+  // — in different places. Whatever comes back gets shown to the user, because
+  // it is usually the only thing that tells them what to do next.
+  errorOf:      (d) => d.error || null,
+};
 
 function computeEntitlement(firstInstall, licence, now = Date.now()) {
   // Paywall off: everyone is entitled, and the popup shows no countdown and
@@ -150,18 +191,17 @@ async function refreshEntitlement({ force = false } = {}) {
   // carry a paying user through an outage.
   if (licence && licence.key && (force || Date.now() - (licence.checkedAt || 0) > RECHECK_MS)) {
     try {
-      const body = new URLSearchParams({ license_key: licence.key });
-      if (licence.instanceId) body.set('instance_id', licence.instanceId);
-      const res  = await fetch(`${LS_API}/validate`, {
+      const res  = await fetch(LICENCE_PROVIDER.validateUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-        body,
+        body: new URLSearchParams(
+          LICENCE_PROVIDER.validateBody(licence.key, licence.instanceId)),
       });
       const data = await res.json();
       licence = {
         ...licence,
-        valid: data.valid === true,
-        status: (data.license_key && data.license_key.status) || 'unknown',
+        valid: LICENCE_PROVIDER.isValid(data),
+        status: LICENCE_PROVIDER.statusOf(data),
         checkedAt: Date.now(),
       };
       await chrome.storage.local.set({ licence });
@@ -203,23 +243,23 @@ async function activateLicence(key) {
   const clean = String(key || '').trim();
   if (!clean) return { ok: false, error: 'Enter a licence key.' };
   try {
-    const res = await fetch(`${LS_API}/activate`, {
+    const res = await fetch(LICENCE_PROVIDER.activateUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: new URLSearchParams({ license_key: clean, instance_name: 'kiko-browser' }),
+      body: new URLSearchParams(LICENCE_PROVIDER.activateBody(clean)),
     });
     const data = await res.json();
-    if (!data.activated) {
-      // Lemon Squeezy returns the seat-limit message here when a team licence
-      // is already fully used, which is exactly what the user needs to read.
-      return { ok: false, error: (data.error || 'That key could not be activated.') };
+    if (!LICENCE_PROVIDER.didActivate(data)) {
+      // The provider's own message carries the reason — a seat limit already
+      // used, a key that was refunded — and that is what the user needs.
+      return { ok: false, error: LICENCE_PROVIDER.errorOf(data) || 'That key could not be activated.' };
     }
     await chrome.storage.local.set({
       licence: {
         key: clean,
-        instanceId: data.instance && data.instance.id,
+        instanceId: LICENCE_PROVIDER.instanceIdOf(data),
         valid: true,
-        status: (data.license_key && data.license_key.status) || 'active',
+        status: LICENCE_PROVIDER.statusOf(data),
         checkedAt: Date.now(),
       },
     });
