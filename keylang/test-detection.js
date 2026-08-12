@@ -451,6 +451,37 @@ console.log('Licence failures say something the user can act on');
   is('401 is not treated as a bad key',   E[401], undefined);
 }
 
+console.log('Only a real answer can revoke a licence');
+{
+  const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  // Load the real function rather than restating the rule here — a test that
+  // reimplements what it is checking passes no matter what the code does.
+  const block = src.slice(src.indexOf('const LICENCE_REVOKED_CODES'),
+                          src.indexOf('function computeEntitlement'));
+  const mayRevoke = vm.runInContext(block + ';mayRevokeLicence',
+                                    vm.createContext({ Set }));
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
+  };
+
+  is('a 200 is authoritative',        mayRevoke(200), true);
+  is('403 revokes (limit reached)',   mayRevoke(403), true);
+  is('404 revokes (unknown key)',     mayRevoke(404), true);
+  is('410 revokes (expired)',         mayRevoke(410), true);
+
+  // Every one of these is our fault, not the customer's. This is the specific
+  // path that would have expired paying users: the Worker 400s on a blank
+  // instance_id, which happens whenever activation returned a shape we could
+  // not read.
+  is('400 does not revoke — our bad request',  mayRevoke(400), false);
+  is('401 does not revoke — our API key',      mayRevoke(401), false);
+  is('500 does not revoke — our Worker',       mayRevoke(500), false);
+  is('502 does not revoke — Creem unreachable',mayRevoke(502), false);
+  is('429 does not revoke — rate limited',     mayRevoke(429), false);
+}
+
 console.log('With the paywall switched off, nobody is ever gated');
 {
   // Lemon Squeezy declined the store, so there is currently no way to pay.

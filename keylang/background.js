@@ -75,11 +75,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // plain object. content.js and the popup only ever read it — they never
 // recompute, so there is no second copy of this logic to drift.
 //
-// Lemon Squeezy's licence endpoints are designed to be called from a client
-// and need no API key, so there is no server of ours in the loop. The host is
-// already covered by the existing <all_urls> permission, which matters: adding
-// a host permission would disable the extension for every current user until
-// they re-approved it.
+// Licence checks go through our own Worker, which holds the provider's API
+// key — see the LICENCE_PROVIDER block below for why. Its host is already
+// covered by the existing <all_urls> permission, which matters: adding a host
+// permission would disable the extension for every current user until they
+// re-approved it.
 
 // Master switch for the paywall. False means everyone keeps working, the
 // trial never expires, and nobody is asked for money.
@@ -124,8 +124,8 @@ const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 // extension knows who takes the money.
 const LICENCE_PROVIDER = {
   name:        'Creem',
-  activateUrl: 'https://kiko-licence.selltechio.workers.dev/activate',
-  validateUrl: 'https://kiko-licence.selltechio.workers.dev/validate',
+  activateUrl: 'https://kiko-licence.itay-c84.workers.dev/activate',
+  validateUrl: 'https://kiko-licence.itay-c84.workers.dev/validate',
 
   // Creem wants JSON, Lemon Squeezy wanted form encoding. Kept as provider
   // data rather than hardcoded at the fetch sites, since it is exactly the
@@ -164,6 +164,24 @@ const LICENCE_PROVIDER = {
 // Creem's error codes, turned into something a person can act on. Without
 // this, someone who has used all their activations is told "that key could
 // not be activated", which is true and useless.
+// Which validation responses are allowed to take a licence away.
+//
+// A 2xx speaks for itself, and 403/404/410 mean the key is genuinely gone —
+// seat limit, unknown key, expired or cancelled. Everything else is our fault:
+// a malformed request, our Worker misconfigured, Creem unreachable. Billing
+// someone while locking them out over our own bug is the worst thing this file
+// can do, so anything inconclusive leaves the previous result standing.
+//
+// This is not hypothetical. The Worker rejects a blank instance_id with a 400,
+// and instanceId is blank whenever activation returned a shape we failed to
+// read. Without this, that bug would quietly expire every paying user a day
+// after they subscribed.
+const LICENCE_REVOKED_CODES = new Set([403, 404, 410]);
+
+function mayRevokeLicence(status) {
+  return (status >= 200 && status < 300) || LICENCE_REVOKED_CODES.has(status);
+}
+
 const LICENCE_HTTP_ERRORS = {
   403: 'This key is already in use on the maximum number of browsers. Remove one from your account, or contact support.',
   404: 'We do not recognise that licence key. Check it for typos.',
@@ -224,10 +242,13 @@ async function refreshEntitlement({ force = false } = {}) {
           LICENCE_PROVIDER.validateBody(licence.key, licence.instanceId)),
       });
       const data = await res.json();
-      // A 5xx is our proxy or the provider being broken, and must not cost a
-      // paying user their access. Leave the previous result alone and let the
-      // grace window carry them, exactly as a network failure would.
-      if (res.status >= 500) throw new Error('licence server error');
+      // Only an answer that actually says something about this licence may
+      // take it away — see mayRevokeLicence. Anything inconclusive is treated
+      // exactly like being offline: keep the last known result and let the
+      // grace window carry them.
+      if (!mayRevokeLicence(res.status)) {
+        throw new Error(`licence check inconclusive (${res.status})`);
+      }
       licence = {
         ...licence,
         valid: LICENCE_PROVIDER.isValid(data),
