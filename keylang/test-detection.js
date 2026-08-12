@@ -352,6 +352,7 @@ console.log('The licence provider block is complete and reads its own shape');
   // provider in a hurry.
   const P = loadLicenceProvider();
   const need = ['name', 'activateUrl', 'validateUrl', 'activateBody', 'validateBody',
+                'contentType', 'encode',
                 'didActivate', 'isValid', 'instanceIdOf', 'statusOf', 'errorOf'];
   need.forEach(k => {
     if (P[k] !== undefined) { pass++; return; }
@@ -362,29 +363,92 @@ console.log('The licence provider block is complete and reads its own shape');
     if (got === want) { pass++; return; }
     fail++; console.log(`  FAIL  ${label}: expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
   };
-  // Both endpoints must be reachable without a secret. A provider needing an
-  // API key cannot be called from an extension, and adopting one means running
-  // a server — which is the decision this block exists to keep visible.
   is('activate is https', P.activateUrl.startsWith('https://'), true);
   is('validate is https', P.validateUrl.startsWith('https://'), true);
-  is('activate body carries the key', P.activateBody('K').license_key, 'K');
-  is('validate body carries the key', P.validateBody('K').license_key, 'K');
-  is('validate body omits a missing instance',
-     'instance_id' in P.validateBody('K'), false);
-  is('validate body includes a known instance',
-     P.validateBody('K', 'i1').instance_id, 'i1');
+
+  // Nothing secret may ship inside the extension, so the URLs it calls must be
+  // our own proxy, never the provider's API directly. Creem's endpoints need
+  // an x-api-key; pointing at them from here would either publish the key or
+  // 401 every paying customer.
+  const OURS = /(^|\.)(workers\.dev|get-kiko\.com)$/;
+  ['activateUrl', 'validateUrl'].forEach(k => {
+    const host = new URL(P[k]).hostname;
+    if (OURS.test(host)) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${k} must call our own proxy, not ${host}`);
+  });
+
+  is('activate body carries the key', P.activateBody('K').key, 'K');
+  is('validate body carries the key', P.validateBody('K').key, 'K');
+  is('activate names the instance',   P.activateBody('K').instance_name, 'kiko-browser');
+  is('validate passes a known instance', P.validateBody('K', 'i1').instance_id, 'i1');
+
+  // The Worker rejects anything that is not a non-empty string, so a first
+  // validation before activation must still send a field rather than undefined.
+  is('validate sends a string when there is no instance yet',
+     typeof P.validateBody('K').instance_id, 'string');
+
+  // Bodies must survive encoding as the provider expects to receive them.
+  is('encodes as JSON', P.encode({ a: 1 }), '{"a":1}');
+  is('content type matches the encoding', P.contentType, 'application/json');
 
   // The readers must be strict about success and forgiving about everything
   // else: an unexpected response should never read as "activated" or "valid",
-  // and should never throw either.
-  is('activated only on a true flag', P.didActivate({ activated: true }), true);
-  is('missing flag is not activation', P.didActivate({}), false);
-  is('a string is not activation',     P.didActivate({ activated: 'yes' }), false);
-  is('valid only on a true flag',      P.isValid({ valid: true }), true);
-  is('missing flag is not valid',      P.isValid({}), false);
+  // and should never throw either. Creem carries both answers in `status`.
+  is('active means activated',         P.didActivate({ status: 'active' }), true);
+  is('missing status is not activation', P.didActivate({}), false);
+  is('inactive is not activation',     P.didActivate({ status: 'inactive' }), false);
+  is('active means valid',             P.isValid({ status: 'active' }), true);
+  is('expired is not valid',           P.isValid({ status: 'expired' }), false);
+  is('disabled is not valid',          P.isValid({ status: 'disabled' }), false);
+  is('missing status is not valid',    P.isValid({}), false);
   is('status falls back rather than throwing', P.statusOf({}), 'unknown');
+  is('status is read through',         P.statusOf({ status: 'expired' }), 'expired');
+
+  // Creem returns `instance` as an array and appends on each activation, so
+  // the one that matters is the last. An object still works, because that is
+  // what the previous provider sent and the reader must not throw on it.
   is('instance id absent is undefined', P.instanceIdOf({}), undefined);
-  is('no error reads as null',          P.errorOf({}), null);
+  is('instance id from an empty array', P.instanceIdOf({ instance: [] }), undefined);
+  is('instance id from a single entry',
+     P.instanceIdOf({ instance: [{ id: 'i1' }] }), 'i1');
+  is('instance id is the newest activation',
+     P.instanceIdOf({ instance: [{ id: 'i1' }, { id: 'i2' }] }), 'i2');
+  is('instance id from an object still works',
+     P.instanceIdOf({ instance: { id: 'i9' } }), 'i9');
+
+  is('no error reads as null',   P.errorOf({}), null);
+  is('an error field is read',   P.errorOf({ error: 'nope' }), 'nope');
+  is('a message field is read',  P.errorOf({ message: 'nope' }), 'nope');
+}
+
+console.log('Licence failures say something the user can act on');
+{
+  const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  const block = src.slice(src.indexOf('const LICENCE_HTTP_ERRORS'),
+                          src.indexOf('function computeEntitlement'));
+  const E = vm.runInContext(block + ';LICENCE_HTTP_ERRORS', vm.createContext({}));
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
+  };
+
+  // The three Creem statuses with a cause the user can do something about.
+  // "That key could not be activated" is true for all of them and helps with
+  // none, which is why these exist.
+  [403, 404, 410].forEach(code => {
+    const msg = E[code];
+    if (typeof msg === 'string' && msg.length > 20) { pass++; return; }
+    fail++; console.log(`  FAIL  no usable message for HTTP ${code}`);
+  });
+  is('403 talks about the browser limit', /browser/i.test(E[403]), true);
+  is('404 suggests a typo',               /typo/i.test(E[404]), true);
+  is('410 says expired or cancelled',     /expired|cancel/i.test(E[410]), true);
+  // 500 is our own proxy failing. Blaming the user's key for our outage is the
+  // specific mistake this guards against.
+  is('500 is not treated as a bad key',   E[500], undefined);
+  is('401 is not treated as a bad key',   E[401], undefined);
 }
 
 console.log('With the paywall switched off, nobody is ever gated');

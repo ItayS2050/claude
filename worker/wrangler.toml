@@ -1,0 +1,12 @@
+name = "kiko-licence"
+main = "kiko-licence.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# "test" talks to test-api.creem.io and takes no real money.
+# Change to "live" only after the live API key has been set as a secret.
+CREEM_MODE = "test"
+
+# CREEM_API_KEY is a secret, not a var. Never put it in this file — it is
+# committed to git. Set it with:
+#   npx wrangler secret put CREEM_API_KEY

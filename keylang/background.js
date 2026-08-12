@@ -105,43 +105,69 @@ const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 // Everything specific to whoever sells Kiko lives in this one object, because
 // it has already had to change once and will likely change again.
 //
-// The requirement that rules most providers out: activation and validation
-// have to be callable straight from the extension, with no secret key. A
-// secret in a content script is not a secret, and needing a server to hold
-// one would mean running a backend purely to check licences — the thing this
-// design exists to avoid. Lemon Squeezy, Polar, Creem and Gumroad all publish
-// client-callable licence endpoints; Paddle does not issue licence keys at
-// all, and adopting it means building that server.
+// The requirement that shapes all of this: nothing secret can ship inside the
+// extension. Anything installed on someone's computer can be read off it, so
+// an API key in here is a published API key.
 //
-// To move provider: change the four fields below and, if their JSON differs,
-// the two readers underneath. Nothing else in the extension knows who takes
-// the money.
+// Lemon Squeezy's licence endpoints needed no key, so Kiko called them
+// directly. Creem's need one — their own docs say not to put it in client-side
+// code — so Kiko now calls a Cloudflare Worker (worker/kiko-licence.js) that
+// holds the key and forwards the request. The Worker makes no decisions; it
+// only adds the header. Every judgement about who is entitled to what stays
+// here, where the tests are.
+//
+// The upside of having been forced into a proxy: the next provider change is
+// a Worker redeploy, not another extension release waiting on store review.
+//
+// To move provider: change the URLs and bodies below, the readers underneath
+// if their JSON differs, and CREEM_BASE in the Worker. Nothing else in the
+// extension knows who takes the money.
 const LICENCE_PROVIDER = {
-  name:        'Lemon Squeezy',
-  activateUrl: 'https://api.lemonsqueezy.com/v1/licenses/activate',
-  validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
+  name:        'Creem',
+  activateUrl: 'https://kiko-licence.selltechio.workers.dev/activate',
+  validateUrl: 'https://kiko-licence.selltechio.workers.dev/validate',
 
-  // Form fields the provider expects. Named here rather than inline so a
-  // provider using different parameter names is a data change, not a code one.
-  activateBody: (key) => ({ license_key: key, instance_name: 'kiko-browser' }),
-  validateBody: (key, instanceId) =>
-    instanceId ? { license_key: key, instance_id: instanceId } : { license_key: key },
+  // Creem wants JSON, Lemon Squeezy wanted form encoding. Kept as provider
+  // data rather than hardcoded at the fetch sites, since it is exactly the
+  // kind of thing that differs between providers.
+  contentType: 'application/json',
+  encode:      (obj) => JSON.stringify(obj),
+
+  // Field names the provider expects. Creem calls the key `key`; Lemon
+  // Squeezy called it `license_key`.
+  activateBody: (key) => ({ key, instance_name: 'kiko-browser' }),
+  validateBody: (key, instanceId) => ({ key, instance_id: instanceId || '' }),
 
   // Readers for the provider's response shape.
   //
-  // Each returns a plain answer to a plain question, so a provider that says
-  // { success: true } instead of { activated: true } is a one-line edit here
-  // and nothing else. Written defensively: a provider that changes its shape
-  // without warning must not be able to revoke a paying user's licence by
-  // returning something unexpected.
-  didActivate:  (d) => d.activated === true,
-  isValid:      (d) => d.valid === true,
-  instanceIdOf: (d) => d.instance && d.instance.id,
-  statusOf:     (d) => (d.license_key && d.license_key.status) || 'unknown',
+  // Each returns a plain answer to a plain question. Written defensively: a
+  // provider that changes its shape without warning must not be able to
+  // revoke a paying user's licence by returning something unexpected.
+  //
+  // Creem answers both activate and validate with the same licence object and
+  // no boolean — `status` carries everything. It can be 'active', 'inactive',
+  // 'expired' or 'disabled'; only the first entitles.
+  didActivate:  (d) => d.status === 'active',
+  isValid:      (d) => d.status === 'active',
+  // `instance` is an array here, not an object as it was at Lemon Squeezy.
+  // Activation appends, so the one just created is the last.
+  instanceIdOf: (d) => Array.isArray(d.instance)
+    ? (d.instance[d.instance.length - 1] || {}).id
+    : (d.instance && d.instance.id),
+  statusOf:     (d) => d.status || 'unknown',
   // Providers put the useful message — "activation limit reached" and the like
   // — in different places. Whatever comes back gets shown to the user, because
   // it is usually the only thing that tells them what to do next.
-  errorOf:      (d) => d.error || null,
+  errorOf:      (d) => d.error || d.message || null,
+};
+
+// Creem's error codes, turned into something a person can act on. Without
+// this, someone who has used all their activations is told "that key could
+// not be activated", which is true and useless.
+const LICENCE_HTTP_ERRORS = {
+  403: 'This key is already in use on the maximum number of browsers. Remove one from your account, or contact support.',
+  404: 'We do not recognise that licence key. Check it for typos.',
+  410: 'This licence has expired or been cancelled.',
 };
 
 function computeEntitlement(firstInstall, licence, now = Date.now()) {
@@ -193,11 +219,15 @@ async function refreshEntitlement({ force = false } = {}) {
     try {
       const res  = await fetch(LICENCE_PROVIDER.validateUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-        body: new URLSearchParams(
+        headers: { 'Content-Type': LICENCE_PROVIDER.contentType, Accept: 'application/json' },
+        body: LICENCE_PROVIDER.encode(
           LICENCE_PROVIDER.validateBody(licence.key, licence.instanceId)),
       });
       const data = await res.json();
+      // A 5xx is our proxy or the provider being broken, and must not cost a
+      // paying user their access. Leave the previous result alone and let the
+      // grace window carry them, exactly as a network failure would.
+      if (res.status >= 500) throw new Error('licence server error');
       licence = {
         ...licence,
         valid: LICENCE_PROVIDER.isValid(data),
@@ -245,10 +275,15 @@ async function activateLicence(key) {
   try {
     const res = await fetch(LICENCE_PROVIDER.activateUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: new URLSearchParams(LICENCE_PROVIDER.activateBody(clean)),
+      headers: { 'Content-Type': LICENCE_PROVIDER.contentType, Accept: 'application/json' },
+      body: LICENCE_PROVIDER.encode(LICENCE_PROVIDER.activateBody(clean)),
     });
     const data = await res.json();
+    // Creem says why in the status code, not the body. Prefer our wording for
+    // the three that have a clear cause and a clear next step.
+    if (LICENCE_HTTP_ERRORS[res.status]) {
+      return { ok: false, error: LICENCE_HTTP_ERRORS[res.status] };
+    }
     if (!LICENCE_PROVIDER.didActivate(data)) {
       // The provider's own message carries the reason — a seat limit already
       // used, a key that was refunded — and that is what the user needs.
