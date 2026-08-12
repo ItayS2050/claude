@@ -427,6 +427,14 @@ console.log('The licence provider block is complete and reads its own shape');
   // `instance` as an array and it arrives as a single object. Keeping the real
   // payload here means the next docs-versus-reality gap fails a test instead of
   // a customer.
+  //
+  // Validate returns this byte for byte, so one fixture covers both endpoints.
+  //
+  // Cancelling the subscription did not change it: the licence stayed 'active'
+  // with the period paid up to 26 Aug, which is what terms.html and refund.html
+  // promise. Whether it flips after that date is still unverified — re-run
+  // validate on this key after 26 Aug 2026. If it never flips, cancellation
+  // does not revoke and the product needs an expiry after all.
   const REAL = {
     object: 'license',
     id: 'lk_6QcSTA8cxL53FqHTD0QbMV',
