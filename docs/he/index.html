@@ -183,8 +183,11 @@
     .privacy p{color:#b9b6cc;max-width:620px;margin:16px auto 0;font-size:17px}
 
     /* ---- pricing ---- */
+    /* One plan now that Team is gone. The grid stays because it costs nothing
+       and a second plan may come back; the narrower cap stops a lone card from
+       stretching to 820px and reading as a banner rather than a price. */
     .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;
-      max-width:820px;margin:0 auto;align-items:start}
+      max-width:460px;margin:0 auto;align-items:start}
     .plan{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:34px 30px;
       box-shadow:var(--shadow);position:relative}
     .plan.hero-plan{border:2px solid var(--brand);box-shadow:var(--shadow-lg)}
@@ -428,19 +431,6 @@
           <a href="#" data-checkout style="color:var(--brand);font-weight:600">כבר משתמש ב-Kiko? למנוי →</a></div>
       </div>
 
-      <div class="plan">
-        <div class="plan-name">צוות</div>
-        <div class="plan-price">$36<span> למשתמש לשנה</span></div>
-        <div class="plan-sub">מינימום 5 משתמשים, חיוב שנתי. חשבונית אחת, בלי כרטיס אשראי לכל אחד.</div>
-        <ul>
-          <li>כל מה שיש במסלול יחיד, לכל משתמש</li>
-          <li>חיוב אחד בשנה, על שם החברה</li>
-          <li>עדיין אפס מידע יוצא מהמחשבים שלכם</li>
-          <li>ליווי בהקמת הצוות</li>
-        </ul>
-        <a class="btn btn-ghost" href="mailto:hello@get-kiko.com?subject=Kiko%20for%20teams">דברו איתנו</a>
-        <div class="plan-note">תשובה תוך יום עסקים אחד.</div>
-      </div>
     </div>
   </div>
 </section>

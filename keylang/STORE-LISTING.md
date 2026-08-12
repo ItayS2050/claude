@@ -300,8 +300,11 @@ Both are filled in:
 - `CHECKOUT_URL` = the Lemon Squeezy $5/month link — in `docs/index.html` and
   `keylang/popup.js`
 
-Team is still a mailto, deliberately: Lemon Squeezy's activation limit is fixed
-per variant, so seats are set when a deal closes.
+There is no Team plan. Lemon Squeezy declined the application while the site
+offered one, because "Talk to us" is a consultation/custom-invoicing flow and
+they only support pre-made automated digital products. It was removed from
+index.html, terms.html, the three translated sites and make-i18n.py on 12 Aug
+2026, and they confirmed approval on that basis.
 
 ## Submit — this is an UPDATE, not a new item
 Kiko is already published and has users. Do not create a new item: a new item
@@ -387,10 +390,14 @@ package rather than being retyped in the form.
 
 # PAYMENTS (built in 4.5.0, awaiting submission)
 
-Lemon Squeezy, chosen because its licence keys are a built-in feature: the
-per-key **activation limit is the seat count**, so the 5-seat team plan needs no
-code of ours. Their licence endpoints take no API key and are meant to be called
-from a client, so there is no server in the loop.
+Lemon Squeezy, chosen because its licence keys are a built-in feature and its
+licence endpoints take no API key — they are meant to be called from a client,
+so no server of ours is in the loop.
+
+Creem was set up as a fallback while Lemon Squeezy had the application on hold,
+and required a Cloudflare Worker (`worker/kiko-licence.js`) because its licence
+endpoints need a secret. That Worker is deployed and proven end to end; it stays
+as the escape hatch if this provider falls through again.
 
 ## Interface languages (4.6.0)
 The listing and the website were translated before the extension itself was,
@@ -428,8 +435,6 @@ real: checkout → licence key → **Activate** in the popup → subscription ac
      subscribing on day 5 would get free days on top. Charge at checkout.
    - **Licence keys** enabled, activation limit **1**
    - The checkout preselects whichever variant is **first** in the variant list.
-2. Product **Kiko Team** — $36/seat/year
-   - Enable **licence keys**, activation limit = seats sold (minimum 5)
 
 ## Two constants, same value
 Both hold the **product** link, which opens with both variants:
@@ -454,9 +459,8 @@ Product description, when they ask when you charge:
 > Kiko is a browser extension that detects when someone has typed with the wrong
 > keyboard layout active — Hebrew, Russian, Ukrainian, Korean, Greek or Arabic
 > typed while the keyboard was in English, or the reverse — and corrects the text
-> in one click. We sell it as a $5/month or $40/year subscription, plus a
-> $36/seat/year team plan, through our website get-kiko.com and the Chrome Web
-> Store; customers use it free for 30 days without entering any payment details,
+> in one click. We sell it as a $5/month or $40/year subscription
+> through our website get-kiko.com and the Chrome Web Store; customers use it free for 30 days without entering any payment details,
 > and are charged immediately at checkout when they choose to subscribe.
 
 ## What the extension does
