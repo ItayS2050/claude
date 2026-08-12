@@ -420,6 +420,53 @@ console.log('The licence provider block is complete and reads its own shape');
   is('no error reads as null',   P.errorOf({}), null);
   is('an error field is read',   P.errorOf({ error: 'nope' }), 'nope');
   is('a message field is read',  P.errorOf({ message: 'nope' }), 'nope');
+
+  // A real activation, captured from Creem on 12 Aug 2026 against a test-mode
+  // purchase. Everything above was written from their documentation; this is
+  // the only sample of what they actually send, and it differs — the docs show
+  // `instance` as an array and it arrives as a single object. Keeping the real
+  // payload here means the next docs-versus-reality gap fails a test instead of
+  // a customer.
+  const REAL = {
+    object: 'license',
+    id: 'lk_6QcSTA8cxL53FqHTD0QbMV',
+    product_id: 'prod_6X90O0ijcb6lHAWfktGKBs',
+    status: 'active',
+    key: 'ZV0Y5-UNKRM-GNM6D-NFT9O-DP31V',
+    activation: 1,
+    activation_limit: 5,
+    expires_at: null,
+    created_at: '2026-08-12T10:27:01.225Z',
+    instance: {
+      object: 'license-instance',
+      id: 'lki_18CrSXfPGyKFxCOfVZgfTo',
+      name: 'kiko-browser',
+      status: 'active',
+      created_at: '2026-08-12T10:30:00.197Z',
+      mode: 'test',
+    },
+    mode: 'test',
+  };
+
+  is('a real activation reads as activated', P.didActivate(REAL), true);
+  is('a real activation reads as valid',     P.isValid(REAL), true);
+  is('a real activation yields its status',  P.statusOf(REAL), 'active');
+  is('a real activation yields no error',    P.errorOf(REAL), null);
+  // The one that would have broken everything quietly: a missing instance id
+  // makes every later validation malformed, and the Worker 400s on it.
+  is('a real activation yields an instance id',
+     P.instanceIdOf(REAL), 'lki_18CrSXfPGyKFxCOfVZgfTo');
+  // The body we would send on the next daily check must be complete.
+  is('the follow-up validation carries the instance',
+     P.validateBody(REAL.key, P.instanceIdOf(REAL)).instance_id,
+     'lki_18CrSXfPGyKFxCOfVZgfTo');
+
+  // Expiration is switched off on the product, so the key does not carry a
+  // deadline of its own — access ends when the subscription does. If this ever
+  // comes back non-null, someone has turned expiry on and paying customers
+  // will be cut off on that date.
+  is('the key has no expiry of its own', REAL.expires_at, null);
+  is('five activations, as configured',  REAL.activation_limit, 5);
 }
 
 console.log('Licence failures say something the user can act on');

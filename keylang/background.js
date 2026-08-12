@@ -149,8 +149,12 @@ const LICENCE_PROVIDER = {
   // 'expired' or 'disabled'; only the first entitles.
   didActivate:  (d) => d.status === 'active',
   isValid:      (d) => d.status === 'active',
-  // `instance` is an array here, not an object as it was at Lemon Squeezy.
-  // Activation appends, so the one just created is the last.
+  // Creem's docs show `instance` as an array; a real activation returns it as
+  // a single object. Both are handled because the docs cannot be trusted here
+  // and the cost of guessing wrong is that instanceId comes back undefined,
+  // every later validation is malformed, and the customer is expired while
+  // still paying. If it ever is an array, activation appends, so the one just
+  // created is the last.
   instanceIdOf: (d) => Array.isArray(d.instance)
     ? (d.instance[d.instance.length - 1] || {}).id
     : (d.instance && d.instance.id),
