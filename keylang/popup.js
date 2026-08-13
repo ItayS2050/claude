@@ -41,7 +41,13 @@ function render(data) {
     document.getElementById('site-row').style.display = 'none';
   }
 
-  renderEntitlement(data.entitlement);
+  // Only paint a cached entitlement this build actually produced. One written
+  // by an earlier version may be answering a different question — everyone
+  // updating from 4.7.x carries state:'licensed' from the months the paywall
+  // was off — and showing it would tell a trial user they had subscribed.
+  // Unstamped or foreign, we wait the few milliseconds for the background's
+  // real answer rather than say something false in the meantime.
+  renderEntitlement(freshEnough(data.entitlement) ? data.entitlement : null);
 
   renderWordList('hebrew-words',  hebrewWords,  'hebrew',  (word) => removeWord(word, 'hebrew'));
   renderWordList('english-words', englishWords, 'english', (word) => removeWord(word, 'english'));
@@ -101,6 +107,14 @@ function t(key, subs, fallback) {
 }
 
 // ── Trial / licence banner ────────────────────────────────────
+// background.js stamps every entitlement it writes with the version that
+// worked it out. Anything older is a leftover answer to an older question.
+function freshEnough(ent) {
+  try {
+    return !!ent && ent.v === chrome.runtime.getManifest().version;
+  } catch { return false; }
+}
+
 function renderEntitlement(ent) {
   const box = document.getElementById('ent-box');
   if (!ent) { box.style.display = 'none'; return; }

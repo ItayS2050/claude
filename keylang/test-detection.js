@@ -702,6 +702,48 @@ console.log('The same mistake typed twice fires twice');
      dup(sigOf(det('nvhs', 'akuo')), akuo, TOAST), false);
 }
 
+console.log('A stale entitlement from an older build is never shown');
+{
+  // Every 4.7.x user carries entitlement {state:'licensed'} in storage, written
+  // during the months the paywall was off, where it meant only "nobody is being
+  // charged". Painted unchecked after the update it says "Subscription active"
+  // to someone on a trial, hiding both the countdown and the price.
+  //
+  // The popup paints the cached copy first so it does not flash empty, so the
+  // cached copy has to be checked. background.js stamps each one with the
+  // version that computed it.
+  const src = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+  const block = src.slice(src.indexOf('function freshEnough'),
+                          src.indexOf('function renderEntitlement'));
+  const HERE = '4.8.1';
+  const fresh = vm.runInContext(block + ';freshEnough',
+    vm.createContext({ chrome: { runtime: { getManifest: () => ({ version: HERE }) } } }));
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
+  };
+
+  is('this build\'s own answer is used',
+     fresh({ state: 'trial', v: HERE }), true);
+  // The exact shape a 4.7.x user brings into the update: no stamp at all.
+  is('an unstamped answer is discarded',
+     fresh({ entitled: true, state: 'licensed', daysLeft: null }), false);
+  is('an older build\'s answer is discarded',
+     fresh({ state: 'licensed', v: '4.7.0' }), false);
+  is('a newer build\'s answer is discarded too',
+     fresh({ state: 'licensed', v: '4.9.0' }), false);
+  is('nothing stored is not fresh', fresh(null), false);
+  is('undefined is not fresh',      fresh(undefined), false);
+
+  // background.js must actually apply the stamp, or the popup discards every
+  // answer forever and the banner never appears at all.
+  const bg = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  const stamps = /v: chrome\.runtime\.getManifest\(\)\.version/.test(bg);
+  if (stamps) pass++;
+  else { fail++; console.log('  FAIL  background.js writes entitlement without a version stamp'); }
+}
+
 console.log('The toast preview shows the whole sentence');
 {
   const trunc = kiko.truncatePreview;

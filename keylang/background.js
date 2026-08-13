@@ -313,7 +313,17 @@ async function refreshEntitlement({ force = false } = {}) {
     }
   }
 
-  const entitlement = computeEntitlement(firstInstall, licence, Date.now(), paywallStart);
+  // Stamp which build worked this out. The popup reads the stored copy so it
+  // can paint instantly, and a stored answer from a different build may be
+  // answering a different question: every 4.7.x user has state:'licensed' in
+  // storage right now, written while the paywall was off and meaning only
+  // "nobody is being charged". Rendered unchecked after the update, it tells
+  // someone they have a subscription they never bought and hides the trial and
+  // the price from them entirely.
+  const entitlement = {
+    ...computeEntitlement(firstInstall, licence, Date.now(), paywallStart),
+    v: chrome.runtime.getManifest().version,
+  };
   try { await chrome.storage.local.set({ entitlement }); } catch {}
   updateBadge(entitlement);
   return entitlement;
