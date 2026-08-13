@@ -181,7 +181,11 @@ check('korean -> english', 'ㅔㅣㄷㅁㄴㄷ ㄴ둥 솓 ㄱ데ㅐㄱㅅ', 'kor
 console.log('Trial and licence entitlement');
 {
   const DAY = 86400000, now = Date.UTC(2026, 0, 31);
-  const day = n => ({ at: now - n * DAY });
+  // Two stamps now matter, not one: when they installed, and when they first
+  // ran a build that can charge. For someone who installs a paywalled build
+  // they are the same moment, which is what `both` models.
+  const day   = n => ({ at: now - n * DAY });
+  const both  = n => [day(n), day(n)];
   const eq = (label, got, want) => {
     const ok = got.entitled === want.entitled && got.state === want.state &&
       (want.daysLeft === undefined || got.daysLeft === want.daysLeft);
@@ -191,46 +195,86 @@ console.log('Trial and licence entitlement');
     console.log(`        expected ${JSON.stringify(want)}`);
     console.log(`        actual   ${JSON.stringify(got)}`);
   };
+  const ent = (install, licence, paywallStart) =>
+    computeEntitlement(install, licence, now, paywallStart);
 
-  eq('fresh install',      computeEntitlement(day(0),  null, now), { entitled: true,  state: 'trial', daysLeft: 30 });
-  eq('day 29 of trial',    computeEntitlement(day(29), null, now), { entitled: true,  state: 'trial', daysLeft: 1 });
-  eq('day 30 — expired',   computeEntitlement(day(30), null, now), { entitled: false, state: 'expired', daysLeft: 0 });
-  eq('long past',          computeEntitlement(day(400),null, now), { entitled: false, state: 'expired', daysLeft: 0 });
+  eq('fresh install',    ent(...both(0),  null), { entitled: true,  state: 'trial', daysLeft: 30 });
+  eq('day 29 of trial',  ent(day(29), null, day(29)), { entitled: true,  state: 'trial', daysLeft: 1 });
+  eq('day 30 — expired', ent(day(30), null, day(30)), { entitled: false, state: 'expired', daysLeft: 0 });
+  eq('long past',        ent(day(400),null, day(400)),{ entitled: false, state: 'expired', daysLeft: 0 });
   // No stamp at all must not lock someone out — treat it as starting today.
-  eq('no firstInstall',    computeEntitlement(null,    null, now), { entitled: true,  state: 'trial' });
+  eq('no firstInstall',  ent(null, null, null), { entitled: true, state: 'trial' });
 
   const fresh = { valid: true, checkedAt: now - DAY / 2 };
-  eq('licensed, trial over', computeEntitlement(day(400), fresh, now), { entitled: true, state: 'licensed' });
+  eq('licensed, trial over', ent(day(400), fresh, day(400)), { entitled: true, state: 'licensed' });
   // Offline for six days on a valid licence: still working, by design.
-  eq('licensed, offline 6d', computeEntitlement(day(400), { valid: true, checkedAt: now - 6 * DAY }, now),
+  eq('licensed, offline 6d', ent(day(400), { valid: true, checkedAt: now - 6 * DAY }, day(400)),
      { entitled: true, state: 'licensed' });
   // Past the grace window it falls back to the trial, which has expired.
-  eq('licensed, offline 30d', computeEntitlement(day(400), { valid: true, checkedAt: now - 30 * DAY }, now),
+  eq('licensed, offline 30d', ent(day(400), { valid: true, checkedAt: now - 30 * DAY }, day(400)),
      { entitled: false, state: 'expired' });
-  eq('licence revoked',    computeEntitlement(day(400), { valid: false, checkedAt: now }, now),
+  eq('licence revoked', ent(day(400), { valid: false, checkedAt: now }, day(400)),
      { entitled: false, state: 'expired' });
 
-  // Users stamped on a pre-paywall build get 60 days, not 30 — their clock had
-  // already been running since 4.4.0 shipped, before anyone mentioned a price.
+  // ── What each group was promised ────────────────────────────
+  // Three different figures have been advertised. Everyone gets the one that
+  // was on the site the day they installed, not the one that is there now.
   const on = (n, version) => ({ at: now - n * DAY, version });
-  eq('4.4.0 user, day 20',  computeEntitlement(on(20, '4.4.0'), null, now),
+
+  // Free through 4.4.x: 60 days, because they never agreed to any trial.
+  eq('4.4.0 user, day 20', ent(on(20, '4.4.0'), null, day(20)),
      { entitled: true,  state: 'trial', daysLeft: 40 });
-  eq('4.4.1 user, day 45',  computeEntitlement(on(45, '4.4.1'), null, now),
-     { entitled: true,  state: 'trial', daysLeft: 15 });
-  eq('4.4.1 user, day 60',  computeEntitlement(on(60, '4.4.1'), null, now),
+  eq('4.4.1 user, day 60', ent(on(60, '4.4.1'), null, day(60)),
      { entitled: false, state: 'expired', daysLeft: 0 });
-  eq('4.1.7 user, day 45',  computeEntitlement(on(45, '4.1.7'), null, now),
+  eq('4.1.7 user, day 45', ent(on(45, '4.1.7'), null, day(45)),
      { entitled: true,  state: 'trial', daysLeft: 15 });
-  // Anyone who arrives on the paywall build itself gets the advertised 30.
-  eq('4.5.0 install, day 20', computeEntitlement(on(20, '4.5.0'), null, now),
+
+  // Everyone from the paywall build onwards was shown 30 days.
+  eq('4.5.0 install, day 20', ent(on(20, '4.5.0'), null, day(20)),
      { entitled: true,  state: 'trial', daysLeft: 10 });
-  eq('4.5.0 install, day 45', computeEntitlement(on(45, '4.5.0'), null, now),
+  eq('4.5.0 install, day 45', ent(on(45, '4.5.0'), null, day(45)),
      { entitled: false, state: 'expired', daysLeft: 0 });
-  eq('4.6.0 install, day 45', computeEntitlement(on(45, '4.6.0'), null, now),
+  eq('4.6.0 install, day 29', ent(on(29, '4.6.0'), null, day(29)),
+     { entitled: true,  state: 'trial', daysLeft: 1 });
+  eq('4.7.0 install, day 20', ent(on(20, '4.7.0'), null, day(20)),
+     { entitled: true,  state: 'trial', daysLeft: 10 });
+  eq('5.0.0 install, day 20', ent(on(20, '5.0.0'), null, day(20)),
+     { entitled: true,  state: 'trial', daysLeft: 10 });
+
+  // An unversioned stamp gets the current promise, not the generous one.
+  eq('stamp without version', ent(day(45), null, day(45)),
      { entitled: false, state: 'expired', daysLeft: 0 });
-  // An unversioned stamp must not silently hand out the longer trial.
-  eq('stamp without version', computeEntitlement(day(45), null, now),
+
+  // ── The clock starts when the paywall does ──────────────────
+  // This is the one that decides whether switching payments on is a launch or
+  // an outage. Every existing user installed months ago; if the trial counted
+  // from installation they would all expire the same afternoon, mid-sentence,
+  // having been told nothing.
+  eq('installed 200 days ago, paywall on today',
+     ent(on(200, '4.7.0'), null, day(0)),
+     { entitled: true, state: 'trial', daysLeft: 30 });
+  eq('installed 200 days ago, paywall on 10 days ago',
+     ent(on(200, '4.7.0'), null, day(10)),
+     { entitled: true, state: 'trial', daysLeft: 20 });
+  eq('installed 200 days ago, paywall on 40 days ago',
+     ent(on(200, '4.7.0'), null, day(40)),
      { entitled: false, state: 'expired', daysLeft: 0 });
+  // A pre-paywall user gets 60 days from the day they are told, not from 4.4.
+  eq('4.4.0 user, paywall on today',
+     ent(on(300, '4.4.0'), null, day(0)),
+     { entitled: true, state: 'trial', daysLeft: 60 });
+
+  // The stamp can only ever delay the start, never bring it forward — a bad
+  // clock or a restored backup must not shorten anyone's trial.
+  eq('paywall stamp older than the install',
+     ent(day(5), null, day(90)),
+     { entitled: true, state: 'trial', daysLeft: 25 });
+
+  // If the stamp is missing while the paywall is on — a failed write, or the
+  // very first call before it is saved — nobody may be expired by its absence.
+  eq('no paywall stamp yet, old install',
+     ent(on(400, '4.7.0'), null, null),
+     { entitled: true, state: 'trial', daysLeft: 30 });
 }
 
 console.log('Real Hebrew is never offered for conversion into English');

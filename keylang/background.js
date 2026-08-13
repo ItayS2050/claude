@@ -48,7 +48,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     try {
       const { firstInstall, paywallNotice } =
         await chrome.storage.local.get(['firstInstall', 'paywallNotice']);
-      if (!paywallNotice && isLegacyUser(firstInstall)) {
+      if (!paywallNotice && trialLengthFor(firstInstall) !== TRIAL_DAYS) {
         await chrome.storage.local.set({ paywallNotice: { shownAt: Date.now() } });
         chrome.tabs.create({ url: chrome.runtime.getURL('whats-new.html') });
       }
@@ -192,7 +192,7 @@ const LICENCE_HTTP_ERRORS = {
   410: 'This licence has expired or been cancelled.',
 };
 
-function computeEntitlement(firstInstall, licence, now = Date.now()) {
+function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStart = null) {
   // Paywall off: everyone is entitled, and the popup shows no countdown and
   // no price. 'licensed' rather than a fake trial, because a trial implies a
   // deadline we cannot currently honour either way.
@@ -203,8 +203,8 @@ function computeEntitlement(firstInstall, licence, now = Date.now()) {
   if (licence && licence.valid && now - (licence.checkedAt || 0) < RECHECK_MS + GRACE_MS) {
     return { entitled: true, state: 'licensed', daysLeft: null };
   }
-  const start    = (firstInstall && firstInstall.at) || now;
-  const total    = isLegacyUser(firstInstall) ? LEGACY_DAYS : TRIAL_DAYS;
+  const start    = trialStartedAt(firstInstall, paywallStart, now);
+  const total    = trialLengthFor(firstInstall);
   const daysLeft = total - Math.floor((now - start) / DAY_MS);
   return {
     entitled: daysLeft > 0,
@@ -213,26 +213,69 @@ function computeEntitlement(firstInstall, licence, now = Date.now()) {
   };
 }
 
-// Kiko was free through 4.4.x, and the install stamp predates the paywall, so
-// for those users the clock had already been running for weeks before anyone
-// told them there was one. Give them double the runway rather than expiring
-// people who never agreed to a trial. New installs get the advertised 30 days.
-function isLegacyUser(firstInstall) {
+// When the clock starts.
+//
+// It used to start at install, which is fine for someone who installs a build
+// that already charges — but ruinous for everyone else. Kiko has run free for
+// months; on the day the paywall is switched on, every existing user's install
+// date is already far past any trial length, so all of them would be expired at
+// once, mid-sentence, with no warning. That is the single worst thing this file
+// could do, and nothing in the UI would have hinted it was coming.
+//
+// So the clock starts at whichever came later: the install, or the first time
+// this user ran a build that can charge. A new user's two stamps are minutes
+// apart and the behaviour is unchanged; an existing user gets their full trial
+// beginning the day they are first told there is one.
+function trialStartedAt(firstInstall, paywallStart, now = Date.now()) {
+  const installed = (firstInstall && firstInstall.at) || now;
+  const told      = (paywallStart && paywallStart.at)  || now;
+  return Math.max(installed, told);
+}
+
+// How long that clock runs, by what the user was promised when they arrived.
+//
+// Kiko was free through 4.4.x, so those people never agreed to any trial at
+// all: they get 60 days. Everyone from 4.5.0 on was shown 30 on the site, the
+// listing and the popup, and gets 30.
+//
+// If the advertised figure is ever changed, add a gate here rather than
+// editing TRIAL_DAYS. Shortening a trial under people already inside it takes
+// back a published promise they have no way of knowing was withdrawn.
+function trialLengthFor(firstInstall) {
   const stamped = firstInstall && firstInstall.version;
-  if (!stamped) return false;   // no stamp: treat as new, which is the safe promise
+  if (!stamped) return TRIAL_DAYS;   // no stamp: treat as new, the current promise
+  if (versionBelow(stamped, PAYWALL_VER)) return LEGACY_DAYS;
+  return TRIAL_DAYS;
+}
+
+function versionBelow(stamped, gate) {
   const got  = String(stamped).split('.').map(n => parseInt(n, 10) || 0);
-  const gate = PAYWALL_VER.split('.').map(Number);
-  for (let i = 0; i < gate.length; i++) {
-    if ((got[i] || 0) !== gate[i]) return (got[i] || 0) < gate[i];
+  const want = gate.split('.').map(Number);
+  for (let i = 0; i < want.length; i++) {
+    if ((got[i] || 0) !== want[i]) return (got[i] || 0) < want[i];
   }
-  return false;                 // exactly the paywall version: a new user
+  return false;                      // exactly the gate version is not below it
 }
 
 async function refreshEntitlement({ force = false } = {}) {
-  let firstInstall, licence;
+  let firstInstall, licence, paywallStart;
   try {
-    ({ firstInstall, licence } = await chrome.storage.local.get(['firstInstall', 'licence']));
+    ({ firstInstall, licence, paywallStart } =
+      await chrome.storage.local.get(['firstInstall', 'licence', 'paywallStart']));
   } catch { return null; }
+
+  // The day this user first ran a build that can charge. Written here rather
+  // than in onInstalled because the service worker wakes far more often than
+  // the extension updates, so it is recorded even for someone who never
+  // restarts Chrome around an update. Written once and never moved.
+  //
+  // Only while the paywall is on: stamping it during a free build would start
+  // everyone's clock invisibly, months before they are told anything, which is
+  // exactly the failure this exists to prevent.
+  if (PAYWALL_ENABLED && !paywallStart) {
+    paywallStart = { at: Date.now(), version: chrome.runtime.getManifest().version };
+    try { await chrome.storage.local.set({ paywallStart }); } catch {}
+  }
 
   // Re-validate a stored key at most daily. A network failure leaves the
   // previous result untouched so the grace window in computeEntitlement can
@@ -265,7 +308,7 @@ async function refreshEntitlement({ force = false } = {}) {
     }
   }
 
-  const entitlement = computeEntitlement(firstInstall, licence);
+  const entitlement = computeEntitlement(firstInstall, licence, Date.now(), paywallStart);
   try { await chrome.storage.local.set({ entitlement }); } catch {}
   updateBadge(entitlement);
   return entitlement;
