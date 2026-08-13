@@ -2534,7 +2534,7 @@ function showReviewToast() {
 // only the expiry notice remains, which is the one that has to exist — silence
 // reads as broken software, and people uninstall broken software.
 const TRIAL_NAG_DAYS  = [7, 1];
-const KIKO_CHECKOUT   = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
+const KIKO_CHECKOUT   = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
 
 // Smallest milestone reached but not yet used. Someone who closes the laptop on
 // day 9 and opens it on day 1 should get "last day", not a stale warning about

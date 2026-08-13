@@ -10,7 +10,7 @@ function t(key, subs, fallback) {
   return fallback !== undefined ? fallback : '';
 }
 
-const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/fffb373a-427e-4832-970c-b9ec2119b6c5';
+const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
 
 document.getElementById('sub-btn').href = CHECKOUT_URL;
 document.getElementById('later-btn').addEventListener('click', () => window.close());

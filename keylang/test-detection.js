@@ -75,7 +75,9 @@ function loadLicenceProvider() {
   const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
   const block = src.slice(src.indexOf('const LICENCE_PROVIDER'),
                           src.indexOf('function computeEntitlement'));
-  return vm.runInContext(block + ';LICENCE_PROVIDER', vm.createContext({}));
+  // URLSearchParams is a browser global the provider block uses to form-encode.
+  return vm.runInContext(block + ';LICENCE_PROVIDER',
+                         vm.createContext({ URLSearchParams }));
 }
 
 function loadComputeEntitlement(paywallOn) {
@@ -414,44 +416,47 @@ console.log('The licence provider block is complete and reads its own shape');
   // our own proxy, never the provider's API directly. Creem's endpoints need
   // an x-api-key; pointing at them from here would either publish the key or
   // 401 every paying customer.
-  const OURS = /(^|\.)(workers\.dev|get-kiko\.com)$/;
+  // Nothing secret may ship inside the extension, so the only hosts it may
+  // call are ones that need no key: our own Worker, or a provider whose
+  // licence endpoints are documented as client-callable. Lemon Squeezy's are.
+  // Creem's are not — pointing straight at them would either publish the API
+  // key or 401 every paying customer, which is why the Worker exists.
+  const NO_SECRET_NEEDED = /(^|\.)(workers\.dev|get-kiko\.com|lemonsqueezy\.com)$/;
   ['activateUrl', 'validateUrl'].forEach(k => {
     const host = new URL(P[k]).hostname;
-    if (OURS.test(host)) { pass++; return; }
+    if (NO_SECRET_NEEDED.test(host)) { pass++; return; }
     fail++;
-    console.log(`  FAIL  ${k} must call our own proxy, not ${host}`);
+    console.log(`  FAIL  ${k} calls ${host}, which needs a secret the extension cannot hold`);
   });
 
-  is('activate body carries the key', P.activateBody('K').key, 'K');
-  is('validate body carries the key', P.validateBody('K').key, 'K');
+  is('activate body carries the key', P.activateBody('K').license_key, 'K');
+  is('validate body carries the key', P.validateBody('K').license_key, 'K');
   is('activate names the instance',   P.activateBody('K').instance_name, 'kiko-browser');
   is('validate passes a known instance', P.validateBody('K', 'i1').instance_id, 'i1');
-
-  // The Worker rejects anything that is not a non-empty string, so a first
-  // validation before activation must still send a field rather than undefined.
-  is('validate sends a string when there is no instance yet',
-     typeof P.validateBody('K').instance_id, 'string');
+  // Before activation there is no instance, and Lemon Squeezy wants the field
+  // absent rather than blank.
+  is('validate omits a missing instance', 'instance_id' in P.validateBody('K'), false);
 
   // Bodies must survive encoding as the provider expects to receive them.
-  is('encodes as JSON', P.encode({ a: 1 }), '{"a":1}');
-  is('content type matches the encoding', P.contentType, 'application/json');
+  is('encodes as form data', P.encode({ a: 1, b: 'x y' }), 'a=1&b=x+y');
+  is('content type matches the encoding', P.contentType, 'application/x-www-form-urlencoded');
 
   // The readers must be strict about success and forgiving about everything
   // else: an unexpected response should never read as "activated" or "valid",
-  // and should never throw either. Creem carries both answers in `status`.
-  is('active means activated',         P.didActivate({ status: 'active' }), true);
-  is('missing status is not activation', P.didActivate({}), false);
-  is('inactive is not activation',     P.didActivate({ status: 'inactive' }), false);
-  is('active means valid',             P.isValid({ status: 'active' }), true);
-  is('expired is not valid',           P.isValid({ status: 'expired' }), false);
-  is('disabled is not valid',          P.isValid({ status: 'disabled' }), false);
-  is('missing status is not valid',    P.isValid({}), false);
+  // and should never throw either.
+  is('activated only on a true flag',  P.didActivate({ activated: true }), true);
+  is('missing flag is not activation', P.didActivate({}), false);
+  is('a string is not activation',     P.didActivate({ activated: 'yes' }), false);
+  is('valid only on a true flag',      P.isValid({ valid: true }), true);
+  is('missing flag is not valid',      P.isValid({}), false);
+  is('a string is not valid',          P.isValid({ valid: 'yes' }), false);
+  is('an explicit false is not valid', P.isValid({ valid: false }), false);
   is('status falls back rather than throwing', P.statusOf({}), 'unknown');
-  is('status is read through',         P.statusOf({ status: 'expired' }), 'expired');
+  is('status is read through',
+     P.statusOf({ license_key: { status: 'expired' } }), 'expired');
 
-  // Creem returns `instance` as an array and appends on each activation, so
-  // the one that matters is the last. An object still works, because that is
-  // what the previous provider sent and the reader must not throw on it.
+  // Lemon Squeezy returns `instance` as an object. The array form is still
+  // handled because Creem sent one and the Worker fallback may come back.
   is('instance id absent is undefined', P.instanceIdOf({}), undefined);
   is('instance id from an empty array', P.instanceIdOf({ instance: [] }), undefined);
   is('instance id from a single entry',
@@ -466,20 +471,16 @@ console.log('The licence provider block is complete and reads its own shape');
   is('a message field is read',  P.errorOf({ message: 'nope' }), 'nope');
 
   // A real activation, captured from Creem on 12 Aug 2026 against a test-mode
-  // purchase. Everything above was written from their documentation; this is
-  // the only sample of what they actually send, and it differs — the docs show
-  // `instance` as an array and it arrives as a single object. Keeping the real
-  // payload here means the next docs-versus-reality gap fails a test instead of
-  // a customer.
+  // purchase, kept because Creem is the fallback provider and this is the only
+  // sample anyone has of what it actually sends. It differs from Creem's own
+  // documentation in the field that matters most: the docs show `instance` as
+  // an array and it arrives as a single object.
   //
-  // Validate returns this byte for byte, so one fixture covers both endpoints.
-  //
-  // Cancelling the subscription did not change it: the licence stayed 'active'
-  // with the period paid up to 26 Aug, which is what terms.html and refund.html
-  // promise. Whether it flips after that date is still unverified — re-run
-  // validate on this key after 26 Aug 2026. If it never flips, cancellation
-  // does not revoke and the product needs an expiry after all.
-  const REAL = {
+  // Only the provider-independent parts are asserted here. didActivate and
+  // isValid are deliberately not — they read Lemon Squeezy's shape now, and a
+  // Creem payload failing them is correct rather than a defect. If Kiko ever
+  // moves back, those two readers change and this fixture becomes live again.
+  const CREEM = {
     object: 'license',
     id: 'lk_6QcSTA8cxL53FqHTD0QbMV',
     product_id: 'prod_6X90O0ijcb6lHAWfktGKBs',
@@ -500,25 +501,49 @@ console.log('The licence provider block is complete and reads its own shape');
     mode: 'test',
   };
 
-  is('a real activation reads as activated', P.didActivate(REAL), true);
-  is('a real activation reads as valid',     P.isValid(REAL), true);
-  is('a real activation yields its status',  P.statusOf(REAL), 'active');
-  is('a real activation yields no error',    P.errorOf(REAL), null);
   // The one that would have broken everything quietly: a missing instance id
-  // makes every later validation malformed, and the Worker 400s on it.
-  is('a real activation yields an instance id',
-     P.instanceIdOf(REAL), 'lki_18CrSXfPGyKFxCOfVZgfTo');
-  // The body we would send on the next daily check must be complete.
+  // makes every later validation malformed. instanceIdOf is shared across
+  // providers, so this stays a live test whoever is selling.
+  is('an object instance still yields its id',
+     P.instanceIdOf(CREEM), 'lki_18CrSXfPGyKFxCOfVZgfTo');
   is('the follow-up validation carries the instance',
-     P.validateBody(REAL.key, P.instanceIdOf(REAL)).instance_id,
+     P.validateBody('K', P.instanceIdOf(CREEM)).instance_id,
      'lki_18CrSXfPGyKFxCOfVZgfTo');
+  is('an unrecognised shape never reads as valid', P.isValid(CREEM), false);
+  is('an unrecognised shape yields no error',      P.errorOf(CREEM), null);
 
-  // Expiration is switched off on the product, so the key does not carry a
-  // deadline of its own — access ends when the subscription does. If this ever
-  // comes back non-null, someone has turned expiry on and paying customers
-  // will be cut off on that date.
-  is('the key has no expiry of its own', REAL.expires_at, null);
-  is('five activations, as configured',  REAL.activation_limit, 5);
+  // Product configuration, recorded because getting either wrong cuts people
+  // off: no expiry on the key means access ends with the subscription rather
+  // than on a fixed date, and five activations covers reinstalls.
+  is('the key has no expiry of its own', CREEM.expires_at, null);
+  is('five activations, as configured',  CREEM.activation_limit, 5);
+
+  // Lemon Squeezy's documented shape. Marked as documented rather than
+  // observed on purpose — Creem's docs turned out to be wrong about exactly
+  // this, so replace it with a captured response after the first real
+  // purchase.
+  const LS_ACTIVATE = {
+    activated: true,
+    error: null,
+    license_key: { id: 1, status: 'active', key: 'ABC-123', activation_limit: 5, activation_usage: 1 },
+    instance: { id: '9b2f0c1e-1f0a-4a9b-9a2f-0c1e1f0a4a9b', name: 'kiko-browser' },
+    meta: { store_id: 1, product_id: 2, variant_id: 3 },
+  };
+  const LS_VALIDATE = { valid: true, error: null, license_key: LS_ACTIVATE.license_key,
+                        instance: LS_ACTIVATE.instance, meta: LS_ACTIVATE.meta };
+
+  is('a documented activation reads as activated', P.didActivate(LS_ACTIVATE), true);
+  is('a documented activation yields its instance',
+     P.instanceIdOf(LS_ACTIVATE), '9b2f0c1e-1f0a-4a9b-9a2f-0c1e1f0a4a9b');
+  is('a documented activation yields its status', P.statusOf(LS_ACTIVATE), 'active');
+  is('a documented validation reads as valid',    P.isValid(LS_VALIDATE), true);
+  is('a null error reads as null',                P.errorOf(LS_ACTIVATE), null);
+  // A refunded or cancelled key comes back 200 with valid:false — the body
+  // carries the answer, not the status code.
+  is('a revoked key is not valid',
+     P.isValid({ valid: false, error: 'license_key not active', license_key: { status: 'expired' } }), false);
+  is('and its reason is shown to the user',
+     P.errorOf({ valid: false, error: 'license_key not active' }), 'license_key not active');
 }
 
 console.log('Licence failures say something the user can act on');

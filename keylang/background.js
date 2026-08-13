@@ -84,16 +84,17 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // Master switch for the paywall. False means everyone keeps working, the
 // trial never expires, and nobody is asked for money.
 //
-// Off right now because Lemon Squeezy declined the store, which leaves the
-// extension able to withhold a feature with no way for anyone to pay for it.
-// Detection stopping in October with a dead Subscribe button is the worst
-// outcome available, and far worse than earning nothing for a few weeks.
+// On as of 4.8.0. It was switched off for several weeks when Lemon Squeezy
+// declined the account, because an extension that withholds a feature behind a
+// Subscribe button that does not work is worse than one that earns nothing.
+// The account was approved on 13 Aug 2026 once the Team plan came off the site,
+// and the checkout is live, so the button leads somewhere again.
 //
 // There is no server, so entitlement can only be changed by shipping a build
 // through review. That is the whole reason this is a switch rather than
-// something to sort out later: turning the paywall back on will take days'
-// notice, and so does turning it off.
-const PAYWALL_ENABLED = false;
+// something to sort out later: turning it off again takes days' notice, and so
+// did turning it on.
+const PAYWALL_ENABLED = true;
 
 const TRIAL_DAYS   = 30;           // what the site, the listing and the popup promise
 const LEGACY_DAYS  = 60;           // for people who were already here when Kiko was free
@@ -109,65 +110,69 @@ const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 // extension. Anything installed on someone's computer can be read off it, so
 // an API key in here is a published API key.
 //
-// Lemon Squeezy's licence endpoints needed no key, so Kiko called them
-// directly. Creem's need one — their own docs say not to put it in client-side
-// code — so Kiko now calls a Cloudflare Worker (worker/kiko-licence.js) that
-// holds the key and forwards the request. The Worker makes no decisions; it
-// only adds the header. Every judgement about who is entitled to what stays
-// here, where the tests are.
+// Lemon Squeezy's licence endpoints are designed to be called from a client
+// and need no key, so Kiko talks to them directly and no server of ours is in
+// the loop. Their host is already covered by the existing <all_urls>
+// permission, which matters: adding a host permission would disable the
+// extension for every current user until they re-approved it.
 //
-// The upside of having been forced into a proxy: the next provider change is
-// a Worker redeploy, not another extension release waiting on store review.
+// Creem was set up during the weeks Lemon Squeezy had the application on hold.
+// Its endpoints require an x-api-key, so it needed a Cloudflare Worker
+// (worker/kiko-licence.js) to hold the secret. That Worker is deployed and
+// proven end to end, and stays as the escape hatch: if this provider falls
+// through, switching back is four fields here plus a Worker redeploy, with no
+// extension release waiting on store review.
 //
-// To move provider: change the URLs and bodies below, the readers underneath
-// if their JSON differs, and CREEM_BASE in the Worker. Nothing else in the
-// extension knows who takes the money.
+// To move provider: change the URLs, encoding and bodies below, and the
+// readers underneath if their JSON differs. Nothing else in the extension
+// knows who takes the money.
 const LICENCE_PROVIDER = {
-  name:        'Creem',
-  activateUrl: 'https://kiko-licence.itay-c84.workers.dev/activate',
-  validateUrl: 'https://kiko-licence.itay-c84.workers.dev/validate',
+  name:        'Lemon Squeezy',
+  activateUrl: 'https://api.lemonsqueezy.com/v1/licenses/activate',
+  validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
 
-  // Creem wants JSON, Lemon Squeezy wanted form encoding. Kept as provider
-  // data rather than hardcoded at the fetch sites, since it is exactly the
-  // kind of thing that differs between providers.
-  contentType: 'application/json',
-  encode:      (obj) => JSON.stringify(obj),
+  // Lemon Squeezy takes form encoding, Creem took JSON. Kept as provider data
+  // rather than hardcoded at the fetch sites, since it is exactly the kind of
+  // thing that differs between providers.
+  contentType: 'application/x-www-form-urlencoded',
+  encode:      (obj) => new URLSearchParams(obj).toString(),
 
-  // Field names the provider expects. Creem calls the key `key`; Lemon
-  // Squeezy called it `license_key`.
-  activateBody: (key) => ({ key, instance_name: 'kiko-browser' }),
-  validateBody: (key, instanceId) => ({ key, instance_id: instanceId || '' }),
+  // Field names the provider expects. Lemon Squeezy calls the key
+  // `license_key`; Creem called it `key`.
+  activateBody: (key) => ({ license_key: key, instance_name: 'kiko-browser' }),
+  validateBody: (key, instanceId) =>
+    instanceId ? { license_key: key, instance_id: instanceId }
+               : { license_key: key },
 
   // Readers for the provider's response shape.
   //
   // Each returns a plain answer to a plain question. Written defensively: a
   // provider that changes its shape without warning must not be able to
-  // revoke a paying user's licence by returning something unexpected.
-  //
-  // Creem answers both activate and validate with the same licence object and
-  // no boolean — `status` carries everything. It can be 'active', 'inactive',
-  // 'expired' or 'disabled'; only the first entitles.
-  didActivate:  (d) => d.status === 'active',
-  isValid:      (d) => d.status === 'active',
-  // Creem's docs show `instance` as an array; a real activation returns it as
-  // a single object. Both are handled because the docs cannot be trusted here
-  // and the cost of guessing wrong is that instanceId comes back undefined,
-  // every later validation is malformed, and the customer is expired while
-  // still paying. If it ever is an array, activation appends, so the one just
-  // created is the last.
+  // revoke a paying user's licence by returning something unexpected, so each
+  // reader demands the exact success value rather than anything truthy.
+  didActivate:  (d) => d.activated === true,
+  isValid:      (d) => d.valid === true,
+  // An object here, where Creem sent an array. Both are handled: guessing
+  // wrong is invisible and expensive — instanceId comes back undefined, every
+  // later validation goes out malformed, and the customer is expired while
+  // still paying.
   instanceIdOf: (d) => Array.isArray(d.instance)
     ? (d.instance[d.instance.length - 1] || {}).id
     : (d.instance && d.instance.id),
-  statusOf:     (d) => d.status || 'unknown',
+  statusOf:     (d) => (d.license_key && d.license_key.status) || d.status || 'unknown',
   // Providers put the useful message — "activation limit reached" and the like
   // — in different places. Whatever comes back gets shown to the user, because
-  // it is usually the only thing that tells them what to do next.
+  // it is usually the only thing that tells them what to do next. Lemon
+  // Squeezy puts it in `error` and returns 400 with it, so this is the main
+  // path rather than a fallback.
   errorOf:      (d) => d.error || d.message || null,
 };
 
-// Creem's error codes, turned into something a person can act on. Without
-// this, someone who has used all their activations is told "that key could
-// not be activated", which is true and useless.
+// Status codes with a cause the user can act on. Lemon Squeezy mostly reports
+// failures in the body, so errorOf carries the weight and these are a safety
+// net for the cases where it does not — without them, someone who has used all
+// their activations is told "that key could not be activated", which is true
+// and useless.
 // Which validation responses are allowed to take a licence away.
 //
 // A 2xx speaks for itself, and 403/404/410 mean the key is genuinely gone —
