@@ -77,6 +77,19 @@ function renderWordList(containerId, words, type, onRemove) {
 // variant sits first in the product's variant list is the one preselected.
 const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
 
+// The two places the popup shows its version. Read from the manifest so they
+// cannot disagree with the build they are running in — which they did, and it
+// cost an afternoon of "the new build isn't loading".
+(() => {
+  try {
+    const v = chrome.runtime.getManifest().version;
+    for (const id of ['ver', 'ver-foot']) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = v;
+    }
+  } catch {}
+})();
+
 // Same fallback rule as content.js: the English that used to be hard-coded
 // here is passed in, so a missing key reads as it always did.
 function t(key, subs, fallback) {

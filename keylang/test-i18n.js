@@ -102,5 +102,32 @@ for (const code of LOCALES) {
   }
 }
 
+console.log('No page states a version number of its own');
+{
+  // popup.html carried "v4.7.0" typed by hand, in two places. The manifest went
+  // to 4.8.0 and the popup did not, so a freshly loaded build reported itself as
+  // the old one and a whole test session was spent looking for a phantom
+  // loading failure. Any literal version in a shipped page is that bug waiting.
+  const manifest = JSON.parse(fs.readFileSync(path.join(HERE, 'manifest.json'), 'utf8'));
+  const pages = ['popup.html', 'welcome.html', 'whats-new.html'];
+  const VERSIONISH = /\bv?\d+\.\d+\.\d+\b/g;
+
+  for (const page of pages) {
+    const file = path.join(HERE, page);
+    if (!fs.existsSync(file)) continue;
+    // Comments are not shipped UI, and the comment explaining this very rule
+    // names the two versions that drifted.
+    const body = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+    const hits = body.match(VERSIONISH) || [];
+    if (!hits.length) { ok(); continue; }
+    bad(`${page} hard-codes ${hits.join(', ')} — read chrome.runtime.getManifest().version instead`);
+  }
+
+  // And the one place a version legitimately lives must be well formed, since
+  // the store rejects anything else and the trial gates parse it.
+  if (/^\d+\.\d+\.\d+$/.test(manifest.version)) ok();
+  else bad(`manifest version ${manifest.version} is not three dotted numbers`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
