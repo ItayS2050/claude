@@ -102,6 +102,35 @@ for (const code of LOCALES) {
   }
 }
 
+console.log('Literal dollar signs survive Chrome\'s substitution');
+{
+  // Chrome reads $ followed by a digit as a substitution slot: $1..$9. So
+  // "Subscribe — $5/month or $40/year" rendered as "Subscribe — /month or
+  // 0/year" — $5 became empty substitution five, and $40 became empty
+  // substitution four followed by a nought. The price vanished from the one
+  // button whose entire job is to state the price. Literal dollars must be
+  // written $$.
+  for (const code of LOCALES) {
+    for (const [key, entry] of Object.entries(catalogues[code])) {
+      const bare = entry.message.match(/(?<!\$)\$\d/g);
+      if (!bare) { ok(); continue; }
+      bad(`${code} "${key}" has ${bare[0]} — Chrome eats it as a substitution. Write $$ for a literal dollar`);
+    }
+  }
+
+  // The other half: a placeholder's content is a substitution reference and
+  // must stay a single dollar, or the argument never lands and the message
+  // prints the reference itself.
+  for (const code of LOCALES) {
+    for (const [key, entry] of Object.entries(catalogues[code])) {
+      for (const [name, ph] of Object.entries(entry.placeholders || {})) {
+        if (/^\$\d$/.test(ph.content)) ok();
+        else bad(`${code} "${key}" placeholder ${name} has content ${ph.content} — must be $1..$9`);
+      }
+    }
+  }
+}
+
 console.log('No page states a version number of its own');
 {
   // popup.html carried "v4.7.0" typed by hand, in two places. The manifest went

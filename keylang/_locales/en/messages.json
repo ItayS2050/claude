@@ -98,7 +98,7 @@
     "message": "Last day of your free trial"
   },
   "trialBody": {
-    "message": "After that Kiko stops correcting layout mistakes. $5/month, or $40 for the year. Nothing has been charged so far."
+    "message": "After that Kiko stops correcting layout mistakes. $$5/month, or $$40 for the year. Nothing has been charged so far."
   },
   "trialCta": {
     "message": "See the plans"
@@ -270,7 +270,7 @@
     "message": "Detection is paused. Your learned words are safe — subscribe to switch it back on."
   },
   "entCta": {
-    "message": "Subscribe — $5/month or $40/year"
+    "message": "Subscribe — $$5/month or $$40/year"
   },
   "keyPlaceholder": {
     "message": "Already paid? Paste licence key"
