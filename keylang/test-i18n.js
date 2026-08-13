@@ -109,7 +109,10 @@ console.log('Every message send handles the receiver being gone');
   // extension reloads — has no background left to answer it. Nothing breaks,
   // but Chrome posts a red error on the extension's own page, which reviewers
   // read. Every send needs either a .catch or a callback that reads lastError.
-  const FILES = ['content.js', 'popup.js', 'background.js', 'welcome.js', 'whats-new.js'];
+  // Every script build.sh ships, so a new one cannot quietly escape the rule.
+  const FILES = fs.readFileSync(path.join(HERE, 'build.sh'), 'utf8')
+    .match(/FILES=\(([\s\S]*?)\)/)[1]
+    .split(/\s+/).filter(f => f.endsWith('.js'));
   for (const name of FILES) {
     const file = path.join(HERE, name);
     if (!fs.existsSync(file)) continue;
