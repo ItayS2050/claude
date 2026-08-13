@@ -128,8 +128,9 @@ const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 // knows who takes the money.
 const LICENCE_PROVIDER = {
   name:        'Lemon Squeezy',
-  activateUrl: 'https://api.lemonsqueezy.com/v1/licenses/activate',
-  validateUrl: 'https://api.lemonsqueezy.com/v1/licenses/validate',
+  activateUrl:   'https://api.lemonsqueezy.com/v1/licenses/activate',
+  validateUrl:   'https://api.lemonsqueezy.com/v1/licenses/validate',
+  deactivateUrl: 'https://api.lemonsqueezy.com/v1/licenses/deactivate',
 
   // Lemon Squeezy takes form encoding, Creem took JSON. Kept as provider data
   // rather than hardcoded at the fetch sites, since it is exactly the kind of
@@ -143,6 +144,7 @@ const LICENCE_PROVIDER = {
   validateBody: (key, instanceId) =>
     instanceId ? { license_key: key, instance_id: instanceId }
                : { license_key: key },
+  deactivateBody: (key, instanceId) => ({ license_key: key, instance_id: instanceId }),
 
   // Readers for the provider's response shape.
   //
@@ -352,9 +354,38 @@ function updateBadge(ent) {
   } catch {}
 }
 
+// Give back the seat this browser is already holding, before taking another.
+//
+// Every activation consumes one of the licence's activations, and uninstalling
+// Kiko wipes chrome.storage.local — so a reinstall activates as a brand new
+// instance while the old one goes on counting for ever. Nothing ever released
+// it. A handful of reinstalls and someone who is paying every month is locked
+// out by a message they can do nothing about, which is the worst way to lose a
+// customer: they are still being charged while it happens.
+//
+// Best effort on purpose. If the provider is unreachable or has already
+// forgotten the instance, that must not stop the activation the user is
+// waiting on — the failure mode of skipping it is one wasted seat, and the
+// failure mode of blocking on it is a paying customer stuck at a spinner.
+async function releaseStoredInstance() {
+  if (!LICENCE_PROVIDER.deactivateUrl) return;
+  let licence;
+  try { ({ licence } = await chrome.storage.local.get('licence')); } catch { return; }
+  if (!licence || !licence.key || !licence.instanceId) return;
+  try {
+    await fetch(LICENCE_PROVIDER.deactivateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': LICENCE_PROVIDER.contentType, Accept: 'application/json' },
+      body: LICENCE_PROVIDER.encode(
+        LICENCE_PROVIDER.deactivateBody(licence.key, licence.instanceId)),
+    });
+  } catch {}
+}
+
 async function activateLicence(key) {
   const clean = String(key || '').trim();
   if (!clean) return { ok: false, error: 'Enter a licence key.' };
+  await releaseStoredInstance();
   try {
     const res = await fetch(LICENCE_PROVIDER.activateUrl, {
       method: 'POST',

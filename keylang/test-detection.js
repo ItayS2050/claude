@@ -397,7 +397,8 @@ console.log('The licence provider block is complete and reads its own shape');
   // background.js calls, which is the thing that breaks when someone swaps a
   // provider in a hurry.
   const P = loadLicenceProvider();
-  const need = ['name', 'activateUrl', 'validateUrl', 'activateBody', 'validateBody',
+  const need = ['name', 'activateUrl', 'validateUrl', 'deactivateUrl',
+                'activateBody', 'validateBody', 'deactivateBody',
                 'contentType', 'encode',
                 'didActivate', 'isValid', 'instanceIdOf', 'statusOf', 'errorOf'];
   need.forEach(k => {
@@ -422,7 +423,7 @@ console.log('The licence provider block is complete and reads its own shape');
   // Creem's are not — pointing straight at them would either publish the API
   // key or 401 every paying customer, which is why the Worker exists.
   const NO_SECRET_NEEDED = /(^|\.)(workers\.dev|get-kiko\.com|lemonsqueezy\.com)$/;
-  ['activateUrl', 'validateUrl'].forEach(k => {
+  ['activateUrl', 'validateUrl', 'deactivateUrl'].forEach(k => {
     const host = new URL(P[k]).hostname;
     if (NO_SECRET_NEEDED.test(host)) { pass++; return; }
     fail++;
@@ -438,6 +439,12 @@ console.log('The licence provider block is complete and reads its own shape');
   is('validate omits a missing instance', 'instance_id' in P.validateBody('K'), false);
 
   // Bodies must survive encoding as the provider expects to receive them.
+  // Deactivation needs both halves or the provider cannot tell which seat to
+  // free, and a body missing either would silently release nothing.
+  is('deactivate carries the key',      P.deactivateBody('K', 'i1').license_key, 'K');
+  is('deactivate carries the instance', P.deactivateBody('K', 'i1').instance_id, 'i1');
+  is('deactivate sends nothing else',   Object.keys(P.deactivateBody('K', 'i1')).length, 2);
+
   is('encodes as form data', P.encode({ a: 1, b: 'x y' }), 'a=1&b=x+y');
   is('content type matches the encoding', P.contentType, 'application/x-www-form-urlencoded');
 
@@ -700,6 +707,40 @@ console.log('The same mistake typed twice fires twice');
   // Word order is part of the signature, as it always was.
   is('reordered words are a different detection',
      dup(sigOf(det('nvhs', 'akuo')), akuo, TOAST), false);
+}
+
+console.log('Activating gives back the seat this browser already holds');
+{
+  // Every activation eats one of the licence's activations, and uninstalling
+  // wipes chrome.storage.local — so a reinstall takes a fresh seat while the
+  // old one counts for ever. Five reinstalls and a paying customer is locked
+  // out. This is what happened during testing on 13 Aug: a key with five
+  // activations refused, every seat spent by unpacked loads nobody released.
+  const src = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+
+  const has = (label, re) => {
+    if (re.test(src)) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}`);
+  };
+
+  has('a release step exists', /async function releaseStoredInstance\b/);
+  has('activation releases first',
+      /async function activateLicence[\s\S]{0,400}?await releaseStoredInstance\(\)/);
+
+  // Order matters and is easy to get backwards: releasing after activating
+  // would hand back the seat just taken.
+  const release  = src.indexOf('await releaseStoredInstance()');
+  const activate = src.indexOf('fetch(LICENCE_PROVIDER.activateUrl');
+  if (release > -1 && activate > -1 && release < activate) pass++;
+  else { fail++; console.log('  FAIL  the seat is released after activating, not before'); }
+
+  // It must never block the activation the user is waiting on. A throw here
+  // costs one wasted seat; an unhandled one costs them the activation.
+  has('release swallows its own failures',
+      /async function releaseStoredInstance[\s\S]*?catch \{\}[\s\S]*?\n\}/);
+  // And nothing to release is the common case — a first-time activation.
+  has('release does nothing without a stored instance',
+      /if \(!licence \|\| !licence\.key \|\| !licence\.instanceId\) return;/);
 }
 
 console.log('A stale entitlement from an older build is never shown');
