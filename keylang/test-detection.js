@@ -60,7 +60,7 @@ function loadContentScript() {
   return vm.runInContext(
     '(function () {\n' + src +
     '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
-    '         truncatePreview,' +
+    '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         learnHebrew: ws => ws.forEach(w => learnedHebrew.add(w)),' +
     '         rejectWords: ws => ws.forEach(w => learnedEnglish.add(w)),' +
     '         forgetLearned: () => { learnedHebrew.clear(); learnedEnglish.clear(); },' +
@@ -596,6 +596,42 @@ check('expired: korean silent',  'dkssud gksrnr', null);
 check('expired: hebrew silent',  'akuo nvhs ekhu', null);
 kiko.setEntitled(true);
 check('restored after paying',   'ghbdtn rfr',    'english_as_russian');
+
+console.log('The same mistake typed twice fires twice');
+{
+  const dup = kiko.isDuplicateOfVisibleToast;
+  const det = (...words) => ({ words });
+  const sigOf = (d) => d.words.join('|');
+  const TOAST = {};   // stands in for a live toast element
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
+  };
+
+  const akuo = det('akuo', 'nvhs');
+
+  // The bug, as reported: type it, let the toast go, type the same thing again.
+  // lastDetection still holds the old detection, but nothing is on screen, so
+  // this must not be treated as a duplicate.
+  is('same words after the toast closed is not a duplicate',
+     dup(sigOf(akuo), akuo, null), false);
+
+  // The behaviour actually worth keeping: don't rebuild a toast that is up.
+  is('same words while the toast is up is a duplicate',
+     dup(sigOf(akuo), akuo, TOAST), true);
+
+  is('different words while a toast is up still fire',
+     dup(sigOf(det('ghbdtn')), akuo, TOAST), false);
+  is('nothing shown before is never a duplicate',
+     dup(sigOf(akuo), null, TOAST), false);
+  is('nothing shown and nothing on screen',
+     dup(sigOf(akuo), null, null), false);
+
+  // Word order is part of the signature, as it always was.
+  is('reordered words are a different detection',
+     dup(sigOf(det('nvhs', 'akuo')), akuo, TOAST), false);
+}
 
 console.log('The toast preview shows the whole sentence');
 {

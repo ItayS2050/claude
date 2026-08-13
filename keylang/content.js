@@ -2254,6 +2254,25 @@ function ownsTheToast() {
 }
 
 
+// While a toast is on screen, a detection with the same words is the same
+// request — rebuilding it would flicker and restart its eight-second timer.
+//
+// It used to compare the signature alone, without asking whether the toast was
+// still there. lastDetection is never cleared, so once a toast had been shown
+// for a phrase and then closed — by the auto-dismiss, or a fix, or anything
+// else — typing that exact phrase again was silently ignored for the rest of
+// the page's life. Reported by a user watching someone type, delete, and type
+// the same mistake again to no response.
+//
+// Deliberate suppressions live elsewhere and still work: an explicit ✕ or Esc
+// sets dismissedSignature, a fix sets fixCooldownUntil, and rejected words go
+// into learnedEnglish. Those are choices the user made. This one was an
+// accident of leftover state.
+function isDuplicateOfVisibleToast(sig, prev, toastOnScreen) {
+  if (!toastOnScreen || !prev) return false;
+  return sig === prev.words.join('|');
+}
+
 function showToast(element, detection, forceShow = false) {
   if (!detectionEnabled) return;
   if (!ownsTheToast()) return;
@@ -2286,7 +2305,7 @@ function showToast(element, detection, forceShow = false) {
   }
 
   // Same detection as the one already on screen — leave the toast alone
-  if (!forceShow && lastDetection && sig === lastDetection.words.join('|')) return;
+  if (!forceShow && isDuplicateOfVisibleToast(sig, lastDetection, activeToast)) return;
 
   // Guard: don't regress to a smaller detection on the same element
   if (activeToast && lastDetection && lastElement === element) {
@@ -2907,6 +2926,15 @@ function debounce(fn, ms, maxWait = 0) {
   };
 }
 
+function fieldLength(el) {
+  try {
+    const text = el.isContentEditable
+      ? (el.innerText || el.textContent || '')
+      : (el.value || '');
+    return text.length;
+  } catch { return 0; }
+}
+
 function attachTo(el) {
   if (el._kldVer === KIKO_VERSION) return;
   el._kldVer = KIKO_VERSION;
@@ -2932,6 +2960,22 @@ function attachTo(el) {
     }
   }, 200, 1500);
   el.addEventListener('input',          check);
+
+  // Deleting is how someone takes back a mistake, and retyping it is a fresh
+  // one that deserves an answer. The debounced check above can miss that
+  // entirely: it only clears a dismissal when it happens to observe a nearly
+  // empty field, and someone who deletes and retypes inside the debounce
+  // window never presents one. Watching the raw input events cannot miss it.
+  el.addEventListener('input', () => {
+    if (!dismissedSignature || lastElement !== el) { el._kldLen = fieldLength(el); return; }
+    const len  = fieldLength(el);
+    const prev = el._kldLen ?? len;
+    el._kldLen = len;
+    if (len < prev) {
+      dismissedSignature = null;
+      dismissedWordSet   = new Set();
+    }
+  });
   el.addEventListener('keyup',          e => {
     if (!isLive()) return;
     // Don't fire check on shortcut keys (Alt+Shift+K etc.).
