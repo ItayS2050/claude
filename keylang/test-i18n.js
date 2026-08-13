@@ -102,6 +102,31 @@ for (const code of LOCALES) {
   }
 }
 
+console.log('Every message send handles the receiver being gone');
+{
+  // "Unchecked runtime.lastError: Could not establish connection. Receiving end
+  // does not exist." An orphaned content script — left in an open tab after the
+  // extension reloads — has no background left to answer it. Nothing breaks,
+  // but Chrome posts a red error on the extension's own page, which reviewers
+  // read. Every send needs either a .catch or a callback that reads lastError.
+  const FILES = ['content.js', 'popup.js', 'background.js', 'welcome.js', 'whats-new.js'];
+  for (const name of FILES) {
+    const file = path.join(HERE, name);
+    if (!fs.existsSync(file)) continue;
+    const src = fs.readFileSync(file, 'utf8');
+    const re = /chrome\.(runtime|tabs)\.sendMessage\s*\(/g;
+    let m;
+    while ((m = re.exec(src))) {
+      // Take the call plus a little of what follows: enough to see a .catch()
+      // chained on, or a callback that touches lastError.
+      const tail = src.slice(m.index, m.index + 900);
+      const guarded = /\.catch\s*\(/.test(tail) || /lastError/.test(tail);
+      if (guarded) ok();
+      else bad(`${name} line ${src.slice(0, m.index).split('\n').length}: sendMessage with no .catch and no lastError check`);
+    }
+  }
+}
+
 console.log('Literal dollar signs survive Chrome\'s substitution');
 {
   // Chrome reads $ followed by a digit as a substitution slot: $1..$9. So

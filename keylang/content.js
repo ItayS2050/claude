@@ -243,7 +243,13 @@ function sendFeedback(words, action, type) {
         action, type,
         version: KIKO_VERSION
       })
-    });
+      // An orphaned content script — one left in an open tab after the
+      // extension reloaded — has no background left to talk to, and this
+      // rejects with "Receiving end does not exist". The try/catch above
+      // cannot see that: it is asynchronous. Unhandled, it posts a red error
+      // on the extension's own page, which reviewers read too. Losing one
+      // feedback ping from a tab that predates the update costs nothing.
+    }).catch(() => {});
   } catch {}
 }
 

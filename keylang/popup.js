@@ -156,6 +156,10 @@ document.getElementById('key-btn').addEventListener('click', () => {
   msg.className = 'key-msg';
   msg.textContent = 'Checking…';
   chrome.runtime.sendMessage({ type: 'kiko-activate-licence', key: input.value }, (res) => {
+    // Read lastError even though the UI only needs `res`: leaving it unread is
+    // what Chrome reports as "Unchecked runtime.lastError" on the extension's
+    // error page. The message below already tells the user what happened.
+    void chrome.runtime.lastError;
     if (!res || !res.ok) {
       msg.className = 'key-msg err';
       msg.textContent = (res && res.error) || 'Could not activate that key.';
