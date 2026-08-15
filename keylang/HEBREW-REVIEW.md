@@ -4,10 +4,10 @@ Every Hebrew string on get-kiko.com/he/, in page order, next to its English.
 Mark anything that reads wrong and send the numbers back — I'll apply them in one pass.
 
 **1. Page title**
-- Kiko — שכחת להחליף שפה? תיקון הקלדה בפריסה שגויה: עברית, רוסית, אוקראינית, קוריאנית, יוונית וערבית
+- Kiko — תיקון הקלדה בפריסת מקלדת שגויה, בשש שפות
 
 **2. Meta description**
-- כתבת פסקה שלמה וגילית שהמקלדת הייתה באנגלית? Kiko תופס את זה ברגע ומתקן בלחיצה אחת. שש שפות. חודש ראשון חינם.
+- כתבת פסקה שלמה וגילית שהמקלדת הייתה באנגלית? Kiko תופס את זה ברגע ומתקן בלחיצה אחת. שש שפות. 30 יום חינם.
 
 **3. Social title**
 - Kiko — שוב שכחת להחליף שפה
