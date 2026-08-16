@@ -135,6 +135,9 @@
   "welcomeNote": {
     "message": "You can change this any time from the Kiko popup."
   },
+  "welcomeTrial": {
+    "message": "Free for 30 days. After that it is $$5 a month, or $$40 for the year. No card needed to start."
+  },
   "welcomeSkip": {
     "message": "Skip — enable all languages for now"
   },
