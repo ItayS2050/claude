@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kiko — Fix wrong-keyboard-layout typing in six languages</title>
-  <meta name="description" content="Typed a whole sentence in the wrong keyboard layout? Kiko catches it the moment it happens and fixes it in one click. Six languages. Free for 30 days.">
-  <link rel="icon" href="icon128.png">
-  <link rel="canonical" href="https://get-kiko.com/">
+  <title>Kiko — تصحيح الكتابة بتخطيط لوحة مفاتيح خاطئ</title>
+  <meta name="description" content="كتبت جملة كاملة والتخطيط خاطئ؟ يلاحظ Kiko ذلك فورا ويصححه بنقرة واحدة. ست لغات. 30 يوما مجانا.">
+  <link rel="icon" href="../icon128.png">
+  <link rel="canonical" href="https://get-kiko.com/ar/">
   <link rel="alternate" hreflang="en" href="https://get-kiko.com/">
   <link rel="alternate" hreflang="he" href="https://get-kiko.com/he/">
   <link rel="alternate" hreflang="ru" href="https://get-kiko.com/ru/">
@@ -15,8 +15,8 @@
   <link rel="alternate" hreflang="el" href="https://get-kiko.com/el/">
   <link rel="alternate" hreflang="ar" href="https://get-kiko.com/ar/">
   <link rel="alternate" hreflang="x-default" href="https://get-kiko.com/">
-  <meta property="og:title" content="Kiko — the keyboard layout mistake, fixed">
-  <meta property="og:description" content="Six languages, both directions, one click. Free for 30 days.">
+  <meta property="og:title" content="Kiko — خطأ تخطيط لوحة المفاتيح، مصححا">
+  <meta property="og:description" content="ست لغات، في الاتجاهين، بنقرة واحدة. 30 يوما مجانا.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -250,44 +250,44 @@
 
 <nav>
   <div class="wrap nav-in">
-    <a class="logo" href="#top"><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px"> Kiko</a>
+    <a class="logo" href="#top"><img src="../icon128.png" alt="" width="30" height="30" style="border-radius:8px"> Kiko</a>
     <div class="nav-links">
-      <a href="#languages">Languages</a>
-      <a href="#works">Where it works</a>
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
+      <a href="#languages">اللغات</a>
+      <a href="#works">أين يعمل</a>
+      <a href="#how">كيف يعمل</a>
+      <a href="#pricing">الأسعار</a>
+      <a href="#faq">أسئلة</a>
     </div>
     <div class="langsw" id="langsw"></div>
-    <a class="btn btn-primary btn-sm" href="#" data-webstore>Add to Chrome</a>
+    <a class="btn btn-primary btn-sm" href="#" data-webstore>أضفه إلى Chrome</a>
   </div>
 </nav>
 
 <div id="top" class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><img src="icon128.png" alt="" width="17" height="17" style="border-radius:5px"> <b>6 languages</b> · both directions · free for 30 days</div>
-      <h1>Your keyboard was in the <span class="hl">wrong language</span> again.</h1>
-      <p class="lede">Again. Three sentences in, you look up, and it's all nonsense. Kiko catches
-        that exact moment and puts it right — in the field you're typing in, in one click.</p>
+      <div class="pill"><img src="../icon128.png" alt="" width="17" height="17" style="border-radius:5px"> <b>6 لغات</b> · في الاتجاهين · 30 يوما مجانا</div>
+      <h1>كانت لوحة المفاتيح على <span class="hl">اللغة الخاطئة</span> مرة أخرى.</h1>
+      <p class="lede">من جديد. بعد ثلاث جمل ترفع نظرك فتجد كل شيء طلاسم. يلتقط Kiko
+        تلك اللحظة بالذات ويصححها — داخل الحقل الذي تكتب فيه، بنقرة واحدة.</p>
       <div class="hero-cta">
-        <a class="btn btn-primary" href="#" data-webstore>Add to Chrome — it's free</a>
-        <a class="btn btn-ghost" href="#how">See how it works</a>
+        <a class="btn btn-primary" href="#" data-webstore>أضفه إلى Chrome — مجانا</a>
+        <a class="btn btn-ghost" href="#how">شاهد كيف يعمل</a>
       </div>
-      <div class="cta-note">Free for 30 days, then $5/month · No card to start</div>
+      <div class="cta-note">30 يوما مجانا، ثم 5$ شهريا · لا حاجة لبطاقة للبدء</div>
     </div>
 
     <div class="demo">
       <div class="demo-tabs" role="tablist" id="tabs"></div>
       <div class="demo-body">
-        <div class="field-label">What you typed</div>
+        <div class="field-label">ما كتبته</div>
         <div class="field"><span id="typed"></span><span class="caret"></span></div>
         <div class="toast">
           <div class="toast-head">⌨️ <span id="toast-msg"></span></div>
           <div class="toast-fix" id="fixed"></div>
           <div class="toast-btns">
             <span class="tb tb-fix" id="fixbtn"></span>
-            <span class="tb tb-no">Not right</span>
+            <span class="tb tb-no">غير صحيح</span>
           </div>
         </div>
         <div class="gloss" id="gloss"></div>
@@ -299,10 +299,10 @@
 <section id="languages">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Six languages</div>
-      <h2>Every script that shares your keyboard.</h2>
-      <p class="lede">If your keyboard switches between English and one of these, Kiko already
-        handles it — in both directions. Here's the same greeting in each.</p>
+      <div class="eyebrow">ست لغات</div>
+      <h2>كل أبجدية تشارك لوحة مفاتيحك.</h2>
+      <p class="lede">إذا كنت تبدل بين الإنجليزية وإحدى هذه اللغات، فإن Kiko
+        يتولى ذلك — في الاتجاهين. إليك التحية نفسها بكل لغة.</p>
     </div>
     <div class="langs" id="langcards"></div>
   </div>
@@ -312,31 +312,31 @@
 <section id="works">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Where it works</div>
-      <h2>Every text field in your browser.</h2>
-      <p class="lede">Kiko attaches to the field you are typing in, whatever the site is built
-        with — plain inputs, rich editors, the lot.</p>
+      <div class="eyebrow">أين يعمل</div>
+      <h2>كل حقل نص في متصفحك.</h2>
+      <p class="lede">يرتبط Kiko بالحقل الذي تكتب فيه، مهما كانت التقنية التي بني بها
+        الموقع — حقول بسيطة، محررات متقدمة، كل شيء.</p>
     </div>
     <div class="works">
-      <div><span class="tick">&check;</span><div><b>Webmail</b>
-        <span class="sub">Compose windows, subject lines, replies.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Chat and messaging on the web</b>
-        <span class="sub">Message boxes in browser-based chat apps.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Search boxes</b>
-        <span class="sub">Any search field, on any site.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Forms and comments</b>
-        <span class="sub">Contact forms, comment boxes, reviews, support tickets.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Document and rich-text editors</b>
-        <span class="sub">Online docs, note apps, CMS and blog editors.</span></div></div>
-      <div><span class="tick">&check;</span><div><b>Admin panels and CRMs</b>
-        <span class="sub">The internal tools you live in all day.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>البريد في المتصفح</b>
+        <span class="sub">نوافذ الكتابة، سطور الموضوع، الردود.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>المحادثات والرسائل على الويب</b>
+        <span class="sub">حقول الرسائل في تطبيقات المحادثة داخل المتصفح.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>حقول البحث</b>
+        <span class="sub">أي حقل بحث، في أي موقع.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>النماذج والتعليقات</b>
+        <span class="sub">نماذج التواصل، التعليقات، المراجعات، طلبات الدعم.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>المستندات ومحررات النصوص</b>
+        <span class="sub">المستندات على الإنترنت، تطبيقات الملاحظات، أنظمة إدارة المحتوى ومحررات المدونات.</span></div></div>
+      <div><span class="tick">&check;</span><div><b>لوحات الإدارة وأنظمة CRM</b>
+        <span class="sub">الأدوات الداخلية التي تقضي فيها يومك كله.</span></div></div>
     </div>
     <div class="desk">
       <span class="big">&#128187;</span>
       <div>
-        <b>Prefer the desktop app for something?</b>
-        <p>Kiko lives in Chrome, so open that app's web version in a tab and it is there with you —
-          same account, same conversations, plus the layout fixing.</p>
+        <b>تفضل تطبيق سطح المكتب؟</b>
+        <p>يعيش Kiko داخل Chrome، فافتح نسخة الويب من ذلك التطبيق في تبويب وسيكون معك —
+          الحساب نفسه، المحادثات نفسها، مع تصحيح التخطيط.</p>
       </div>
     </div>
   </div>
@@ -345,29 +345,29 @@
 <section class="sec-warm" id="how">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">How it works</div>
-      <h2>You type. Kiko watches. One click.</h2>
+      <div class="eyebrow">كيف يعمل</div>
+      <h2>أنت تكتب. Kiko ينتبه. نقرة واحدة.</h2>
     </div>
     <div class="steps">
       <div class="step">
         <div class="step-n">1</div>
-        <h3>Type anywhere</h3>
-        <p>Any website you open in Chrome — search boxes, forms, comment fields, most webmail and rich-text editors. A few apps run editors that reject changes from anything but their own code — if you hit one, tell us and we will look at it.</p>
+        <h3>اكتب في أي مكان</h3>
+        <p>أي موقع تفتحه في Chrome — حقول البحث، النماذج، التعليقات، معظم خدمات البريد ومحررات النصوص. بعض التطبيقات لديها محررات ترفض أي تغيير لا يأتي من شفرتها الخاصة — إن صادفت واحدا منها فأخبرنا وسننظر فيه.</p>
       </div>
       <div class="step">
         <div class="step-n">2</div>
-        <h3>It spots the mismatch</h3>
-        <p>The moment your text stops making sense in one layout and starts making sense in another.</p>
+        <h3>يلاحظ عدم التطابق</h3>
+        <p>في اللحظة التي يفقد فيها نصك معناه بتخطيط ويكتسبه بتخطيط آخر.</p>
       </div>
       <div class="step">
         <div class="step-n">3</div>
-        <h3>One click fixes it</h3>
-        <p>The corrected text replaces the nonsense in place. No retyping, no copy-paste.</p>
+        <h3>نقرة واحدة تصححه</h3>
+        <p>يحل النص المصحح محل الطلاسم في مكانه. بلا إعادة كتابة، وبلا نسخ ولصق.</p>
       </div>
       <div class="step">
         <div class="step-n">4</div>
-        <h3>It learns you</h3>
-        <p>Wrong call? Tell it once. That word never gets flagged again. It gets quieter over time.</p>
+        <h3>يتعلم منك</h3>
+        <p>أخطأ؟ قل له مرة واحدة. لن تعلم تلك الكلمة مرة أخرى أبدا. ويصير أهدأ مع الوقت.</p>
       </div>
     </div>
   </div>
@@ -376,22 +376,22 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <div class="eyebrow">Built to disappear</div>
-      <h2>Fast, quiet, out of your way.</h2>
+      <div class="eyebrow">مصمم ليختفي</div>
+      <h2>سريع، هادئ، لا يعترض طريقك.</h2>
     </div>
     <div class="feats">
-      <div class="feat"><div class="feat-i">⚡</div><div><h3>Real-time</h3>
-        <p>Catches mistakes as you type. Nothing to select, nothing to press.</p></div></div>
-      <div class="feat"><div class="feat-i">🎯</div><div><h3>Not a dictionary</h3>
-        <p>Scores every word against each language's letter patterns, so it catches words no list contains.</p></div></div>
-      <div class="feat"><div class="feat-i">🔕</div><div><h3>Never nags</h3>
-        <p>Long sessions collapse to a small bubble instead of a popup. Mute any site with one click.</p></div></div>
+      <div class="feat"><div class="feat-i">⚡</div><div><h3>في الوقت الفعلي</h3>
+        <p>يلتقط الأخطاء أثناء الكتابة. لا شيء تحدده، ولا شيء تضغطه.</p></div></div>
+      <div class="feat"><div class="feat-i">🎯</div><div><h3>ليس قاموسا</h3>
+        <p>يقيم كل كلمة وفق أنماط حروف كل لغة، فيلتقط كلمات لا توجد في أي قائمة.</p></div></div>
+      <div class="feat"><div class="feat-i">🔕</div><div><h3>لا يزعجك</h3>
+        <p>في الكتابة الطويلة ينكمش إلى فقاعة صغيرة بدل النافذة. أسكت أي موقع بنقرة واحدة.</p></div></div>
       <div class="feat"><div class="feat-i">⌨️</div><div><h3>Alt + Shift + K</h3>
-        <p>Scan the whole field, or convert whatever text you've selected, on demand.</p></div></div>
-      <div class="feat"><div class="feat-i">🎚️</div><div><h3>Your languages only</h3>
-        <p>Turn on the ones you type. The rest never run.</p></div></div>
-      <div class="feat"><div class="feat-i">🧠</div><div><h3>Remembers corrections</h3>
-        <p>Every "not right" is stored locally and respected forever.</p></div></div>
+        <p>افحص الحقل كله، أو حول النص الذي حددته، متى شئت.</p></div></div>
+      <div class="feat"><div class="feat-i">🎚️</div><div><h3>لغاتك أنت فقط</h3>
+        <p>شغل ما تكتب به. أما البقية فلا تعمل إطلاقا.</p></div></div>
+      <div class="feat"><div class="feat-i">🧠</div><div><h3>يتذكر التصحيحات</h3>
+        <p>كل «غير صحيح» يحفظ محليا ويحترم إلى الأبد.</p></div></div>
     </div>
   </div>
 </section>
@@ -399,10 +399,10 @@
 <section class="sec-soft">
   <div class="wrap">
     <div class="privacy">
-      <h2>Your typing never leaves your computer.</h2>
-      <p>Kiko has no server to send anything to. Every detection and correction runs inside your
-        browser, and the words it learns live in local storage on your machine. No account,
-        no sign-up, no analytics, no tracking.</p>
+      <h2>ما تكتبه لا يغادر حاسوبك أبدا.</h2>
+      <p>ليس لدى Kiko خادم يرسل إليه شيئا. كل كشف وكل تصحيح يجري داخل
+        متصفحك، والكلمات التي يتعلمها تبقى في التخزين المحلي على جهازك. بلا حساب،
+        بلا تسجيل، بلا تحليلات، بلا تتبع.</p>
     </div>
   </div>
 </section>
@@ -410,29 +410,29 @@
 <section id="pricing">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Pricing</div>
-      <h2>Free for a month. Then $5.</h2>
-      <p class="lede">Use it properly first. If it hasn't saved you enough retyping to be worth
-        five dollars by day 30, don't keep it.</p>
+      <div class="eyebrow">الأسعار</div>
+      <h2>شهر مجانا. ثم 5$.</h2>
+      <p class="lede">جربه كما ينبغي أولا. إن لم يوفر عليك بحلول اليوم الثلاثين إعادة كتابة تساوي
+        خمسة دولارات، فلا تبقه.</p>
     </div>
     <div class="plans">
       <div class="plan hero-plan">
-        <div class="badge">First 30 days free</div>
-        <div class="plan-name">Individual</div>
-        <div class="plan-price">$5<span>/month</span></div>
-        <div class="plan-alt">or <b>$40/year</b> — <em>two months free</em></div>
-        <div class="plan-sub">Everything Kiko does, on all your Chrome profiles.</div>
+        <div class="badge">أول 30 يوما مجانا</div>
+        <div class="plan-name">فردي</div>
+        <div class="plan-price">$5<span>/شهريا</span></div>
+        <div class="plan-alt">أو <b>40$/سنويا</b> — <em>شهران مجانا</em></div>
+        <div class="plan-sub">كل ما يفعله Kiko، على كل ملفاتك في Chrome.</div>
         <ul>
-          <li>All six language pairs, both directions</li>
-          <li>Detection on every website</li>
-          <li>Full-field scan and selection convert</li>
-          <li>Learns your words, forever</li>
-          <li>Nothing leaves your device</li>
+          <li>أزواج اللغات الستة كلها، في الاتجاهين</li>
+          <li>الكشف في كل موقع</li>
+          <li>فحص الحقل كاملا وتحويل النص المحدد</li>
+          <li>يتعلم كلماتك، إلى الأبد</li>
+          <li>لا شيء يغادر جهازك</li>
         </ul>
-        <a class="btn btn-primary" href="#" data-webstore>Start free — no card</a>
-        <div class="plan-note">30 days free, then $5/month or $40/year — you choose at checkout.
-          Cancel anytime.<br>
-          <a href="#" data-checkout style="color:var(--brand);font-weight:600">Already using Kiko? Subscribe →</a></div>
+        <a class="btn btn-primary" href="#" data-webstore>ابدأ مجانا — بلا بطاقة</a>
+        <div class="plan-note">30 يوما مجانا، ثم 5$ شهريا أو 40$ سنويا — تختار عند الدفع.
+          يمكن الإلغاء في أي وقت.<br>
+          <a href="#" data-checkout style="color:var(--brand);font-weight:600">تستخدم Kiko بالفعل؟ اشترك ←</a></div>
       </div>
 
     </div>
@@ -442,67 +442,67 @@
 <section class="sec-warm" id="faq">
   <div class="wrap">
     <div class="sec-head center">
-      <div class="eyebrow">Questions</div>
-      <h2>The things people ask.</h2>
+      <div class="eyebrow">أسئلة</div>
+      <h2>ما يسألنا عنه الناس.</h2>
     </div>
     <div class="faq">
-      <details open><summary>What happens after 30 days?</summary>
-        <p>Kiko asks you to subscribe — $5/month, or $40 for the year if you'd rather pay once and
-          save two months. Nothing is charged during the trial and no card is needed to start — if
-          you don't subscribe, detection simply stops.</p></details>
-      <details><summary>How do I cancel?</summary>
-        <p>At <a href="https://app.lemonsqueezy.com/my-orders" style="color:var(--brand);font-weight:600">app.lemonsqueezy.com/my-orders</a> —
-          enter the email you paid with and cancel in two clicks. You don't need to ask us, and
-          there's no retention call. Full refund within 14 days if you change your mind.</p></details>
-      <details><summary>Does my typing get sent anywhere?</summary>
-        <p>No. There is no server. Detection runs inside your browser and the words Kiko learns are
-          stored locally on your machine. Read the <a href="privacy.html" style="color:var(--brand);font-weight:600">privacy policy</a>.</p></details>
-      <details><summary>Why does it need access to every site?</summary>
-        <p>Because you might mistype in any text field — your inbox, a search box, an admin panel.
-          There is no fixed list of places to watch. Kiko reads only the field you are typing in,
-          analyses it in memory, and discards it.</p></details>
-      <details><summary>Will it flag normal English words?</summary>
-        <p>Rarely — it needs several consecutive suspicious words before it says anything. When it
-          does get one wrong, click "Not right" and it never flags that word again.</p></details>
-      <details><summary>Does it work the other way round?</summary>
-        <p>Yes. Typed English while your keyboard was still in Hebrew, Korean or Greek? Kiko reads
-          the gibberish and turns it back into English.</p></details>
-      <details><summary>Does it work with apps I use on the desktop?</summary>
-        <p>Kiko works on any website you open in Chrome, and that includes the web version of
-          nearly every desktop app — same account, same messages. Open it in a tab and Kiko is
-          there. Standalone desktop applications run outside the browser, so no browser extension
-          can reach them.</p></details>
-      <details><summary>Which browsers?</summary>
-        <p>Chrome today, and Chromium browsers like Edge, Brave and Arc. Firefox and Safari are on
-          the list.</p></details>
+      <details open><summary>ماذا يحدث بعد 30 يوما؟</summary>
+        <p>يطلب منك Kiko الاشتراك — 5$ شهريا، أو 40$ للسنة إن فضلت الدفع مرة واحدة
+          وتوفير شهرين. لا يخصم شيء خلال الفترة التجريبية ولا حاجة لبطاقة للبدء — وإن
+          لم تشترك، يتوقف الكشف ببساطة.</p></details>
+      <details><summary>كيف ألغي؟</summary>
+        <p>على العنوان <a href="https://app.lemonsqueezy.com/my-orders" style="color:var(--brand);font-weight:600">app.lemonsqueezy.com/my-orders</a> —
+          أدخل البريد الذي دفعت به وألغ بنقرتين. لا حاجة لسؤالنا،
+          ولا توجد مكالمة إقناع. استرداد كامل خلال 14 يوما إن غيرت رأيك.</p></details>
+      <details><summary>هل يرسل ما أكتبه إلى أي مكان؟</summary>
+        <p>لا. لا يوجد خادم. الكشف يعمل داخل متصفحك، والكلمات التي يتعلمها Kiko
+          تحفظ محليا على جهازك. اقرأ <a href="../privacy.html" style="color:var(--brand);font-weight:600">سياسة الخصوصية</a>.</p></details>
+      <details><summary>لماذا يحتاج إلى الوصول لكل المواقع؟</summary>
+        <p>لأنك قد تخطئ الكتابة في أي حقل — بريدك، حقل بحث، لوحة إدارة.
+          لا توجد قائمة ثابتة بالأماكن التي يراقبها. يقرأ Kiko الحقل الذي تكتب فيه فقط،
+          يحلله في الذاكرة، ثم يتخلص منه.</p></details>
+      <details><summary>هل سيعلم كلمات إنجليزية عادية؟</summary>
+        <p>نادرا — فهو يحتاج عدة كلمات مشبوهة متتالية قبل أن يقول شيئا. وإن
+          أخطأ في واحدة، انقر «غير صحيح» ولن يعلم تلك الكلمة مرة أخرى.</p></details>
+      <details><summary>هل يعمل في الاتجاه المعاكس؟</summary>
+        <p>نعم. كتبت إنجليزية ولوحة المفاتيح ما زالت على العبرية أو الكورية أو اليونانية؟ يقرأ Kiko
+          الطلاسم ويعيدها إلى الإنجليزية.</p></details>
+      <details><summary>هل يعمل مع تطبيقات سطح المكتب؟</summary>
+        <p>يعمل Kiko في أي موقع تفتحه في Chrome، وهذا يشمل نسخة الويب من
+          معظم تطبيقات سطح المكتب — الحساب نفسه، الرسائل نفسها. افتحها في تبويب وسيكون Kiko
+          هناك. أما التطبيقات المستقلة فتعمل خارج المتصفح، ولذلك لا تصل إليها أي إضافة متصفح
+          على الإطلاق.</p></details>
+      <details><summary>أي متصفحات؟</summary>
+        <p>Chrome اليوم، والمتصفحات المبنية على Chromium مثل Edge وBrave وArc. أما Firefox وSafari فهما على
+          القائمة.</p></details>
     </div>
   </div>
 </section>
 
 <div class="final wrap">
-  <h2>Stop retyping whole sentences.</h2>
-  <p class="lede">Install it, forget it's there, and notice how often it quietly saves you.</p>
-  <a class="btn btn-primary" href="#" data-webstore>Add to Chrome — free for 30 days</a>
+  <h2>كف عن إعادة كتابة جمل كاملة.</h2>
+  <p class="lede">ثبته، وانس وجوده، ولاحظ كم مرة ينقذك في صمت.</p>
+  <a class="btn btn-primary" href="#" data-webstore>أضفه إلى Chrome — 30 يوما مجانا</a>
 </div>
 
 <footer>
   <div class="wrap foot-in">
-    <div><img src="icon128.png" alt="" width="18" height="18" style="border-radius:5px;vertical-align:-4px"> <b style="color:var(--ink-2)">Kiko</b> · © 2026 SELLTECHIO LTD · Ginnosar, Israel 1498000</div>
+    <div><img src="../icon128.png" alt="" width="18" height="18" style="border-radius:5px;vertical-align:-4px"> <b style="color:var(--ink-2)">Kiko</b> · © 2026 SELLTECHIO LTD · Ginnosar, Israel 1498000</div>
     <div class="foot-links">
-      <a href="support.html">Support</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Terms</a>
-      <a href="refund.html">Refunds</a>
+      <a href="../support.html">الدعم</a>
+      <a href="../privacy.html">الخصوصية</a>
+      <a href="../terms.html">الشروط</a>
+      <a href="../refund.html">الاسترداد</a>
       <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a>
     </div>
   </div>
 </footer>
 
 <script>
-  // Set once the Web Store assigns an extension ID. Every "Add to Chrome"
+  // Set once the Web Store assigns an extension ID. Every "أضفه إلى Chrome"
   // button on the page reads from this one constant.
   const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/alibejcaklfjcbjmncgbhpdichpblnkl';
-  // Lemon Squeezy product checkout — offers both plans, $5/month and $40/year,
+  // Lemon Squeezy product checkout — offers both plans, $5/شهريا and 40$/سنويا,
   // and the buyer chooses. Same value as CHECKOUT_URL in keylang/popup.js.
   const CHECKOUT_URL = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
   document.querySelectorAll('[data-checkout]').forEach(a => { a.href = CHECKOUT_URL; });
@@ -530,12 +530,12 @@
   const LANGS = [
     // Deliberate letter badges, not flag emoji — Windows has never shipped flag
     // glyphs and silently falls back to bare letters, so we draw them ourselves.
-    {code:'he', badge:'IL', tint:'#8fc0ff', name:'Hebrew',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'hello', rtl:true},
-    {code:'ru', badge:'RU', tint:'#d3aef9', name:'Russian',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'hi'},
-    {code:'uk', badge:'UA', tint:'#fbe08a', name:'Ukrainian', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'hi'},
-    {code:'ko', badge:'KR', tint:'#93e7f5', name:'Korean',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'hi'},
-    {code:'el', badge:'GR', tint:'#b9bdfa', name:'Greek',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'hi'},
-    {code:'ar', badge:'SA', tint:'#fbd08a', name:'Arabic',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'hello', rtl:true}
+    {code:'he', badge:'IL', tint:'#8fc0ff', name:'العبرية',    native:'שלום',   roman:'shalom',   typed:'akuo',   mean:'مرحبا', rtl:true},
+    {code:'ru', badge:'RU', tint:'#d3aef9', name:'الروسية',   native:'привет', roman:'privet',   typed:'ghbdtn', mean:'أهلا'},
+    {code:'uk', badge:'UA', tint:'#fbe08a', name:'الأوكرانية', native:'привіт', roman:'pryvit',   typed:'ghbdsn', mean:'أهلا'},
+    {code:'ko', badge:'KR', tint:'#93e7f5', name:'الكورية',    native:'안녕',    roman:'annyeong', typed:'dkssud', mean:'أهلا'},
+    {code:'el', badge:'GR', tint:'#b9bdfa', name:'اليونانية',     native:'γεια',   roman:'yia',      typed:'geia',   mean:'أهلا'},
+    {code:'ar', badge:'SA', tint:'#fbd08a', name:'العربية',    native:'مرحبا',  roman:'marhaba',  typed:'lvpfh',  mean:'مرحبا', rtl:true}
   ];
 
   // -- hero demo ------------------------------------------------------------
@@ -553,13 +553,13 @@
     const l = LANGS[i];
     [...tabs.children].forEach((b, n) => b.setAttribute('aria-selected', n === i ? 'true' : 'false'));
     document.getElementById('typed').textContent = l.typed;
-    document.getElementById('toast-msg').textContent = `Wrong layout? Looks like ${l.name}:`;
+    document.getElementById('toast-msg').textContent = `تخطيط خاطئ؟ يبدو أنها ${l.name}:`;
     const fx = document.getElementById('fixed');
     fx.textContent = l.native;
     fx.className = 'toast-fix' + (l.rtl ? ' rtl' : '');
-    document.getElementById('fixbtn').textContent = `Fix → ${l.name}`;
+    document.getElementById('fixbtn').textContent = `صحح ← ${l.name}`;
     document.getElementById('gloss').innerHTML =
-      `<b>${l.native}</b> — "${l.roman}", ${l.mean} in ${l.name}. On a US layout those keys come out as <b>${l.typed}</b>.`;
+      `<b>${l.native}</b> — "${l.roman}", ${l.mean} بـ${l.name}. على التخطيط الإنجليزي تخرج هذه المفاتيح هكذا <b>${l.typed}</b>.`;
   }
   select(0);
 
@@ -573,22 +573,22 @@
     <div class="lang">
       <div class="lang-top">
         <span class="lang-flag" style="background:${l.tint}">${l.badge}</span>
-        <span class="lang-name">${l.name} ↔ English</span>
+        <span class="lang-name">${l.name} ↔ الإنجليزية</span>
         <span class="lang-mean">"${l.mean}"</span>
       </div>
       <div class="row">
-        <span class="row-k">Meant</span>
+        <span class="row-k">قصدت</span>
         <span class="row-v native${l.rtl ? ' rtl' : ''}">${l.native}</span>
         <span class="lang-mean">${l.roman}</span>
       </div>
       <div class="row got">
-        <span class="row-k">Got</span>
+        <span class="row-k">خرج</span>
         <span class="row-v">${l.typed}</span>
       </div>
       <div class="row fixed">
         <span class="row-k">Kiko</span>
         <span class="row-v native${l.rtl ? ' rtl' : ''}">${l.native}</span>
-        <span class="lang-mean">one click</span>
+        <span class="lang-mean">نقرة واحدة</span>
       </div>
     </div>`).join('');
 </script>

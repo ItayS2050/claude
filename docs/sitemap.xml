@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9"
+<!-- The namespace is sitemaps.org, plural. It read sitemap.org, which is a
+     different domain and not the schema: search engines reject a sitemap whose
+     urlset is in an unrecognised namespace, so this file has most likely been
+     doing nothing since it was written. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://get-kiko.com/</loc>
@@ -7,11 +11,17 @@
     <xhtml:link rel="alternate" hreflang="he" href="https://get-kiko.com/he/"/>
     <xhtml:link rel="alternate" hreflang="ru" href="https://get-kiko.com/ru/"/>
     <xhtml:link rel="alternate" hreflang="ko" href="https://get-kiko.com/ko/"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://get-kiko.com/uk/"/>
+    <xhtml:link rel="alternate" hreflang="el" href="https://get-kiko.com/el/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://get-kiko.com/ar/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://get-kiko.com/"/>
   </url>
   <url><loc>https://get-kiko.com/he/</loc></url>
   <url><loc>https://get-kiko.com/ru/</loc></url>
   <url><loc>https://get-kiko.com/ko/</loc></url>
+  <url><loc>https://get-kiko.com/uk/</loc></url>
+  <url><loc>https://get-kiko.com/el/</loc></url>
+  <url><loc>https://get-kiko.com/ar/</loc></url>
   <url><loc>https://get-kiko.com/support.html</loc></url>
   <url><loc>https://get-kiko.com/privacy.html</loc></url>
   <url><loc>https://get-kiko.com/terms.html</loc></url>
