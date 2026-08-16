@@ -31,6 +31,30 @@ import pathlib
 HERE = pathlib.Path(__file__).parent
 LOCALES = ("en", "he", "ru", "ko")
 
+# Languages that ship a store listing but nothing else. Kiko corrects six
+# languages and the listing only spoke four of them, so a Ukrainian or an Arabic
+# speaker searching in their own language found nothing — two of the six with no
+# presence in their own market at all.
+#
+# Kept apart from the table below rather than added as three more columns,
+# because that table has a hundred rows and these locales need two of them. A
+# language graduates by moving its strings into M and being added to LOCALES,
+# which is when the rest of the interface has been translated and read.
+LISTING_ONLY = {
+    "uk": (
+        "Kiko – виправлення розкладки клавіатури",
+        "Не та розкладка? Kiko знайде і одним кліком виправить текст українською, івритом, російською, корейською, грецькою, арабською.",
+    ),
+    "el": (
+        "Kiko – διόρθωση λάθους διάταξης πληκτρολογίου",
+        "Λάθος διάταξη; Το Kiko εντοπίζει ελληνικά, εβραϊκά, ρωσικά, ουκρανικά, κορεατικά και αραβικά και τα διορθώνει με ένα κλικ.",
+    ),
+    "ar": (
+        "Kiko – تصحيح الكتابة بتخطيط لوحة مفاتيح خاطئ",
+        "تخطيط لوحة المفاتيح خاطئ؟ يكتشف Kiko العربية والعبرية والروسية والأوكرانية والكورية واليونانية ويصححها بنقرة واحدة.",
+    ),
+}
+
 # Languages whose interface we ship. Empty means listings only.
 # Do not add a language here until a native speaker has read the strings —
 # a wrong translation in a paid product costs more than an English one.
@@ -350,6 +374,9 @@ def entry(text):
 def main():
     limits = {"extName": 75, "extDescription": 132}
     problems = []
+    for code, (name, desc) in LISTING_ONLY.items():
+        if code in LOCALES:
+            problems.append(f"{code}: in both LOCALES and LISTING_ONLY")
     for i, code in enumerate(LOCALES):
         # The default locale always carries everything: it is what every other
         # locale falls back to.
@@ -371,6 +398,21 @@ def main():
             json.dumps(msgs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         kind = "full interface" if full else "listing only"
         print(f"  _locales/{code}/messages.json  {len(msgs):>3} strings  ({kind})")
+    for code, (name, desc) in LISTING_ONLY.items():
+        msgs = {}
+        for key, text in (("extName", name), ("extDescription", desc)):
+            if not text:
+                problems.append(f"{code}: {key} is empty")
+                continue
+            if len(text) > limits[key]:
+                problems.append(f"{code} {key}: {len(text)} chars, limit {limits[key]}")
+            msgs[key] = entry(text)
+        d = HERE / "_locales" / code
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "messages.json").write_text(
+            json.dumps(msgs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"  _locales/{code}/messages.json  {len(msgs):>3} strings  (listing only)")
+
     if problems:
         raise SystemExit("problems:\n  " + "\n  ".join(problems))
 
