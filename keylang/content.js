@@ -995,7 +995,27 @@ function looksLikeRealHebrew(words) {
   return hits >= 2 || hits / he.length >= 0.34;
 }
 
-function convertToHebrew(t)    { return [...t].map(c => EN_TO_HE[c]  || c).join(''); }
+function convertToHebrew(t) {
+  // Token by token, because a trailing comma is ambiguous and the reading that
+  // matched has to be the reading that converts. wordCouldBeHebrew accepts
+  // "akuo," by trying it again as "akuo" plus punctuation; if the conversion
+  // did not agree it would offer שלוםת where the user wrote שלום, — a visibly
+  // wrong suggestion, which is worse than staying quiet.
+  //
+  // Only tokens that fail as-is and succeed stripped are treated this way, so
+  // "t," still converts to את and nothing that already worked changes.
+  return t.split(/(\s+)/).map(tok => {
+    if (!/\S/.test(tok)) return tok;
+    const bare = tok.replace(/[,.;]$/, '');
+    if (bare !== tok && bare.length >= 2 &&
+        !couldBeHebrewExactly(tok) && couldBeHebrewExactly(bare)) {
+      return mapToHebrew(bare) + tok.slice(bare.length);
+    }
+    return mapToHebrew(tok);
+  }).join('');
+}
+
+function mapToHebrew(t) { return [...t].map(c => EN_TO_HE[c] || c).join(''); }
 function convertToEnglish(t)   { return [...t].map(c => HE_TO_EN[c] || c).join(''); }
 function convertToRussian(t)   { return [...t].map(c => EN_TO_RU[c]  || c).join(''); }
 function convertFromRussian(t) { return [...t].map(c => RU_TO_EN[c] || c).join(''); }
@@ -1022,7 +1042,25 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// On the Hebrew layout the comma key is ת, the full stop is ש and the
+// semicolon is ף, so those characters are kept inside words — "את" is typed
+// `t,` and stripping the comma would destroy one of the commonest words in the
+// language. But an ordinary sentence has commas in it too, and "akuo," reads as
+// שלוםת, which the final-form rule rejects as impossible. So the word came out
+// as unrecognisable and the whole run died with it.
+//
+// Try the raw reading first, and only if that fails, try it again without a
+// single trailing punctuation mark. `t,` still passes as את on the first
+// attempt; `akuo,` fails, then passes as שלום. Nothing is accepted that a bare
+// word would not have been — the second attempt runs the same gauntlet — so
+// this cannot admit a class of text the rules already reject.
 function wordCouldBeHebrew(word) {
+  if (couldBeHebrewExactly(word)) return true;
+  const trimmed = word.replace(/[,.;]$/, '');
+  return trimmed.length >= 2 && trimmed !== word && couldBeHebrewExactly(trimmed);
+}
+
+function couldBeHebrewExactly(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;

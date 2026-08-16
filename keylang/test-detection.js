@@ -318,6 +318,31 @@ console.log('Real Hebrew is never offered for conversion into English');
   check('english on a hebrew keyboard, 4', 'בשמ טםו דקמג צק איק שאאשביקג כןךק', 'hebrew_as_english');
 }
 
+console.log('A comma is punctuation or the letter ת, whichever the word allows');
+{
+  // On the Hebrew layout the comma key is ת. So "t," is את — one of the
+  // commonest words in the language — and stripping punctuation blindly would
+  // destroy it. But an ordinary sentence has commas too, and "akuo," reads as
+  // שלוםת, which is impossible: ם is a final form and cannot precede a letter.
+  // Before this, the word was simply unrecognisable and the whole run died.
+  check('a comma after a word no longer kills the run',
+        'akuo, nv akunl vhuo', 'english_as_hebrew',
+        { converted: 'שלום, מה שלומך היום' });
+  // The raw reading is tried first so a word that genuinely ends in ת is
+  // untouched. Honest caveat: no case in the corpus distinguishes raw-first
+  // from strip-always, so that ordering rests on the argument about words
+  // ending in ת rather than on evidence. Worth revisiting when the corpus
+  // holds real text.
+  check('a word that really ends in ת still converts',
+        't, vhuo', 'english_as_hebrew', { converted: 'את היום' });
+  check('a full stop behaves the same way',
+        'akuo. nv akunl', 'english_as_hebrew', { converted: 'שלום. מה שלומך' });
+  // Nothing is admitted that a bare word would not have been: the second
+  // attempt runs the same gauntlet, so English with commas stays silent.
+  check('english with commas stays quiet',  'yes, i can do that, but not before friday', null);
+  check('english with a full stop stays quiet', 'ok, sounds good, talk later.', null);
+}
+
 console.log('A rejected word bridges a run instead of splitting it');
 {
   // Reported from the wild. "cut" had been rejected once; every later Hebrew
