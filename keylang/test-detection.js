@@ -61,6 +61,7 @@ function loadContentScript() {
     '(function () {\n' + src +
     '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
+    '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         learnHebrew: ws => ws.forEach(w => learnedHebrew.add(w)),' +
     '         rejectWords: ws => ws.forEach(w => learnedEnglish.add(w)),' +
     '         forgetLearned: () => { learnedHebrew.clear(); learnedEnglish.clear(); },' +
@@ -316,6 +317,50 @@ console.log('Real Hebrew is never offered for conversion into English');
   check('english on a hebrew keyboard, 2', 'ישן טםו דקני אק כןךק', 'hebrew_as_english');
   check('english on a hebrew keyboard, 3', 'פךקשדק גם\'מךםשג איק ךשאקדא הקרדןםמ', 'hebrew_as_english');
   check('english on a hebrew keyboard, 4', 'בשמ טםו דקמג צק איק שאאשביקג כןךק', 'hebrew_as_english');
+}
+
+console.log('A fix replaces the mistyped words and not one word more');
+{
+  // Found by the 4.8.6 audit. Detection was right — those really are mistyped
+  // Hebrew words — but the context-extension pass then absorbed the English
+  // word beside the run, so accepting the fix replaced a word the user had
+  // typed on purpose. "yesterday" became טקדאקרגשט.
+  //
+  // The rule that came out of it: a common English word may be *enclosed* by
+  // wrong-layout text, but may never *extend* a run outward.
+  const span = (label, input, want) => {
+    kiko.forgetLearned();
+    kiko.setLangs({ ...ALL });
+    const d = kiko.analyzeText(input);
+    const got = d ? d.original : null;
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        input    ${JSON.stringify(input)}`);
+    console.log(`        expected ${JSON.stringify(want)}`);
+    console.log(`        actual   ${JSON.stringify(got)}`);
+  };
+
+  span('trailing english is left alone',
+       'I spoke with akuo nv akunl yesterday', 'akuo nv akunl');
+  span('leading english is left alone',
+       'the akuo nv file', 'akuo nv');
+  span('english on both sides is left alone',
+       'akuo nv akunl and then I left', 'akuo nv akunl');
+  span('a brand before the run is left alone',
+       'Slack akuo nv akunl', 'akuo nv akunl');
+  span('a fully mistyped sentence is taken whole',
+       'akuo nv akunl vhuo', 'akuo nv akunl vhuo');
+
+  // Acronyms are short, vowel-free and in no dictionary, which is exactly the
+  // shape of a mistyped Hebrew word. Capitalisation is the only thing that
+  // tells them apart: nobody holds shift through a whole wrong-layout burst.
+  check('acronyms are not offered for conversion',
+        'send the PDF and the CSV to HR', null);
+  check('more acronyms',  'PR CI CD QA UAT prod', null);
+  // One-sided on purpose: a burst typed with caps lock is now missed, which
+  // costs a shrug, where converting someone's acronyms costs them their text.
+  check('lowercase burst still fires', 'akuo nv akunl', 'english_as_hebrew');
 }
 
 console.log('A comma is punctuation or the letter ת, whichever the word allows');
@@ -839,6 +884,61 @@ console.log('The toast preview shows the whole sentence');
   // Hebrew counts words the same way; nothing here is Latin-specific.
   const he = 'שלום מה שלומך אני לא מצליח לקרוא את זה בכלל';
   is('hebrew sentence survives intact', trunc(he), he);
+}
+
+console.log('The fix can be accepted without touching the mouse');
+{
+  // Escape dismissed, but accepting needed a click, so the fastest users —
+  // the ones who type in two languages all day, which is the whole market —
+  // had to leave the keyboard for every correction. Alt+Shift+Enter accepts.
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
+  };
+  const key = o => Object.assign(
+    { code: 'Enter', altKey: false, shiftKey: false, ctrlKey: false, metaKey: false }, o);
+
+  is('alt+shift+enter accepts',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true })), true);
+  is('the numeric keypad enter works too',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true, code: 'NumpadEnter' })), true);
+
+  // Enter alone is not available. In Gmail, Slack, WhatsApp Web and every
+  // other place Kiko runs, Enter sends the message — binding accept to it
+  // would fire the fix at the moment the text is already gone.
+  is('bare enter does not accept',      kiko.isAcceptShortcut(key({})), false);
+  is('shift+enter does not accept',     kiko.isAcceptShortcut(key({ shiftKey: true })), false);
+  is('alt+enter does not accept',       kiko.isAcceptShortcut(key({ altKey: true })), false);
+  is('ctrl+alt+shift+enter does not',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true, ctrlKey: true })), false);
+  is('cmd+alt+shift+enter does not',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true, metaKey: true })), false);
+  is('alt+shift+K is still the scan key, not accept',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true, code: 'KeyK' })), false);
+
+  // The review nudge and the trial notice are built from the same markup and
+  // put their own button under .kld-primary. One opens the Web Store, the
+  // other opens checkout. A keystroke aimed at a sentence must not open either.
+  is('a fix toast answers the shortcut',
+     kiko.toastAcceptsKeyboard({ dataset: { kldFix: '1' } }), true);
+  is('the review nudge does not',   kiko.toastAcceptsKeyboard({ dataset: {} }), false);
+  is('the trial notice does not',   kiko.toastAcceptsKeyboard({ dataset: {} }), false);
+  is('no toast at all does not',    kiko.toastAcceptsKeyboard(null), false);
+
+  // A shortcut nobody is told about is not a feature. It is printed on the
+  // button it presses, in symbols, so all seven locales read it the same.
+  is('the shortcut is shown on the button', typeof kiko.ACCEPT_KEYS === 'string'
+     && kiko.ACCEPT_KEYS.length > 0, true);
+  const src = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  const labelled = [...src.matchAll(/class="kld-btn kld-primary"[^>]*>\$\{escapeHtml\(detection\.btnLabel\)\}([^`]*?)<\/button>/g)];
+  is('every fix button prints the shortcut', labelled.length, 2);
+  for (const m of labelled) {
+    is('  ...and it is the kbd hint', /kld-kbd">\$\{ACCEPT_KEYS\}/.test(m[1]), true);
+  }
+  // Both fix toasts must opt in, or the shortcut silently does nothing on one.
+  is('both fix toasts mark themselves', (src.match(/dataset\.kldFix = '1'/g) || []).length, 2);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

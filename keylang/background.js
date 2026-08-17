@@ -452,14 +452,6 @@ async function ensureOffscreen() {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'kiko-feedback') {
-    // Return true to keep the service worker alive until the fetch completes.
-    // Without this, Chrome can terminate the worker before the POST goes out.
-    fetch(msg.url, { method: 'POST', body: msg.body })
-      .catch(() => {})
-      .finally(() => sendResponse());
-    return true;
-  }
   if (msg.type === 'kiko-activate-licence') {
     activateLicence(msg.key).then(sendResponse);
     return true;

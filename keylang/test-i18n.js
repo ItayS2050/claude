@@ -102,6 +102,55 @@ for (const code of LOCALES) {
   }
 }
 
+console.log('Nothing in the extension can send typed text anywhere');
+{
+  // The published promise — "your typing never leaves your computer", on the
+  // site in six languages and in the store listing — used to be kept by one
+  // empty string constant in content.js. sendFeedback() would have posted up
+  // to fifteen typed words to whatever URL that constant held. It held "", so
+  // nothing was ever sent, but a promise that survives only because nobody
+  // filled in a blank is not a guarantee. Removed in 4.9.0; this keeps it out.
+  const shipped = fs.readFileSync(path.join(HERE, 'build.sh'), 'utf8')
+    .match(/FILES=\(([\s\S]*?)\)/)[1]
+    .split(/\s+/).filter(f => f.endsWith('.js'));
+
+  // content.js sees every keystroke on every page. It must not be able to
+  // reach the network at all — not directly, and not by asking the background
+  // to fetch a URL on its behalf, which is exactly how the old path worked.
+  const content = fs.readFileSync(path.join(HERE, 'content.js'), 'utf8');
+  for (const [label, re] of [
+    ['fetch',            /\bfetch\s*\(/],
+    ['XMLHttpRequest',   /XMLHttpRequest/],
+    ['sendBeacon',       /sendBeacon/],
+    ['WebSocket',        /new\s+WebSocket/],
+    ['EventSource',      /new\s+EventSource/],
+    ['a url in a message', /sendMessage\s*\(\s*\{[^}]*\burl\s*:/],
+  ]) {
+    if (!re.test(content)) ok();
+    else bad(`content.js can reach the network via ${label} — it sees every keystroke and must not`);
+  }
+
+  // Nowhere may forward an arbitrary URL handed to it. The old background
+  // handler did `fetch(msg.url, ...)`, which turned the service worker into a
+  // relay for anything a content script asked it to send.
+  for (const name of shipped) {
+    const src = fs.readFileSync(path.join(HERE, name), 'utf8');
+    if (!/fetch\s*\(\s*msg\./.test(src)) ok();
+    else bad(`${name} fetches a URL taken from a message — that is a relay for arbitrary data`);
+  }
+
+  // The only destination the extension may talk to is the licence provider,
+  // and the only thing it may carry is a licence key.
+  const bg = fs.readFileSync(path.join(HERE, 'background.js'), 'utf8');
+  const targets = [...bg.matchAll(/fetch\(([^,)]+)/g)].map(m => m[1].trim());
+  for (const t of targets) {
+    if (/^LICENCE_PROVIDER\.\w+Url$/.test(t)) ok();
+    else bad(`background.js fetches ${t}, which is not a LICENCE_PROVIDER endpoint`);
+  }
+  if (targets.length) ok();
+  else bad('expected the licence calls to still be present');
+}
+
 console.log('Every message send handles the receiver being gone');
 {
   // "Unchecked runtime.lastError: Could not establish connection. Receiving end

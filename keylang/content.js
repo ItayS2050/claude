@@ -228,30 +228,24 @@ function decomposeHangul(text) {
   return out;
 }
 
-// ── Feedback telemetry (anonymous, fire-and-forget) ──────────
-// Telemetry disabled — all processing is local, no text is sent to any server.
-const FEEDBACK_URL = '';
-
-function sendFeedback(words, action, type) {
-  if (!FEEDBACK_URL) return;
-  try {
-    chrome.runtime.sendMessage({
-      type: 'kiko-feedback',
-      url: FEEDBACK_URL,
-      body: JSON.stringify({
-        words: words.slice(0, 15).map(w => w.toLowerCase()),
-        action, type,
-        version: KIKO_VERSION
-      })
-      // An orphaned content script — one left in an open tab after the
-      // extension reloaded — has no background left to talk to, and this
-      // rejects with "Receiving end does not exist". The try/catch above
-      // cannot see that: it is asynchronous. Unhandled, it posts a red error
-      // on the extension's own page, which reviewers read too. Losing one
-      // feedback ping from a tab that predates the update costs nothing.
-    }).catch(() => {});
-  } catch {}
-}
+// ── No telemetry ──────────────────────────────────────────────
+// There is deliberately no function here that can send anything anywhere.
+//
+// Until 4.9.0 this block held sendFeedback(), which posted up to fifteen of
+// the user's typed words to whatever URL a constant held. The constant was an
+// empty string and nothing was ever sent — but "your typing never leaves your
+// computer" is published on the site in six languages and in the store
+// listing, and that promise was being kept by one empty string in a file
+// edited every release. A promise that survives only by nobody filling in a
+// blank is not a guarantee.
+//
+// The background handler that performed the POST is gone too. The only network
+// calls left in the extension are the three licence calls in background.js,
+// which carry a licence key and nothing else.
+//
+// If aggregate metrics are ever wanted, they belong in background.js as
+// integer counters with no text, no URLs and no hostnames — and the store
+// declaration and the privacy pages have to change in the same release.
 
 // ── Localisation ──────────────────────────────────────────────
 // Every call carries the English that used to be hard-coded here as its
@@ -1054,7 +1048,22 @@ function escapeHtml(s) {
 // attempt; `akuo,` fails, then passes as שלום. Nothing is accepted that a bare
 // word would not have been — the second attempt runs the same gauntlet — so
 // this cannot admit a class of text the rules already reject.
+// PDF, CSV, HR, CI, CD. Short, vowel-free, in no dictionary, and they map onto
+// Hebrew keys as cleanly as any mistyped word does — "csv to hr" was being
+// offered as בדה אם יר. Capitalisation is the signal that separates them:
+// somebody typing Hebrew with the wrong layout produces lowercase, because
+// they are not holding shift for every letter.
+//
+// Deliberately one-sided. A burst typed with caps lock on will now be missed,
+// which costs a shrug; offering to convert someone's acronyms costs them their
+// text. Only applied to short all-caps tokens — a genuinely shouted sentence
+// is several long words and does not match.
+function looksLikeAcronym(word) {
+  return word.length <= 5 && word === word.toUpperCase() && /[A-Z]/.test(word);
+}
+
 function wordCouldBeHebrew(word) {
+  if (looksLikeAcronym(word)) return false;
   if (couldBeHebrewExactly(word)) return true;
   const trimmed = word.replace(/[,.;]$/, '');
   return trimmed.length >= 2 && trimmed !== word && couldBeHebrewExactly(trimmed);
@@ -1077,11 +1086,31 @@ function couldBeHebrewExactly(word) {
   return true;
 }
 
+// A word that is unmistakably English is never part of a wrong-layout burst,
+// however cleanly its letters happen to map onto Hebrew keys.
+//
+// This is the guard the context extension was missing. Detection was right —
+// "I spoke with akuo nv akunl yesterday" really does contain three mistyped
+// Hebrew words — but the extension pass then absorbed "yesterday", and
+// accepting the fix would have replaced a word the user typed on purpose with
+// טקדאקרגשט. "the", "and" and "then" went the same way. wordCouldBeHebrew
+// rejects all four correctly; the extension pass simply never asked it.
+//
+// The threshold is looser than wordCouldBeHebrew's 0.20 on purpose. Extension
+// exists to pick up the ragged edges of a burst — short words, words with no
+// vowels — and tightening it all the way would make the pass pointless. What
+// it must never do is swallow a word from the common English list.
+function unmistakablyEnglish(lower) {
+  if (EN_WORDS.has(lower)) return true;
+  return englishScore(lower) >= 0.35;
+}
+
 function mapsToHebrew(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
   if (learnedHebrew.has(lower)) return true;
+  if (unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
   for (let i = 0; i < mapped.length - 1; i++) {
@@ -1094,10 +1123,36 @@ function mapsToHebrew(word) {
 // keyboard mapping. Final-form at non-final position is actually EVIDENCE of wrong
 // layout here, not a reason to exclude. EN_WORDS/englishScore filters are also skipped
 // because in a mixed Hebrew+Latin sentence we want the whole Latin segment.
+// The looser check, used when the text already contains real Hebrew. In that
+// company a word like "vc" probably is a mistyped Hebrew word rather than an
+// abbreviation, so the final-form rule is dropped. The English guard is not:
+// "Slack" and "deck" in a Hebrew sentence are the brand and the noun, and
+// eating them is the same destructive mistake in a different context.
+// Pure key-mapping, no judgement about the word itself. Only ever used to
+// decide whether a word can sit *inside* a run, never whether a run may grow
+// outward to reach it — see the bridge condition in the run assembly.
+// Length is what separates the two cases, and neither the dictionary nor the
+// English score can do it: "cut" and "meeting" are both absent from the common
+// word list and both score high, yet "cut" belongs inside
+// "tueh cut brtv nv eurv gfahu" and "meeting" must break
+// "brtv nv meeting eurv gfahu" in half.
+//
+// Three or four letters enclosed by wrong-layout text is plausibly part of the
+// burst. Seven letters is a word somebody meant to type.
+const MAX_BRIDGE_LEN = 4;
+
+function keysMapToHebrew(word) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2 || lower.length > MAX_BRIDGE_LEN) return false;
+  if (learnedEnglish.has(lower)) return false;
+  return [...lower].every(c => EN_TO_HE[c] !== undefined && HEBREW_RE.test(EN_TO_HE[c]));
+}
+
 function physicallyMapsToHebrew(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
+  if (unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   return mapped.every(c => c !== undefined && HEBREW_RE.test(c));
 }
@@ -1638,7 +1693,18 @@ function analyzeText(rawText, scanAll = false) {
       if (curRun.length === 0) curStartIdx = wi;
       curRun.push(w);
     } else if (curRun.length > 0 && curGap.length < 2 &&
-               (PASSTHROUGH.has(w.toLowerCase()) || bridgesRejectedWord(w))) {
+               // A common English word may be *enclosed* by wrong-layout text —
+               // "tueh cut brtv nv eurv gfahu" is a whole Hebrew sentence in
+               // which "cut" happens to spell an English word, and splitting
+               // there leaves half the sentence as gibberish. It may never
+               // *extend* a run outward, which is what was destroying the
+               // "yesterday" in "I spoke with akuo nv akunl yesterday".
+               //
+               // Enclosure is what makes it safe: a gap is only merged when
+               // another plausible word follows it, so a trailing English word
+               // is dropped rather than absorbed.
+               (PASSTHROUGH.has(w.toLowerCase()) || bridgesRejectedWord(w) ||
+                keysMapToHebrew(w))) {
       curGap.push(w);
     } else {
       if (curRun.length > 0) allRuns.push({ words: [...curRun], startIdx: curStartIdx });
@@ -2164,6 +2230,13 @@ const STYLES = `
   .kld-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
   .kld-btn:active { transform: translateY(0); }
   .kld-primary    { background: #3b82f6; color: #fff; flex: 1; }
+  /* The accept shortcut, printed on the button that it presses. Symbols only,
+     so it reads the same in all seven locales, and isolated so it does not
+     get reordered when the toast is in RTL. */
+  .kld-kbd {
+    font-size: 10px; font-weight: 600; opacity: 0.7; letter-spacing: 0.3px;
+    margin-inline-start: 6px; direction: ltr; unicode-bidi: isolate;
+  }
   .kld-reject     { background: #1e293b; color: #f87171; border: 1px solid #f8717140; }
   .kld-dismiss    { background: none; border: none; color: #64748b; padding: 4px 6px; font-size: 14px; line-height: 1; }
   .kld-dismiss:hover { color: #e2e8f0; }
@@ -2280,6 +2353,26 @@ function playDetectionSound() {
 // speak. Only the frame the user is actually typing in should, and every path
 // that reaches showToast — typing, the recall bubble, Alt+Shift+K, the context
 // menu — runs in exactly that frame.
+// The whole loop has to be reachable without the mouse. Escape already
+// dismisses; this accepts. Enter on its own is not available — in every chat
+// app Kiko runs in, Enter sends the message — so accept carries the same
+// modifiers as Alt+Shift+K rather than inventing a second convention.
+const IS_MAC      = /mac/i.test(navigator.userAgent);
+const ACCEPT_KEYS = IS_MAC ? '⌥⇧⏎' : 'Alt+Shift+↵';
+
+function isAcceptShortcut(e) {
+  return !!(e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey &&
+            (e.code === 'Enter' || e.code === 'NumpadEnter'));
+}
+
+// The review nudge and the trial notice reuse the toast markup, and both put a
+// .kld-primary button where the fix button goes — one opens the store, the
+// other opens checkout. Neither may be pressed by a keystroke the user aimed
+// at their text, so only a toast that marked itself as offering a fix answers.
+function toastAcceptsKeyboard(toast) {
+  return !!(toast && toast.dataset && toast.dataset.kldFix === '1');
+}
+
 function ownsTheToast() {
   try {
     // An unfocused window must stay quiet. Two windows on the same site each
@@ -2372,6 +2465,10 @@ function showToast(element, detection, forceShow = false) {
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   if (UI_RTL) toast.dir = 'rtl';
+  // Only a toast that offers a fix answers to the accept shortcut. The review
+  // nudge and the trial notice reuse this markup, and neither should be
+  // openable by a keystroke the user aimed at their text.
+  toast.dataset.kldFix = '1';
   toast.innerHTML = `
     <div class="kld-header">
       <span>⌨️</span>
@@ -2384,7 +2481,7 @@ function showToast(element, detection, forceShow = false) {
       <span class="kld-preview-arrow">→</span><span class="kld-preview-new">${escapeHtml(truncatePreview(detection.converted))}</span>
     </div>
     <div class="kld-actions">
-      <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
+      <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}<span class="kld-kbd">${ACCEPT_KEYS}</span></button>
       <button class="kld-btn kld-reject">${escapeHtml(detection.rejectLabel)}</button>
     </div>
     <div class="kld-footer">
@@ -2432,10 +2529,9 @@ function showToast(element, detection, forceShow = false) {
       }
     }
     saveFeedback(detection.words, true, detection.lang || 'he');
-    sendFeedback(detection.words, 'fix', detection.type);
     removeToast(false);
     if (ok) {
-      const kb = /mac/i.test(navigator.userAgent) ? '⌘+Space' : 'Alt+Shift';
+      const kb = IS_MAC ? '⌘+Space' : 'Alt+Shift';
       const undoFn = undoSnapshot ? () => {
         element.value = undoSnapshot.val;
         element.selectionStart = element.selectionEnd = undoSnapshot.sel;
@@ -2471,7 +2567,6 @@ function showToast(element, detection, forceShow = false) {
   // Reject — teach Kiko this is not a layout mistake
   toast.querySelector('.kld-reject').addEventListener('click', () => {
     saveFeedback(detection.words, false, detection.lang || 'he');
-    sendFeedback(detection.words, 'reject', detection.type);
     const sample = detection.words.slice(0, 3).join(', ');
     showConfirm(`✓ Got it — "${sample}${detection.words.length > 3 ? '…' : ''}" noted`);
     removeToast(false);
@@ -2762,6 +2857,17 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  // Alt+Shift+Enter — accept the fix. Clicking the button rather than calling
+  // the handler keeps one code path for both, and dispatching it inline in the
+  // keydown preserves the user activation execCommand('insertText') needs.
+  if (isAcceptShortcut(e)) {
+    if (!toastAcceptsKeyboard(activeToast)) return;
+    e.preventDefault();
+    const primary = activeToast.querySelector('.kld-primary');
+    if (primary) primary.click();
+    return;
+  }
+
   if (!e.altKey || !e.shiftKey || e.code !== 'KeyK') return;
   e.preventDefault();
 
@@ -2897,11 +3003,12 @@ function convertSelection(text, sel) {
 
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
+  toast.dataset.kldFix = '1';
   toast.innerHTML = `
     <div class="kld-header"><span>⌨️</span><span style="flex:1">${escapeHtml(detection.message)}</span><button class="kld-btn kld-dismiss" title="${escapeHtml(t('hintDismiss', null, 'Dismiss'))}">✕</button></div>
     <div class="kld-preview">${escapeHtml(detection.converted)}</div>
     <div class="kld-actions">
-      <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}</button>
+      <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}<span class="kld-kbd">${ACCEPT_KEYS}</span></button>
       <button class="kld-btn kld-reject">Cancel</button>
     </div>
     <div class="kld-hint">Converting selected text</div>
