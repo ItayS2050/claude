@@ -39,6 +39,7 @@ Kiko is not a dictionary lookup — it scores every word against the letter patt
 - Turn Kiko off for a specific site with one click
 - Optional sound alert when a mistake is caught
 - **Alt + Shift + K** — scan the current field, or convert whatever text you've selected
+- **Alt + Shift + Enter** to accept, **Esc** to dismiss — the whole loop without leaving the keyboard
 
 **Everything stays on your machine**
 

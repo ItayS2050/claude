@@ -207,6 +207,9 @@
   "shortcutScan": {
     "message": "Alt + Shift + K · Scan or convert selected text on any page"
   },
+  "shortcutAccept": {
+    "message": "Alt + Shift + Enter · Accept the fix  ·  Esc · Dismiss"
+  },
   "worksAnywhere": {
     "message": "Works on any website with a text field"
   },
