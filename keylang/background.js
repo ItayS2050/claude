@@ -37,6 +37,27 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
   } catch {}
 
+  // One-time repair, 4.9.1. Until now the in-page review nudge wrote a
+  // thirty-day silence when it timed out, which it did on almost every
+  // appearance: it opened three seconds after a fix, on top of the green
+  // confirm, in the same spot, for nine seconds. Nearly every stored 'snoozed'
+  // is therefore a nudge nobody saw rather than a user who said no, and
+  // storage survives updates, so those users would never be asked again.
+  // Clearing it gives each of them one honest chance under the new timing.
+  // 'done' is a real answer and is left alone.
+  if (details.reason === 'update') {
+    try {
+      const { reviewNudge, reviewNudgeReset } = await chrome.storage.local.get(
+        ['reviewNudge', 'reviewNudgeReset']);
+      if (!reviewNudgeReset) {
+        if (reviewNudge && reviewNudge.state === 'snoozed') {
+          await chrome.storage.local.remove('reviewNudge');
+        }
+        await chrome.storage.local.set({ reviewNudgeReset: true });
+      }
+    } catch {}
+  }
+
   // Tell the people who installed Kiko when it was free that it now costs
   // something. They agreed to no such thing, and an auto-update that silently
   // starts a countdown is not an announcement. Everyone who installs from here

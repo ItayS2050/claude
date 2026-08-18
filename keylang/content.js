@@ -2539,7 +2539,7 @@ function showToast(element, detection, forceShow = false) {
         element.dispatchEvent(new Event('change', { bubbles: true }));
       } : null;
       showConfirm(`✓ Fixed! Switch keyboard: ${kb}`, undoFn);
-      setTimeout(maybeShowReviewToast, 3000);
+      setTimeout(maybeShowReviewToast, REVIEW_DELAY_MS);
       // Re-scan after a short delay to catch any remaining mismatched words
       // (e.g. a sentence with both Hebrew text and Latin-on-Hebrew-keyboard words)
       setTimeout(() => {
@@ -2621,9 +2621,25 @@ function removeToast(showRecall = true) {
 }
 
 // ── Review nudge (shown in-page after 3rd fix) ────────────────
-const REVIEW_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
+//
+// 160 users, zero reviews, and the reason was here. This asked once, for nine
+// seconds, on top of the green "✓ Fixed!" box — same coordinates, three
+// seconds in, while the confirm was still on screen — and then wrote a
+// thirty-day silence whether or not anyone had looked at it. Timing out is not
+// an answer. One unseen appearance bought a month of quiet, and
+// chrome.storage.local survives updates, so reinstalling changed nothing.
+//
+// Now: an answer is honoured for a month, going unseen is honoured for three
+// days, and four unseen tries in a row is taken as an answer of its own.
+const REVIEW_SNOOZE_MS  = 30 * 24 * 60 * 60 * 1000;  // "maybe later" — a reply
+const REVIEW_QUIET_MS   =  3 * 24 * 60 * 60 * 1000;  // timed out — not a reply
+const REVIEW_MAX_MISSES = 4;
+// Long enough after the confirm's own five seconds that the two are never on
+// screen together, and never in the same place.
+const REVIEW_DELAY_MS   = 6000;
+const REVIEW_VISIBLE_MS = 15000;
 
-function showReviewToast() {
+function showReviewToast(nudge) {
   if (activeToast) return;
   injectStyles();
   const reviewUrl = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
@@ -2644,10 +2660,13 @@ function showReviewToast() {
   `;
   toast.querySelectorAll('button').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
 
-  const snooze = () => {
-    try { chrome.storage.local.set({ reviewNudge: { state: 'snoozed', snoozeUntil: Date.now() + REVIEW_SNOOZE_MS } }).catch(() => {}); } catch {}
+  const close = (state, ms) => {
+    const misses = state === 'quiet' ? ((nudge && nudge.misses) || 0) + 1 : 0;
+    try { chrome.storage.local.set({ reviewNudge: { state, snoozeUntil: Date.now() + ms, misses } }).catch(() => {}); } catch {}
     toast.remove(); if (activeToast === toast) activeToast = null;
   };
+  const snooze = () => close('snoozed', REVIEW_SNOOZE_MS);   // they answered
+  const unseen = () => close('quiet',   REVIEW_QUIET_MS);    // they never saw it
   toast.querySelector('#kld-rv-rate').addEventListener('click', () => {
     try { chrome.storage.local.set({ reviewNudge: { state: 'done' } }).catch(() => {}); } catch {}
     toast.remove(); if (activeToast === toast) activeToast = null;
@@ -2660,7 +2679,7 @@ function showReviewToast() {
   makeDraggable(toast);
   (document.body || document.documentElement).appendChild(toast);
   activeToast = toast;
-  const t = setTimeout(() => { if (activeToast === toast) snooze(); }, 9000);
+  const t = setTimeout(() => { if (activeToast === toast) unseen(); }, REVIEW_VISIBLE_MS);
   toast.addEventListener('mouseenter', () => clearTimeout(t));
 }
 
@@ -2787,8 +2806,11 @@ async function maybeShowReviewToast() {
     const nudge = d.reviewNudge || null;
     if (converted < 3) return;
     if (nudge && nudge.state === 'done') return;
-    if (nudge && nudge.state === 'snoozed' && Date.now() < nudge.snoozeUntil) return;
-    showReviewToast();
+    if (nudge && (nudge.misses || 0) >= REVIEW_MAX_MISSES) return;
+    // Both 'snoozed' and 'quiet' wait out their own clock; the difference is
+    // only how long each one bought.
+    if (nudge && nudge.snoozeUntil && Date.now() < nudge.snoozeUntil) return;
+    showReviewToast(nudge);
   } catch {}
 }
 

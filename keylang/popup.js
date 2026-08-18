@@ -324,18 +324,29 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 });
 
 // ── Review nudge ──────────────────────────────────────────────
-// State machine stored in chrome.storage.local as `reviewNudge`:
-//   null / missing  → never shown; show after 3 conversions
-//   { state: 'snoozed', snoozeUntil: <ms> } → dismissed; show again after 30 days
-//   { state: 'done' }                        → clicked review; never show again
+// State machine stored in chrome.storage.local as `reviewNudge`, shared with
+// the in-page nudge in content.js — whichever one the user answers settles it
+// for both.
+//   null / missing                               → never shown; show after 3 conversions
+//   { state: 'snoozed', snoozeUntil, misses: 0 } → they replied "later"; 30 days
+//   { state: 'quiet',   snoozeUntil, misses: n } → the in-page one timed out
+//                                                  unseen; 3 days, and n tries
+//                                                  in a row is taken as a no
+//   { state: 'done' }                            → left a review; never again
+//
+// This block used to sit at the bottom of a 1939px popup that Chrome cuts off
+// at 600. It rendered correctly and no one ever scrolled to it. It now sits
+// directly under the stats, which are also the argument for leaving a review.
 
-const REVIEW_URL = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
-const SNOOZE_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+const REVIEW_URL  = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+const SNOOZE_MS   = 30 * 24 * 60 * 60 * 1000; // 30 days
+const MAX_MISSES  = 4;
 
 function maybeShowNudge(stats, nudge) {
   if (stats.converted < 3) return;
   if (nudge && nudge.state === 'done') return;
-  if (nudge && nudge.state === 'snoozed' && Date.now() < nudge.snoozeUntil) return;
+  if (nudge && (nudge.misses || 0) >= MAX_MISSES) return;
+  if (nudge && nudge.snoozeUntil && Date.now() < nudge.snoozeUntil) return;
   document.getElementById('review-nudge').style.display = 'block';
 }
 
@@ -346,7 +357,9 @@ document.getElementById('review-nudge-rate').addEventListener('click', () => {
 });
 
 function snoozeNudge() {
-  chrome.storage.local.set({ reviewNudge: { state: 'snoozed', snoozeUntil: Date.now() + SNOOZE_MS } });
+  // Dismissing here is a reply, so it resets the unseen counter — someone who
+  // says "later" has not ignored us four times, they have answered once.
+  chrome.storage.local.set({ reviewNudge: { state: 'snoozed', snoozeUntil: Date.now() + SNOOZE_MS, misses: 0 } });
   document.getElementById('review-nudge').style.display = 'none';
 }
 
