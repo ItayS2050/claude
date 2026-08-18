@@ -62,6 +62,10 @@ function loadContentScript() {
     '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
+    '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
+    '         afterAFix: () => { strictModeUntil = Date.now() + STRICT_MS; },' +
+    '         longAfterAFix: () => { strictModeUntil = 0; lastCase2Original = null; },' +
+    '         rememberCase2: s => { lastCase2Original = s.trim().toLowerCase(); },' +
     '         learnHebrew: ws => ws.forEach(w => learnedHebrew.add(w)),' +
     '         rejectWords: ws => ws.forEach(w => learnedEnglish.add(w)),' +
     '         forgetLearned: () => { learnedHebrew.clear(); learnedEnglish.clear(); },' +
@@ -939,6 +943,87 @@ console.log('The fix can be accepted without touching the mouse');
   }
   // Both fix toasts must opt in, or the shortcut silently does nothing on one.
   is('both fix toasts mark themselves', (src.match(/dataset\.kldFix = '1'/g) || []).length, 2);
+}
+
+console.log('Kiko keeps working in the seconds after a fix');
+{
+  // The single largest source of "Kiko didn't fire". Accepting a fix put the
+  // detector into a fifteen-second strict mode that switched off all word
+  // scoring and left only final-form violations — which short text rarely has.
+  // Measured, that silenced about half of the phrases people actually type
+  // into a chat box, for fifteen seconds after every single fix. Someone
+  // typing fast in two languages spends most of their session inside that
+  // window, which is exactly the person Kiko is for.
+  const fires = (label, text, want) => {
+    const got = kiko.analyzeText(text) !== null;
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${want ? 'a detection' : 'silence'} for ${JSON.stringify(text)}`);
+  };
+
+  kiko.forgetLearned();
+  kiko.setLangs({ he: true, ru: true, uk: true, ko: true, el: true, ar: true });
+  kiko.setEntitled(true);
+
+  const he = s => kiko.toHebrewKeys(s);   // English typed on a Hebrew keyboard
+
+  for (const phrase of ['ok thanks', 'call me', 'not sure', 'on my way',
+                        'give me a sec', 'maybe if we agree']) {
+    kiko.longAfterAFix();
+    fires(`"${phrase}" fires normally`, he(phrase), true);
+    kiko.afterAFix();
+    fires(`"${phrase}" still fires right after a fix`, he(phrase), true);
+  }
+  kiko.longAfterAFix();
+
+  // What the window is actually for. One word is genuinely ambiguous straight
+  // after a conversion — בוא is a real Hebrew word and also the keys for
+  // "cut" — so the single-word trigger stays held back. Two words do not have
+  // that problem, which is why the rule belongs on the fast path alone.
+  kiko.afterAFix();
+  fires('a lone word waits out the window', he('thanks'), false);
+  kiko.longAfterAFix();
+  fires('and fires once the window closes', he('thanks'), true);
+
+  // The window has to be short enough to be over before the next sentence.
+  if (kiko.STRICT_MS > 0 && kiko.STRICT_MS <= 5000) pass++;
+  else { fail++; console.log(`  FAIL  the window is ${kiko.STRICT_MS}ms — seconds, not fifteen of them`); }
+
+  // The reason the blanket rule existed: never undo the fix just applied. That
+  // job belongs to lastCase2Original, so removing the blanket must not hand it
+  // back. The direction matters — the risk is a Case 2 fix (Latin keys meaning
+  // Hebrew, converted to Hebrew) that Case 1 then wants to read straight back
+  // as Latin. Testing it with Hebrew-keys-meaning-English proves nothing,
+  // because that path never sets the guard at all.
+  const undone = [];
+  for (const typed of ['akuo nv akunl', 'akuo ekhu vurt',
+                       'vhahcv ,,ehho cjsr vhahcu, ceunv vabhhv']) {
+    kiko.longAfterAFix();
+    const d = kiko.analyzeText(typed);
+    if (!d) { fail++; console.log(`  FAIL  nothing to fix in ${JSON.stringify(typed)}`); continue; }
+    if (!d.type.startsWith('english_as_')) {
+      fail++;
+      console.log(`  FAIL  ${JSON.stringify(typed)} is ${d.type}, not the direction the guard covers`);
+      continue;
+    }
+    const after = typed.replace(d.original, d.converted);
+    kiko.longAfterAFix();
+    kiko.rememberCase2(d.original);
+    kiko.afterAFix();
+    fires(`the fix of ${JSON.stringify(typed)} is not immediately undone`, after, false);
+    undone.push(after);
+  }
+  kiko.longAfterAFix();
+
+  // Real Hebrew is still left alone inside the window — the whole point of
+  // narrowing rather than deleting.
+  for (const real of ['שלום מה שלומך היום', 'אני חושב שזה רעיון טוב',
+                      'בוא נדבר על זה מחר בבוקר']) {
+    kiko.afterAFix();
+    fires('real Hebrew stays untouched in the window', real, false);
+  }
+  kiko.longAfterAFix();
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

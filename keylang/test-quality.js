@@ -72,8 +72,12 @@ function load() {
     '         setLangs: o => { enabledLangs = o; },' +
     '         setEntitled: v => { entitled = v; },' +
     '         reject: ws => ws.forEach(w => learnedEnglish.add(w)),' +
+    '         openStrictWindow: () => { strictModeUntil = Date.now() + STRICT_MS; },' +
+    '         closeStrictWindow: () => { strictModeUntil = 0; },' +
+    '         STRICT_MS,' +
     '         forget: () => { learnedEnglish.clear(); },' +
-    '         fromHebrew: convertToEnglish, fromRussian: convertFromRussian,' +
+    '         fromHebrew: convertToEnglish, toHebrewKeys: convertToHebrew,' +
+    '         fromRussian: convertFromRussian,' +
     '         fromUkrainian: convertFromUkrainian, fromKorean: convertFromKorean,' +
     '         fromGreek: convertFromGreek, fromArabic: convertFromArabic };\n})()',
     sandbox);
@@ -117,6 +121,31 @@ const otherRows = OTHER.map(kind => {
   const fp  = set.filter(s => kiko.analyzeText(s) !== null);
   return { kind, n: set.length, fp: fp.length, examples: fp.slice(0, 2) };
 });
+
+// ── The seconds after a fix ──────────────────────────────────────────────
+// For a few seconds after a conversion Kiko holds its single-word trigger
+// back, because short real Hebrew words decode to real English ones. That
+// window used to switch off multi-word scoring too, and silenced about half of
+// all short phrases for fifteen seconds after every fix — the single largest
+// source of "Kiko didn't fire" reports. It was narrowed in 4.9.2.
+//
+// Narrowing it means the window is now a place false positives could appear,
+// so it is measured here and counted in the gate rather than assumed safe.
+const ALL_CORRECT = [...LANGS.flatMap(c => CORPUS.silent[c]),
+                     ...OTHER.flatMap(k => CORPUS.silent[k])];
+kiko.openStrictWindow();
+const postFixFP = ALL_CORRECT.filter(s => kiko.analyzeText(s) !== null);
+kiko.closeStrictWindow();
+
+// And the recall it was costing, on the short text people type into chat.
+const CHAT = ['ok thanks', 'call me', 'not sure', 'on my way', 'give me a sec',
+              'sounds good', 'lets do it', 'send it', 'what do you think',
+              'maybe if we agree', 'looks good to me', 'lets try again tomorrow'];
+const chatTyped = CHAT.map(s => kiko.toHebrewKeys(s));
+const chatNormal = chatTyped.filter(t => kiko.analyzeText(t) !== null).length;
+kiko.openStrictWindow();
+const chatPostFix = chatTyped.filter(t => kiko.analyzeText(t) !== null).length;
+kiko.closeStrictWindow();
 
 // ── Span accuracy: of what fires, does it replace the right words? ───────
 const spanResults = CORPUS.spans.map(c => {
@@ -164,6 +193,20 @@ for (const r of otherRows) {
   }
 }
 
+console.log('\nThe seconds after a fix — the window that used to go deaf\n');
+console.log(`  false positives inside it  ${postFixFP.length} of ${ALL_CORRECT.length}`);
+for (const ex of postFixFP.slice(0, 3)) console.log(`      ${ex}`);
+console.log(`  short chat phrases caught  ${chatPostFix}/${CHAT.length} inside the window` +
+            `, ${chatNormal}/${CHAT.length} outside`);
+if (chatPostFix < chatNormal) {
+  for (const t of chatTyped) {
+    kiko.closeStrictWindow(); const a = kiko.analyzeText(t);
+    kiko.openStrictWindow();  const b = kiko.analyzeText(t);
+    if (a && !b) console.log(`      still silenced: ${t}  ->  ${a.converted}`);
+  }
+  kiko.closeStrictWindow();
+}
+
 console.log('\nSpan accuracy — does the fix replace exactly the mistyped words\n');
 for (const r of spanResults) {
   const mark = r.ok ? ' ok ' : 'WRONG';
@@ -207,8 +250,8 @@ for (const [k, v] of Object.entries(lat)) {
 }
 
 // ── Verdict ──────────────────────────────────────────────────────────────
-const totalCorrect = rows.reduce((a, r) => a + r.tn + r.fp, 0) + otherN;
-const totalFP      = agg.fp + otherFP;
+const totalCorrect = rows.reduce((a, r) => a + r.tn + r.fp, 0) + otherN + ALL_CORRECT.length;
+const totalFP      = agg.fp + otherFP + postFixFP.length;
 const fpRate       = totalFP / totalCorrect;
 
 console.log('\n' + '═'.repeat(64));
