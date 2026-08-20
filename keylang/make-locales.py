@@ -244,6 +244,17 @@ M = {
 "reEnable":      ("Re-enable auto-detection", "להפעיל מחדש זיהוי אוטומטי",
                   "Включить автоопределение", "자동 감지 다시 켜기"),
 "reviewAsk":     ("Enjoying Kiko?", "נהנה מ-Kiko?", "Нравится Kiko?", "Kiko가 마음에 드시나요?"),
+# Chrome's i18n has no plural forms, so the singular is its own string rather
+# than "1 mistakes", which reads like a bug and undercuts the ask.
+"reviewCountOne": ("Kiko has fixed one typing mistake for you.",
+                 "‏Kiko תיקן לך שגיאת הקלדה אחת.",
+                 "Kiko исправил вам одну опечатку.",
+                 "Kiko가 오타 하나를 고쳐드렸어요."),
+"reviewCount":   ("Kiko has fixed $COUNT$ typing mistakes for you.",
+                 "‏Kiko תיקן לך $COUNT$ שגיאות הקלדה.",
+                 "Kiko исправил вам $COUNT$ опечаток.",
+                 "Kiko가 오타 $COUNT$개를 고쳐드렸어요."),
+"reviewHelp":    ("Rate Kiko", "לדרג את Kiko", "Оценить Kiko", "Kiko 평가하기"),
 "reviewBody":    ("A quick review helps others find it and keeps us motivated to improve!",
                   "ביקורת קצרה עוזרת לאחרים למצוא אותו ונותנת לנו דחיפה להמשיך לשפר.",
                   "Короткий отзыв помогает другим найти его и придаёт нам сил делать лучше.",
@@ -355,6 +366,7 @@ PLACEHOLDERS = {
     "$LANG$":  ("lang",  "$1"),
     "$DAYS$":  ("days",  "$1"),
     "$TYPED$": ("typed", "$1"),
+    "$COUNT$": ("count", "$1"),
     "$MEANT$": ("meant", "$2"),
 }
 

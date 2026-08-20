@@ -237,6 +237,20 @@
   "reviewAsk": {
     "message": "Enjoying Kiko?"
   },
+  "reviewCountOne": {
+    "message": "Kiko has fixed one typing mistake for you."
+  },
+  "reviewCount": {
+    "message": "Kiko has fixed $COUNT$ typing mistakes for you.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "reviewHelp": {
+    "message": "Rate Kiko"
+  },
   "reviewBody": {
     "message": "A quick review helps others find it and keeps us motivated to improve!"
   },

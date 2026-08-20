@@ -342,12 +342,39 @@ const REVIEW_URL  = `https://chromewebstore.google.com/detail/${chrome.runtime.i
 const SNOOZE_MS   = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_MISSES  = 4;
 
+// Always available, whatever the nudge state says. The card below is the ask
+// and is deliberately conditional; this is the door, and a door that is only
+// sometimes there is worse than no door. Someone who decides on their own to
+// rate Kiko must always find somewhere to do it.
+document.getElementById('help-rate').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.storage.local.set({ reviewNudge: { state: 'done' } });
+  window.open(REVIEW_URL, '_blank');
+});
+
 function maybeShowNudge(stats, nudge) {
+  // Their own number, not a claim about us: Kiko fixed this many things for
+  // this person, and that is the entire argument for spending thirty seconds
+  // on a review. Counted locally and never sent anywhere.
+  const n = stats.converted || 0;
+  const line = document.getElementById('review-count');
+  if (line && n > 0) {
+    line.textContent = n === 1
+      ? (chrome.i18n.getMessage('reviewCountOne')
+         || 'Kiko has fixed one typing mistake for you.')
+      : (chrome.i18n.getMessage('reviewCount', [String(n)])
+         || `Kiko has fixed ${n} typing mistakes for you.`);
+    line.style.cssText = 'display:block;color:#7dd3fc;font-weight:600;margin:3px 0';
+  }
+  // When the full card is up it carries its own button; two asks stacked reads
+  // as pestering. The slim link returns the moment the card goes away.
+  const slim = document.getElementById('help-rate');
   if (stats.converted < 3) return;
   if (nudge && nudge.state === 'done') return;
   if (nudge && (nudge.misses || 0) >= MAX_MISSES) return;
   if (nudge && nudge.snoozeUntil && Date.now() < nudge.snoozeUntil) return;
   document.getElementById('review-nudge').style.display = 'block';
+  if (slim) slim.style.display = 'none';
 }
 
 document.getElementById('review-nudge-rate').addEventListener('click', () => {

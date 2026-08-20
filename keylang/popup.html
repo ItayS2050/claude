@@ -101,6 +101,15 @@
       border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
     }
     .review-nudge-later:hover { background: #334155; color: #e2e8f0; }
+    /* Always present, whatever the nudge state is. Sits under the stats, which
+       are the argument for it, and well inside the 600px Chrome gives a popup. */
+    .rate-line {
+      display: block; text-align: center; text-decoration: none;
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 8px; margin: 14px 0 0; font-size: 12px; font-weight: 600;
+      color: #7dd3fc;
+    }
+    .rate-line:hover { background: #334155; }
     .shortcut { color: #475569; font-size: 11px; margin-top: 10px; text-align: center; }
     .paused-banner {
       display: none;
@@ -224,10 +233,13 @@
     </div>
   </div>
 
+  <a href="#" class="rate-line" id="help-rate">⭐ <span data-i18n="reviewHelp">Rate Kiko</span></a>
+
   <div class="review-nudge" id="review-nudge">
     <div class="review-nudge-top">
       <div class="review-nudge-text">
         <strong><span data-i18n="reviewAsk">Enjoying Kiko?</span> ⭐</strong><br>
+        <span id="review-count"></span>
         <span data-i18n="reviewBody">A quick review helps others find it and keeps us motivated to improve!</span>
       </div>
       <button class="review-nudge-close" id="review-nudge-close" title="Dismiss">✕</button>

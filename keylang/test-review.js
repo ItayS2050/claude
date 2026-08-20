@@ -248,6 +248,49 @@ const DAY = 24 * 60 * 60 * 1000;
     ok('nowhere near the help links at the bottom', nudge < help);
   }
 
+  // ── There is always a way in ────────────────────────────────────────────
+  console.log('Somebody who decides on their own to rate Kiko can always do it');
+  {
+    const html = fs.readFileSync(path.join(__dirname, 'popup.html'), 'utf8');
+    const js   = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+    const rate  = html.indexOf('id="help-rate"');
+    const card  = html.indexOf('id="review-nudge"');
+    const stats = html.indexOf('<div class="stats">');
+    const list  = html.indexOf('<div class="word-list"');
+    const help  = html.indexOf('class="help-links"');
+
+    // The card is the ask and is conditional by design. This is the door, and
+    // a door that is only sometimes there is worse than no door at all: the
+    // card is hidden for thirty days after one dismissal, and for everyone
+    // under three fixes, which is most people most of the time.
+    ok('a permanent rate link exists', rate > 0);
+    ok('it is not inside the conditional card', rate < card);
+    ok('it comes after the stats that justify it', rate > stats);
+    // Chrome clips a popup at 600px. The first version of this link rendered
+    // at y=1801, in the help list at the very bottom — invisible, which is the
+    // exact bug 4.9.1 fixed for the card.
+    ok('and above the learned-word lists, so it is inside the fold', rate < list);
+    ok('not buried in the help links', rate < help);
+
+    // Opening the store is an answer, so it must settle the nudge too —
+    // otherwise Kiko keeps asking someone who already reviewed it.
+    const handler = js.slice(js.indexOf("getElementById('help-rate')"));
+    ok('clicking it marks the nudge done',
+       /state: 'done'/.test(handler.slice(0, 400)));
+    ok('and opens the review page', /REVIEW_URL/.test(handler.slice(0, 400)));
+
+    // "Kiko has fixed 1 typing mistakes for you" reads like a bug and
+    // undercuts the ask. Chrome i18n has no plural forms, so this is manual.
+    ok('the singular is its own string', /reviewCountOne/.test(js));
+    const en = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '_locales/en/messages.json'), 'utf8'));
+    ok('both count strings ship', !!en.reviewCountOne && !!en.reviewCount);
+    ok('the plural one declares its placeholder',
+       !!(en.reviewCount.placeholders && en.reviewCount.placeholders.count));
+    ok('the singular carries no placeholder to leave unfilled',
+       !/\$COUNT\$/.test(en.reviewCountOne.message));
+  }
+
   // ── The one-time repair for people already silenced ────────────────────
   console.log('Users silenced by the old bug get one honest chance');
   {
