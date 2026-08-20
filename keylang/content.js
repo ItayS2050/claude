@@ -2646,6 +2646,7 @@ function removeToast(showRecall = true) {
 //
 // Now: an answer is honoured for a month, going unseen is honoured for three
 // days, and four unseen tries in a row is taken as an answer of its own.
+const KIKO_ITEM_ID      = 'alibejcaklfjcbjmncgbhpdichpblnkl';
 const REVIEW_SNOOZE_MS  = 30 * 24 * 60 * 60 * 1000;  // "maybe later" — a reply
 const REVIEW_QUIET_MS   =  3 * 24 * 60 * 60 * 1000;  // timed out — not a reply
 const REVIEW_MAX_MISSES = 4;
@@ -2657,7 +2658,10 @@ const REVIEW_VISIBLE_MS = 15000;
 function showReviewToast(nudge) {
   if (activeToast) return;
   injectStyles();
-  const reviewUrl = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+  // See KIKO_ITEM_ID in popup.js: chrome.runtime.id is not the published id
+  // for anything but the published build, and the review page has to be the
+  // real listing either way.
+  const reviewUrl = `https://chromewebstore.google.com/detail/${KIKO_ITEM_ID}/reviews`;
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   toast.style.borderColor = '#f59e0b';

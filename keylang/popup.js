@@ -338,7 +338,13 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 // at 600. It rendered correctly and no one ever scrolled to it. It now sits
 // directly under the stats, which are also the argument for leaving a review.
 
-const REVIEW_URL  = `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews`;
+// The published listing, hard-coded. This used to be built from
+// chrome.runtime.id, which is only the published id when the copy running is
+// the published one — an unpacked build gets a fresh random id, so the review
+// button opened "This item is not available". The page we want to send people
+// to is always the real listing, whatever copy they happen to be running.
+const KIKO_ITEM_ID = 'alibejcaklfjcbjmncgbhpdichpblnkl';
+const REVIEW_URL  = `https://chromewebstore.google.com/detail/${KIKO_ITEM_ID}/reviews`;
 const SNOOZE_MS   = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_MISSES  = 4;
 

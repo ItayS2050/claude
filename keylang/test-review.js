@@ -291,6 +291,34 @@ const DAY = 24 * 60 * 60 * 1000;
        !/\$COUNT\$/.test(en.reviewCountOne.message));
   }
 
+  // ── The link has to point at the listing that exists ────────────────────
+  console.log('Every review link points at the published listing');
+  {
+    const files = ['content.js', 'popup.js'];
+    const ids = new Set();
+    for (const f of files) {
+      const src = fs.readFileSync(path.join(__dirname, f), 'utf8');
+      // chrome.runtime.id is the id of whatever copy is running. For an
+      // unpacked build that is a fresh random id, and the review page for it
+      // does not exist — the button lands on "This item is not available".
+      ok(`${f} does not build the review url from chrome.runtime.id`,
+         !/chromewebstore[^`'"]*\$\{chrome\.runtime\.id\}/.test(src));
+      const m = src.match(/KIKO_ITEM_ID\s*=\s*'([a-p]{32})'/);
+      ok(`${f} names the published item id`, !!m);
+      if (m) ids.add(m[1]);
+      ok(`${f} builds the review url from it`,
+         /chromewebstore\.google\.com\/detail\/\$\{KIKO_ITEM_ID\}\/reviews/.test(src));
+    }
+    is('both files agree on the id', ids.size, 1);
+
+    // The website links to the same listing and is maintained separately, so
+    // it is the independent check that the id is the right one.
+    const site = fs.readFileSync(
+      path.join(__dirname, '..', 'docs', 'index.html'), 'utf8');
+    const onSite = (site.match(/chromewebstore\.google\.com\/detail\/([a-p]{32})/) || [])[1];
+    is('and it matches the id the website links to', [...ids][0], onSite);
+  }
+
   // ── The one-time repair for people already silenced ────────────────────
   console.log('Users silenced by the old bug get one honest chance');
   {
