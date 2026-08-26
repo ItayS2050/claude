@@ -358,7 +358,7 @@ document.getElementById('help-rate').addEventListener('click', (e) => {
   window.open(REVIEW_URL, '_blank');
 });
 
-function maybeShowNudge(stats, nudge) {
+function maybeShowNudge(stats, nudge, ent) {
   // Their own number, not a claim about us: Kiko fixed this many things for
   // this person, and that is the entire argument for spending thirty seconds
   // on a review. Counted locally and never sent anywhere.
@@ -372,6 +372,12 @@ function maybeShowNudge(stats, nudge) {
          || `Kiko has fixed ${n} typing mistakes for you.`);
     line.style.cssText = 'display:block;color:#7dd3fc;font-weight:600;margin:3px 0';
   }
+  // An expired trial is the wrong moment to ask, and asking anyway is how a
+  // 5.0 turns into a 3.0. The permanent link above is untouched — someone who
+  // wants to rate Kiko after their trial ends is still free to. See the same
+  // guard in maybeShowReviewToast.
+  if (ent && ent.entitled === false) return;
+
   // When the full card is up it carries its own button; two asks stacked reads
   // as pestering. The slim link returns the moment the card goes away.
   const slim = document.getElementById('help-rate');
@@ -473,7 +479,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         void chrome.runtime.lastError;
         if (ent) renderEntitlement(ent);
       });
-      maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null);
+      maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null,
+                     data.entitlement || null);
     }
   );
 });

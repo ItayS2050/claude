@@ -2823,6 +2823,13 @@ async function maybeShowReviewToast() {
     const d = await chrome.storage.local.get(['stats', 'reviewNudge']);
     const converted = (d.stats || {}).converted || 0;
     const nudge = d.reviewNudge || null;
+    // Never ask someone whose trial has run out. Detection has just stopped
+    // working for them, and the honest reading of that moment is that they
+    // have lost something, not that they owe us a favour. Asking there is how
+    // a 5.0 becomes a 3.0 — at a handful of ratings, one angry review halves
+    // the score. They can still rate Kiko whenever they choose: the permanent
+    // link in the popup stays. This only stops us from raising it.
+    if (!entitled) return;
     if (converted < 3) return;
     if (nudge && nudge.state === 'done') return;
     if (nudge && (nudge.misses || 0) >= REVIEW_MAX_MISSES) return;

@@ -92,7 +92,8 @@ function makeKiko() {
     '         REVIEW_SNOOZE_MS, REVIEW_QUIET_MS, REVIEW_MAX_MISSES,' +
     '         REVIEW_DELAY_MS, REVIEW_VISIBLE_MS,' +
     '         clearToast: () => { activeToast = null; },' +
-    '         setToast:   t => { activeToast = t; } };\n})()', sandbox);
+    '         setToast:   t => { activeToast = t; },' +
+    '         setEntitled: v => { entitled = v; } };\n})()', sandbox);
 
   return {
     ...api,
@@ -110,6 +111,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 (async () => {
   const k = makeKiko();
+  k.setEntitled(true);
 
   // ── When it appears ────────────────────────────────────────────────────
   console.log('It asks once the user has actually got value from Kiko');
@@ -246,6 +248,41 @@ const DAY = 24 * 60 * 60 * 1000;
     // the nudge at y=1440. Keeping it above the first list keeps it on screen.
     ok('and before the learned-word lists', nudge < firstList);
     ok('nowhere near the help links at the bottom', nudge < help);
+  }
+
+  // ── Not while their trial is over ───────────────────────────────────────
+  console.log('Nobody is asked for a review the moment Kiko stops working');
+  {
+    // The paywall turns detection off when a trial ends. Asking for five stars
+    // at exactly that moment is how a 5.0 becomes a 3.0 — at a handful of
+    // ratings a single angry review halves the score. They keep the permanent
+    // link in the popup; this only stops us raising it.
+    k.setEntitled(false);
+    k.reset(); k.put({ stats: { converted: 40 } });
+    await k.maybeShowReviewToast(); await settle();
+    is('an expired trial is never asked', k.onScreen.length, 0);
+    ok('and no state is written, so the ask survives for when they subscribe',
+       k.get().reviewNudge === undefined);
+
+    k.setEntitled(true);
+    k.reset(); k.put({ stats: { converted: 40 } });
+    await k.maybeShowReviewToast(); await settle();
+    is('someone still entitled is asked as before', k.onScreen.length, 1);
+    k.reset();
+
+    // The popup card carries the same guard; the permanent link does not.
+    const js = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+    const nudgeFn = js.slice(js.indexOf('function maybeShowNudge'),
+                             js.indexOf('function maybeShowNudge') + 1600);
+    ok('the popup card checks entitlement too',
+       /ent && ent\.entitled === false/.test(nudgeFn));
+    ok('and it is handed the entitlement to check',
+       /maybeShowNudge\([^)]*data\.entitlement/s.test(js));
+    // The door stays open: the guard belongs to the ask, not to the link.
+    const rateHandler = js.slice(js.indexOf("getElementById('help-rate')"),
+                                 js.indexOf("getElementById('help-rate')") + 400);
+    ok('the permanent link is not gated by entitlement',
+       !/entitled/.test(rateHandler));
   }
 
   // ── There is always a way in ────────────────────────────────────────────
