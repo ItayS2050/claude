@@ -134,6 +134,13 @@ module.exports = {
       '다음 주에 회의를 잡을 수 있을까요',
       '비행기 표는 이미 예약했습니다',
       '오늘 언제 퇴근하세요',
+      // Korean writes whole phrases as one token, and every sentence above
+      // has spaces — so none of them reached the single-word path, which is
+      // exactly why it stayed broken until 4.9.6. These are the things a
+      // Korean types most, and each of them is one word.
+      '안녕하세요', '감사합니다', '알겠습니다', '모르겠어요', '죄송합니다',
+      '수고하셨습니다', '확인했습니다', '잠시만요', '괜찮아요', '축하합니다',
+      '반갑습니다', '기다리겠습니다',
       '엄마 집에 열쇠를 두고 왔어요',
       '아이들은 네 시에 학교에서 돌아옵니다',
       '집에 가는 길에 우유와 빵을 사야 해요',

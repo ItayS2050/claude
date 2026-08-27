@@ -919,6 +919,14 @@ function wordCouldBeKorean(word) {
   // A known Korean word outranks the English-likeness heuristic: "dkssud" (안녕)
   // scores 0.40 as English and would otherwise never be caught.
   if (COMMON_KO_WORDS.has(koWord)) return true;
+  // A long token that decomposes into four or more complete syllables is
+  // evidence on its own, and the two scores below are not built for it.
+  // englishScore on a twelve-character romanisation is noise — 보냈습니다
+  // reads as 0.36 English and was rejected — while koreanScore's 0.5 floor is
+  // tuned for short words and drops 모르겠어요 at 0.40. Both are ordinary
+  // things to type. Hangul that falls out this cleanly, this many syllables
+  // deep, is not an accident of English letters.
+  if (koWord.length >= 4 && koreanScore(koWord) >= 0.35) return true;
   if (englishScore(lower) >= 0.35) return false;
   return koreanScore(koWord) >= 0.5;
 }
@@ -1895,6 +1903,16 @@ function analyzeText(rawText, scanAll = false) {
   if (!textHasHebrew && enabledLangs.ko) {
     const koCandWords = extractWords(text);
     const koMinRun = textHasHangul ? 1 : 2;
+    // Korean writes whole phrases as one token — 안녕하세요, 감사합니다 and
+    // 알겠습니다 are each a single word — so the two-word rule that keeps the
+    // Latin languages honest silences the four most common things a Korean
+    // types. A romanised Korean phrase is long and decomposes into many clean
+    // syllables, and that is the evidence the second word was standing in for.
+    // Four syllables is the line: 안녕 (2) still needs a neighbour, 안녕하세요
+    // (5) speaks for itself. wordCouldBeKorean has already required a complete
+    // syllable decomposition and rejected anything English-looking, so what
+    // reaches here is a long token that is Korean or nothing.
+    const koSoloRun = w => convertToKorean(w).length >= 4;
     const allKoRuns = [];
     let curKoRun = [], curKoStartIdx = -1;
     for (let wi = 0; wi < koCandWords.length; wi++) {
@@ -1909,7 +1927,9 @@ function analyzeText(rawText, scanAll = false) {
     }
     if (curKoRun.length > 0) allKoRuns.push({ words: curKoRun, startIdx: curKoStartIdx });
 
-    const koRunEntry = [...allKoRuns].reverse().find(r => r.words.length >= koMinRun);
+    const koRunEntry = [...allKoRuns].reverse().find(
+      r => r.words.length >= koMinRun ||
+           (r.words.length === 1 && koSoloRun(r.words[0])));
     if (koRunEntry) {
       const runKo2 = koRunEntry.words;
       const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
