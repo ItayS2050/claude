@@ -1110,6 +1110,19 @@ function couldBeHebrewExactly(word) {
 // it must never do is swallow a word from the common English list.
 function unmistakablyEnglish(lower) {
   if (EN_WORDS.has(lower)) return true;
+  // englishScore divides by length - 1, so a short token has almost no
+  // denominator: two letters with one common bigram score a flat 1.00, three
+  // letters score 0.50. That is how "jcr" — חבר — came to be treated as
+  // unmistakably English and thrown out of its own run, leaving the toast
+  // offering "היי מה" and abandoning "שלומך חבר?" as Latin. The same arithmetic
+  // reads כן, יש, אין, רק and בוא as English too, which are about as common as
+  // Hebrew words get. Below four letters the score means nothing and the word
+  // list above is the only evidence worth having.
+  //
+  // A vowel test was here as well and was removed: across every word of every
+  // Hebrew sentence in the corpus, 147 of them, not one was four letters or
+  // more, vowel-less, and scoring as English. It guarded nothing.
+  if (lower.length < 4) return false;
   return englishScore(lower) >= 0.35;
 }
 

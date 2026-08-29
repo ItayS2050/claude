@@ -63,6 +63,7 @@ function loadContentScript() {
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
+    '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
     '         afterAFix: () => { strictModeUntil = Date.now() + STRICT_MS; },' +
     '         longAfterAFix: () => { strictModeUntil = 0; lastCase2Original = null; },' +
     '         rememberCase2: s => { lastCase2Original = s.trim().toLowerCase(); },' +
@@ -943,6 +944,72 @@ console.log('The fix can be accepted without touching the mouse');
   }
   // Both fix toasts must opt in, or the shortcut silently does nothing on one.
   is('both fix toasts mark themselves', (src.match(/dataset\.kldFix = '1'/g) || []).length, 2);
+}
+
+console.log('A run is not cut short by a word that only scores as English');
+{
+  // Reported from the wild, twice: "vhh nv akunl jcr?" offered only "היי מה"
+  // and left "שלומך חבר?" behind as Latin. Converting half a sentence is worse
+  // than converting none of it.
+  //
+  // englishScore divides by length - 1, so on a three-letter token a single
+  // common bigram reads as 0.50 — and unmistakablyEnglish, added in 4.9.0 to
+  // stop runs swallowing real English words, vetoes anything at 0.35. "jcr" is
+  // חבר. That one bigram threw it out of its own run. A regression from 4.9.0.
+  const span = (label, text, want) => {
+    const d = kiko.analyzeText(text);
+    const got = d ? d.original : null;
+    if (got === want) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        expected ${JSON.stringify(want)}`);
+    console.log(`        actual   ${JSON.stringify(got)}`);
+  };
+  kiko.forgetLearned();
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  span('the whole greeting converts, not the first half',
+       'vhh nv akunl jcr?', 'vhh nv akunl jcr?');
+  check('and it converts to the right thing', 'vhh nv akunl jcr?',
+        'english_as_hebrew', { converted: 'היי מה שלומך חבר?' });
+  span('the same run inside an English sentence takes only its own words',
+       'I said vhh nv akunl jcr to him', 'vhh nv akunl jcr');
+
+  // A three-letter word joins as a bridge, not as a run of its own — so it can
+  // extend a run but never create one. Two of them are still not a detection.
+  span('a bridge word cannot start a run on its own', 'vhh jcr', null);
+  check('and a lone Hebrew-looking word still never fires', 'jcr', null);
+
+  // The 4.9.0 guard still has to do its job. This is the case it was added
+  // for, and relaxing the score must not hand it back: "meeting" is a real
+  // English word and stops the run dead, even with Hebrew on both sides.
+  span('a real English word still stops a run',
+       'vhh nv meeting jcr', 'vhh nv');
+  span('and still does with more Hebrew behind it',
+       'vhh nv meeting akunl jcr', 'vhh nv');
+  check('genuine English is still silent',
+        'i think the meeting was useful', null);
+
+  // Why the length floor is there, and not only the vowel test. englishScore
+  // divides by length - 1, so a two-letter token with one common bigram scores
+  // a flat 1.00. These are among the most ordinary words in Hebrew, and every
+  // one of them would be vetoed as English on the strength of that.
+  const notEnglish = (he) => {
+    const typed = kiko.fromHebrewKeys(he).replace(/[^a-z]/gi, '').toLowerCase();
+    if (!kiko.unmistakablyEnglish(typed)) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  "${he}" (typed "${typed}") is treated as English`);
+  };
+  for (const w of ['כן', 'יש', 'אין', 'רק', 'בוא', 'זה', 'לא', 'מה']) notEnglish(w);
+
+  // And the guard still fires where it should: these are real English words of
+  // four letters or more, with vowels, and they must stop a run.
+  for (const w of ['meeting', 'sorry', 'quick', 'later', 'about']) {
+    if (kiko.unmistakablyEnglish(w)) pass++;
+    else { fail++; console.log(`  FAIL  "${w}" is not recognised as English`); }
+  }
 }
 
 console.log('Korean phrases are one word, and one word is enough');
