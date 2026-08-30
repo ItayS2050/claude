@@ -59,7 +59,7 @@ function loadContentScript() {
   // duplicate-injection guard, which is illegal at true top level.
   return vm.runInContext(
     '(function () {\n' + src +
-    '\nreturn { analyzeText, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
+    '\nreturn { analyzeText: analyzeByLines, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
@@ -1163,6 +1163,56 @@ console.log('Real Greek is never offered up as English');
   }).length;
   if (caught >= 30) pass++;
   else { fail++; console.log(`  FAIL  Greek catches only ${caught}/${CORPUS.silent.en.length} mistyped English sentences`); }
+}
+
+console.log('The language that explains the sentence wins, not the one asked first');
+{
+  // The passes ran in a fixed order and the first to match returned, so a
+  // language that explained three words of a line beat one that explained all
+  // of it purely by being asked earlier:
+  //
+  //   typed    Vj;tv kb vs yfpyfxbnm dcnhtxe yf cktle.otq ytltkt
+  //   offered  לנ הד טכ                              (Hebrew, three words)
+  //   Russian  назначить встречу на следующей неделе  (the whole line)
+  //
+  // Reordering only moves the problem to whoever is asked last, so the order
+  // stopped deciding. Every enabled language is asked and the best answer
+  // wins — best meaning the most real words in the language it claims, with
+  // coverage settling ties. Coverage alone was the first attempt and was not
+  // enough: Russian and Arabic each covered more of a Korean sentence than
+  // Korean did, while producing pure noise.
+  const CORPUS = require('./corpus.js');
+  kiko.forgetLearned();
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  check('Russian keeps the line Hebrew took three words of',
+        'Vj;tv kb vs yfpyfxbnm dcnhtxe yf cktle.otq ytltkt',
+        'english_as_russian',
+        { converted: 'назначить встречу на следующей неделе' });
+  check('Korean keeps a line Arabic covered more of',
+        'rhoscksgdkdy rjrwjdgkwl dksgdmtueh ehlqslek',
+        'english_as_korean', { converted: '괜찮아요 걱정하지' });
+
+  // The ceiling. Every corpus sentence, mistyped, with all six languages on:
+  // how many end up converted into a script the writer was not using. It was
+  // 47 before this change and is 24 now. The number may only come down.
+  const LANGS = ['he','ru','uk','ko','el','ar'];
+  let usable = 0, wrong = 0;
+  for (const code of LANGS) {
+    for (const sentence of CORPUS.silent[code]) {
+      const typed = kiko.down[code](sentence);
+      if (/[^\x00-\x7F]/.test(typed)) continue;   // not a form a keyboard makes
+      usable++;
+      const d = kiko.analyzeText(typed);
+      if (d && (d.lang || 'he') !== code) wrong++;
+    }
+  }
+  if (wrong <= 24) pass++;
+  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 24`); }
+  if (usable >= 159) pass++;
+  else { fail++; console.log(`  FAIL  only ${usable} sentences are measurable, expected 159`); }
 }
 
 console.log('Each language keeps its own text when all six are enabled');

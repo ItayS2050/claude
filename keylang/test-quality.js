@@ -68,7 +68,7 @@ function load() {
   vm.createContext(sandbox);
   return vm.runInContext(
     '(function () {\n' + src +
-    '\nreturn { analyzeText,' +
+    '\nreturn { analyzeText: analyzeByLines,' +
     '         setLangs: o => { enabledLangs = o; },' +
     '         setEntitled: v => { entitled = v; },' +
     '         reject: ws => ws.forEach(w => learnedEnglish.add(w)),' +

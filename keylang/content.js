@@ -2091,6 +2091,95 @@ function analyzeText(rawText, scanAll = false) {
   return null;
 }
 
+// analyzeText answers with the first pass that matches, and the passes run in
+// a fixed order, so a language that explains three words of a sentence beats
+// one that explains all of it purely by being asked earlier. Measured over the
+// corpus, 47 of 159 sentences were converted into a script the writer was not
+// using — and the worst of them are not close calls:
+//
+//   typed     Vj;tv kb vs yfpyfxbnm dcnhtxe yf cktle.otq ytltkt
+//   offered   לנ הד טכ                                  (Hebrew, three words)
+//   Russian   назначить встречу на следующей неделе      (the whole line)
+//
+// Hebrew won that by going first. Reordering the passes only moves the problem
+// to whoever is asked last, so the order stops deciding: every enabled
+// language is asked, and the answer that accounts for the most of what the
+// person typed is the one shown. Ties keep the existing order, so nothing
+// changes where the passes already agreed.
+//
+// The cost lands where it is cheap. Almost every call finds nothing at all —
+// somebody typing ordinary English — and those still run exactly one pass and
+// stop. Only a call that already has a candidate pays for the comparison.
+const NO_LANGS = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
+
+// How much of what the person typed a candidate accounts for. Coverage alone
+// was the first attempt and it is not enough: on two Korean sentences both
+// Russian and Arabic covered more characters while producing pure noise —
+// "цла йлувлееьйыдул" is not Russian, "قاخسؤنسلينيغ" is not Arabic — where
+// Korean produced 받았습니다 and 괜찮아요. So the first question is whether the
+// output is made of real words in the language being claimed, and coverage
+// only settles ties. Every language already carries the list needed to ask.
+const REAL_WORDS = {
+  ru: w => COMMON_RU_WORDS.has(w),
+  uk: w => COMMON_UK_WORDS.has(w),
+  ar: w => COMMON_AR_WORDS.has(w),
+  ko: w => COMMON_KO_WORDS.has(w),
+  el: w => COMMON_EL_WORDS_PLAIN.has(stripTonos(w)),
+  he: w => isCommonHebrewWord(w),
+  en: w => COMMON_EN_WORDS.has(w),
+};
+
+function outputLanguage(detection) {
+  // english_as_he produces Hebrew; he_as_english produces English.
+  const m = /^english_as_(\w+)$/.exec(detection.type);
+  if (m) return detection.lang || 'he';
+  return 'en';
+}
+
+function realWordsProduced(detection) {
+  if (!detection) return 0;
+  const isReal = REAL_WORDS[outputLanguage(detection)];
+  if (!isReal) return 0;
+  return detection.converted.split(/\s+/)
+    .map(w => w.replace(/[^\p{L}]/gu, '').toLowerCase())
+    .filter(w => w.length >= 2 && isReal(w))
+    .length;
+}
+
+function explains(detection) {
+  return detection ? detection.original.replace(/\s/g, '').length : 0;
+}
+
+// Better means more real words; the same number of real words means whichever
+// accounts for more of the line. Equal on both keeps the earlier pass, so the
+// existing order still decides where there is nothing to choose between them.
+function beats(candidate, best) {
+  const cw = realWordsProduced(candidate), bw = realWordsProduced(best);
+  if (cw !== bw) return cw > bw;
+  return explains(candidate) > explains(best);
+}
+
+function bestOfLanguages(text, scanAll) {
+  const first = analyzeText(text, scanAll);
+  if (!first) return null;
+  const enabled = Object.keys(NO_LANGS).filter(l => enabledLangs[l]);
+  if (enabled.length < 2) return first;
+
+  const saved = enabledLangs;
+  let best = first;
+  try {
+    for (const lang of enabled) {
+      if (lang === (first.lang || 'he')) continue;
+      enabledLangs = { ...NO_LANGS, [lang]: true };
+      const candidate = analyzeText(text, scanAll);
+      if (candidate && beats(candidate, best)) best = candidate;
+    }
+  } finally {
+    enabledLangs = saved;
+  }
+  return best;
+}
+
 // Analyze each line independently (last → first) so a correctly-typed line
 // on one row can't bleed into a wrong-layout run on another row.
 function analyzeByLines(text, scanAll = false) {
@@ -2098,7 +2187,7 @@ function analyzeByLines(text, scanAll = false) {
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
     if (line.trim().length < 3) continue;
-    const result = analyzeText(line, scanAll);
+    const result = bestOfLanguages(line, scanAll);
     if (result) return result;
   }
   return null;

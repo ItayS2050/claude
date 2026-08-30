@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "default_locale": "en",
-  "version": "4.9.10",
+  "version": "4.9.11",
   "description": "__MSG_extDescription__",
   "author": "Kiko",
   "homepage_url": "https://get-kiko.com",
