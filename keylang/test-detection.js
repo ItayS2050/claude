@@ -64,6 +64,12 @@ function loadContentScript() {
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
+    '         down: {he:convertToEnglish, ru:convertFromRussian,' +
+    '                uk:convertFromUkrainian, ko:convertFromKorean,' +
+    '                el:convertFromGreek, ar:convertFromArabic},' +
+    '         up:   {he:convertToHebrew, ru:convertToRussian,' +
+    '                uk:convertToUkrainian, ko:convertToKorean,' +
+    '                el:convertToGreek, ar:convertToArabic},' +
     '         afterAFix: () => { strictModeUntil = Date.now() + STRICT_MS; },' +
     '         longAfterAFix: () => { strictModeUntil = 0; lastCase2Original = null; },' +
     '         rememberCase2: s => { lastCase2Original = s.trim().toLowerCase(); },' +
@@ -1010,6 +1016,110 @@ console.log('A run is not cut short by a word that only scores as English');
     if (kiko.unmistakablyEnglish(w)) pass++;
     else { fail++; console.log(`  FAIL  "${w}" is not recognised as English`); }
   }
+}
+
+console.log('A keyboard table covers the whole keyboard, shift included');
+{
+  // The reverse tables were built by inverting the forward ones, and the
+  // forward ones only ever declared the unshifted keys. Cyrillic and Greek
+  // have case, so every sentence-initial letter and every proper noun had no
+  // entry: "Привет" came back as "Пhbdtn", "Γεια σου" as "Γeia soy". Arabic is
+  // not cased but keeps أ إ آ ذ on their own keys, and those were missing too.
+  //
+  // It made four of the six languages unmeasurable — a mistyped form that
+  // still contains its own script is not what any keyboard produces — which is
+  // why the quality suite scored them as clean for months.
+  const CORPUS = require('./corpus.js');
+  const clean = (label, code) => {
+    const bad = CORPUS.silent[code].filter(s => /[^\x00-\x7F]/.test(kiko.down[code](s)));
+    if (bad.length === 0) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}: ${bad.length} of ${CORPUS.silent[code].length} keep their own script`);
+    console.log(`        ${bad[0]}\n          -> ${kiko.down[code](bad[0])}`);
+  };
+  for (const [code, name] of [['he','Hebrew'],['ru','Russian'],['uk','Ukrainian'],
+                              ['ko','Korean'],['el','Greek'],['ar','Arabic']]) {
+    clean(`${name} converts to keys a keyboard could produce`, code);
+  }
+
+  // And it has to survive the trip back, or the tables disagree with each other.
+  // Letters only: punctuation cannot round-trip and is not meant to. A comma
+  // is the ת key on a Hebrew keyboard and the б key on a Russian one, so
+  // "typed" text containing one is genuinely ambiguous. Sentences carrying
+  // Latin words are skipped for the same reason — convertTo* will map those
+  // letters too, which is correct and not reversible.
+  const trip = (label, code) => {
+    const bad = CORPUS.silent[code]
+      .map(s => s.replace(/[^\p{L} ]/gu, '').trim())
+      .filter(s => s && !/[a-zA-Z]/.test(s))
+      .filter(s => kiko.up[code](kiko.down[code](s)) !== s);
+    if (bad.length === 0) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}: ${bad.length} do not survive the round trip`);
+    console.log(`        ${bad[0]}\n          -> ${kiko.up[code](kiko.down[code](bad[0]))}`);
+  };
+  for (const [code, name] of [['he','Hebrew'],['ru','Russian'],['uk','Ukrainian'],
+                              ['ko','Korean'],['el','Greek'],['ar','Arabic']]) {
+    trip(`${name} round-trips`, code);
+  }
+
+  // The specific letters that were missing, named so a regression says why.
+  const maps = (label, code, native, key) => {
+    const got = kiko.down[code](native);
+    if (got === key) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}: ${native} -> ${JSON.stringify(got)}, expected ${JSON.stringify(key)}`);
+  };
+  maps('capital Russian П',    'ru', 'П', 'G');
+  maps('Russian ё',            'ru', 'ё', '`');
+  maps('capital Russian Э',    'ru', 'Э', '"');   // э lives on the apostrophe
+  maps('capital Ukrainian Я',  'uk', 'Я', 'Z');
+  maps('capital Greek Γ',      'el', 'Γ', 'G');
+  maps('capitalised Greek accent Έ', 'el', 'Έ', ';E');
+  maps('Arabic أ',             'ar', 'أ', 'H');
+  maps('Arabic ذ',             'ar', 'ذ', '`');
+}
+
+console.log('Real Greek is never offered up as English');
+{
+  // With the tables fixed, Case G1 lost the protection it had been getting by
+  // accident — uppercase Greek used to survive conversion and trip its "no
+  // Greek left" check. Six ordinary Greek sentences were offered as English.
+  // The test that matters is whether the words are Greek words, not whether
+  // the conversion completed.
+  const CORPUS = require('./corpus.js');
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  const fired = CORPUS.silent.el.filter(s => kiko.analyzeText(s) !== null);
+  if (fired.length === 0) pass++;
+  else {
+    fail++;
+    console.log(`  FAIL  ${fired.length} correct Greek sentences are offered for conversion`);
+    console.log(`        ${fired[0]}`);
+  }
+  // Each of the six, by name, so a loosened threshold says which it broke.
+  for (const s of ['Θα σου στείλω το αρχείο αργότερα σήμερα',
+                   'Τα παιδιά γυρίζουν από το σχολείο στις τέσσερις',
+                   'Η συνάντηση αναβλήθηκε για αύριο το πρωί',
+                   'Ας το συζητήσουμε στο τηλέφωνο αργότερα',
+                   'Πόσο κοστίζει συνολικά με τα μεταφορικά',
+                   'Θα τα πούμε αύριο στις οκτώ το βράδυ']) {
+    if (kiko.analyzeText(s) === null) pass++;
+    else { fail++; console.log(`  FAIL  offered to convert: ${s}`); }
+  }
+  // But English typed on a Greek keyboard must still be caught. Not every
+  // sentence survives the rule — "please send me the file" happens to contain
+  // με and φιλε once mapped, two real Greek words, and is silenced. That is
+  // the measured cost: three sentences in fifty-five. So the floor is what is
+  // pinned here, not any single example.
+  check('English typed on a Greek keyboard still fires',
+        kiko.up.el('i will review the document and get back to you'), 'greek_as_english');
+  const caught = CORPUS.silent.en.filter(s => {
+    const d = kiko.analyzeText(kiko.up.el(s));
+    return d && d.lang === 'el';
+  }).length;
+  if (caught >= 30) pass++;
+  else { fail++; console.log(`  FAIL  Greek catches only ${caught}/${CORPUS.silent.en.length} mistyped English sentences`); }
 }
 
 console.log('Each language keeps its own text when all six are enabled');

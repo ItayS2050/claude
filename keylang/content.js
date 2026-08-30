@@ -38,14 +38,41 @@ const RUSSIAN_RE = /[а-яёА-ЯЁ]/;
 const FINAL_FORMS = new Set(['ך','ם','ן','ף','ץ']);
 
 // ── Russian keyboard mapping (ЙЦУКЕН ↔ QWERTY) ───────────────
+// Cyrillic and Greek have upper case, and almost every sentence a person types
+// starts with one. Nothing below declared the shifted keys, so the inverse
+// tables had no entry for them and the manual "convert selection" path left
+// them untranslated: Привет came back as Пhbdtn, Γεια σου as Γeia soy. Every
+// sentence-initial letter and every proper noun, in four of the six languages.
+//
+// Declaring them by hand would be eighty more rows to keep in step with the
+// lower-case ones. Shift on a cased layout gives the capital of whatever the
+// key already produces, so the pairs are derived instead, and cannot drift.
+// Several letters live on punctuation keys — э on the apostrophe, ж on the
+// semicolon, ё on the backtick — and toUpperCase() does nothing to those, so
+// they need the shifted key spelled out.
+const SHIFTED_PUNCT = {
+  ';': ':', "'": '"', '[': '{', ']': '}', ',': '<', '.': '>',
+  '/': '?', '`': '~', '-': '_', '=': '+',
+};
+function withShiftedKeys(map) {
+  for (const [en, native] of Object.entries({ ...map })) {
+    const EN = SHIFTED_PUNCT[en] || en.toUpperCase();
+    const NATIVE = native.toUpperCase();
+    if (EN !== en && NATIVE !== native && map[EN] === undefined) map[EN] = NATIVE;
+  }
+  return map;
+}
+
 const EN_TO_RU = {
   'q':'й','w':'ц','e':'у','r':'к','t':'е','y':'н','u':'г','i':'ш','o':'щ','p':'з',
   '[':'х',']':'ъ',
   'a':'ф','s':'ы','d':'в','f':'а','g':'п','h':'р','j':'о','k':'л','l':'д',
   ';':'ж',"'":'э',
   'z':'я','x':'ч','c':'с','v':'м','b':'и','n':'т','m':'ь',
-  ',':'б','.':'ю'
+  ',':'б','.':'ю',
+  '`':'ё'
 };
+withShiftedKeys(EN_TO_RU);
 const RU_TO_EN = {};
 for (const [en, ru] of Object.entries(EN_TO_RU)) {
   if (RUSSIAN_RE.test(ru)) RU_TO_EN[ru] = en;
@@ -71,8 +98,20 @@ const EN_TO_AR = {
   'a':'ش','s':'س','d':'ي','f':'ب','g':'ل','h':'ا','j':'ت','k':'ن','l':'م',
   ';':'ك',"'":'ط',
   'z':'ئ','x':'ء','c':'ؤ','v':'ر','n':'ى','m':'ة',
-  ',':'و','.':'ز','/':'ظ'
+  ',':'و','.':'ز','/':'ظ',
+  // Arabic is not cased, so withShiftedKeys cannot derive these. The three
+  // hamza-carrying alefs and ذ sit on their own keys and were missing
+  // entirely: أ alone appeared fifteen times in the corpus, and every one of
+  // those sentences came out of "convert selection" with an Arabic letter
+  // still sitting in the middle of the Latin.
+  //
+  // These four positions are from the Arabic 101 layout and have not been
+  // checked by a native typist — see REVIEW-ar.md. Getting one wrong converts
+  // that letter to the wrong key rather than leaving it alone, so they are
+  // worth confirming before the next Arabic push.
+  '`':'ذ','H':'أ','Y':'إ','N':'آ'
 };
+withShiftedKeys(EN_TO_UK);
 const ARABIC_RE = /[؀-ۿ]/;
 const AR_TO_EN = {};
 for (const [en, ar] of Object.entries(EN_TO_AR)) {
@@ -88,6 +127,7 @@ const EN_TO_EL = {
   'a':'α','s':'σ','d':'δ','f':'φ','g':'γ','h':'η','j':'ξ','k':'κ','l':'λ',';':'΄',
   'z':'ζ','x':'χ','c':'ψ','v':'ω','b':'β','n':'ν','m':'μ'
 };
+withShiftedKeys(EN_TO_EL);
 const GREEK_RE = /[Ά-ώ]/;
 const EL_TO_EN = {};
 for (const [en, el] of Object.entries(EN_TO_EL)) {
@@ -96,6 +136,12 @@ for (const [en, el] of Object.entries(EN_TO_EL)) {
 EL_TO_EN['΄'] = ';'; // the tonos dead key itself is not a Greek letter
 
 const EL_TONOS = { 'α':'ά','ε':'έ','η':'ή','ι':'ί','ο':'ό','υ':'ύ','ω':'ώ' };
+// A capitalised accented vowel opens a great many Greek sentences — Έχω, Ήταν,
+// Όταν — and with only the lower-case pairs here, expandGreekTonos left them
+// as they were and the conversion carried a Greek letter into Latin text.
+for (const [plain, accented] of Object.entries({ ...EL_TONOS })) {
+  EL_TONOS[plain.toUpperCase()] = accented.toUpperCase();
+}
 const EL_UNTONOS = {};
 for (const [plain, accented] of Object.entries(EL_TONOS)) EL_UNTONOS[accented] = plain;
 
@@ -1451,8 +1497,24 @@ function analyzeText(rawText, scanAll = false) {
     if (runG1.length >= 1) {
       const elInRun = runG1.filter(w => GREEK_RE.test(w));
       if (!elInRun.some(w => learnedEnglish.has(w.toLowerCase()))) {
+        // Real Greek is not for converting. Until the keyboard tables were
+        // completed this pass was protected by accident: uppercase Greek had
+        // no entry, so it survived conversion and tripped the "no Greek left"
+        // check below. With the tables correct that protection vanished, and
+        // six ordinary Greek sentences — every one of them opening on a
+        // capital — were offered up as English.
+        //
+        // The real test was never conversion completeness but whether the
+        // words are Greek words. Measured over the corpus: real Greek carries
+        // a median of three common words per sentence, English typed on a
+        // Greek keyboard a median of none. Two is the line — it silences 21 of
+        // 22 real Greek sentences and costs 3 detections out of 55, which is
+        // the trade this product is tuned for.
+        const greekWordsInRun = elInRun.filter(
+          w => COMMON_EL_WORDS_PLAIN.has(stripTonos(w.toLowerCase().replace(/[^Ά-ώ]/g, '')))
+        ).length;
         const allMapG = elInRun.every(w => [...expandGreekTonos(w)].every(c => EL_TO_EN[c] !== undefined));
-        if (allMapG) {
+        if (allMapG && greekWordsInRun < 2) {
           const originalG1  = elInRun.join(' ');
           const convertedG1 = convertFromGreek(originalG1);
           if (convertedG1.trim().length >= 2 && !GREEK_RE.test(convertedG1)) {
