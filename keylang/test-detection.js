@@ -1012,6 +1012,57 @@ console.log('A run is not cut short by a word that only scores as English');
   }
 }
 
+console.log('Each language keeps its own text when all six are enabled');
+{
+  // The English→X passes run in order and the first match wins, so the order
+  // decides who gets to claim ambiguous letters. Korean was asked last, after
+  // Arabic and Russian, and lost ten of thirty-four corpus sentences to them —
+  // a Korean speaker being offered their own greeting rewritten in Arabic.
+  // That is not a miss, it is a confident wrong answer, and accepting it
+  // destroys the sentence.
+  //
+  // Korean now goes first, because its test is the only structural one: every
+  // keystroke must land inside a complete Hangul syllable. Arabic and Greek
+  // are the loosest — nearly every QWERTY key maps to something — so they are
+  // asked last.
+  const claims = (label, typed, wantType) => {
+    kiko.setLangs({ ...ALL });
+    const d = kiko.analyzeText(typed);
+    const got = d ? d.type : null;
+    if (got === wantType) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}`);
+    console.log(`        ${JSON.stringify(typed)}`);
+    console.log(`        expected ${wantType}, got ${got}` +
+                (d ? `  -> ${JSON.stringify(d.converted)}` : ''));
+  };
+  kiko.forgetLearned();
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  // Every one of these was claimed by Arabic or Russian before the reorder.
+  claims('a Korean greeting is not Arabic',
+         'dkssudgktpdy dhsmf djEjgrp wlsotpdy', 'english_as_korean');
+  claims('nor is a Korean sentence about a file',
+         'vkdlfdms dhsmf wjsurdp qhsoemflrpTtmqslek', 'english_as_korean');
+  claims('a Korean thank-you is not Russian',
+         'ehdhkwntutj wjdakf rkatkgkqslek', 'english_as_korean');
+  claims('nor is a Korean question',
+         'ekdma wndp ghldmlfmf wkqdmf tn dlTdmfRkdy', 'english_as_korean');
+
+  // And asking Korean first must not let it claim anyone else's.
+  claims('Russian stays Russian', 'ghbdtn rfr ltkf ctujlyz', 'english_as_russian');
+  claims('Russian stays Russian, second sample',
+         'cgfcb,j ,jkmijt pf gjvjom', 'english_as_russian');
+  claims('Greek stays Greek',   'geia soy ti kaneiw shmera', 'english_as_greek');
+  claims('Greek stays Greek, second sample',
+         'eyxaristv poly gia th bohueia', 'english_as_greek');
+  claims('Hebrew stays Hebrew', 'akuo nv akunl vhuo', 'english_as_hebrew');
+  claims('Hebrew stays Hebrew, second sample',
+         'tbh atkj kl t, veuc', 'english_as_hebrew');
+  claims('Arabic stays Arabic', 'a;vh [.dgh ugn hglshu]m', 'english_as_arabic');
+}
+
 console.log('Korean phrases are one word, and one word is enough');
 {
   // Kiko needs a run of two words before it fires, which is right for Hebrew

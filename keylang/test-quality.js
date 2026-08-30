@@ -77,6 +77,9 @@ function load() {
     '         STRICT_MS,' +
     '         forget: () => { learnedEnglish.clear(); },' +
     '         fromHebrew: convertToEnglish, toHebrewKeys: convertToHebrew,' +
+    '         down: {he:convertToEnglish, ru:convertFromRussian,' +
+    '                uk:convertFromUkrainian, ko:convertFromKorean,' +
+    '                el:convertFromGreek, ar:convertFromArabic},' +
     '         fromRussian: convertFromRussian,' +
     '         fromUkrainian: convertFromUkrainian, fromKorean: convertFromKorean,' +
     '         fromGreek: convertFromGreek, fromArabic: convertFromArabic };\n})()',
@@ -147,6 +150,37 @@ kiko.openStrictWindow();
 const chatPostFix = chatTyped.filter(t => kiko.analyzeText(t) !== null).length;
 kiko.closeStrictWindow();
 
+// ── Which language claims the text ───────────────────────────────────────
+// The passes run in a fixed order and the first match wins, so the order
+// decides who claims ambiguous letters. Until 4.9.8 Korean was asked last,
+// after Arabic and Russian, and lost ten of its thirty-four sentences to them
+// — a Korean speaker offered their own greeting rewritten in Arabic. Accepting
+// that destroys the sentence, which makes it worse than any miss.
+//
+// Nothing above measures it: precision and recall both count a detection as
+// correct without ever asking what language came out. Reported here so a
+// reordering cannot quietly undo it.
+//
+// Only sentences whose mistyped form is clean ASCII count. The reverse
+// converters leave uppercase Cyrillic and Greek and several Arabic letters
+// untranslated, so most Russian, Ukrainian, Greek and Arabic rows cannot be
+// measured yet — a separate bug, and the reason those rows read as they do.
+const claimRows = {};
+let claimUsable = 0, claimWrong = 0;
+for (const code of LANGS) {
+  claimRows[code] = { n: 0, got: {}, silent: 0 };
+  for (const s of CORPUS.silent[code]) {
+    const typed = kiko.down[code](s);
+    if (/[^\x00-\x7F]/.test(typed)) continue;
+    claimUsable++; claimRows[code].n++;
+    const d = kiko.analyzeText(typed);
+    if (!d) { claimRows[code].silent++; continue; }
+    const got = d.lang || 'he';
+    claimRows[code].got[got] = (claimRows[code].got[got] || 0) + 1;
+    if (got !== code) claimWrong++;
+  }
+}
+
 // ── Span accuracy: of what fires, does it replace the right words? ───────
 const spanResults = CORPUS.spans.map(c => {
   const d = kiko.analyzeText(c.typed);
@@ -206,6 +240,15 @@ if (chatPostFix < chatNormal) {
   }
   kiko.closeStrictWindow();
 }
+
+console.log('\nWhich language claims the text — the diagonal is right\n');
+console.log('              ' + LANGS.map(l => l.padStart(5)).join('') + '    silent  measurable');
+for (const code of LANGS) {
+  const r = claimRows[code];
+  const cells = LANGS.map(l => (r.got[l] ? String(r.got[l]) : '.').padStart(5)).join('');
+  console.log(`  ${NAMES[code].padEnd(11)}${cells}${String(r.silent).padStart(9)}${String(r.n).padStart(11)}`);
+}
+console.log(`\n  ${claimWrong} of ${claimUsable} measurable sentences go to the wrong language`);
 
 console.log('\nSpan accuracy — does the fix replace exactly the mistyped words\n');
 for (const r of spanResults) {

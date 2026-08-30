@@ -1802,6 +1802,68 @@ function analyzeText(rawText, scanAll = false) {
     }
   }
 
+  // Korean runs first of the English→X passes, and that ordering is the whole
+  // point rather than an accident of when each language was added. Korean is
+  // the only one whose test is structural: every keystroke must land inside a
+  // complete Hangul syllable, and a run of letters that does that is Korean or
+  // it is nothing. Arabic and Greek are the loosest — very nearly every QWERTY
+  // key maps to some letter — so they must be asked last, and Russian sits in
+  // between.
+  //
+  // Asked last, as it used to be, Korean lost ten of thirty-four corpus
+  // sentences to Arabic and Russian, and losing them meant a Korean speaker
+  // being offered their own greeting rewritten in Arabic. Not a miss — a
+  // confident wrong answer that destroys the sentence if accepted.
+  // ── Case K2: English characters typed while Korean keyboard was expected
+  // Runs last of all the English→X passes. wordCouldBeKorean already demands a
+  // clean syllable decomposition, but English maps onto plausible Hangul easily,
+  // so the established languages keep first claim on any ambiguous run.
+  if (!textHasHebrew && enabledLangs.ko) {
+    const koCandWords = extractWords(text);
+    const koMinRun = textHasHangul ? 1 : 2;
+    // Korean writes whole phrases as one token — 안녕하세요, 감사합니다 and
+    // 알겠습니다 are each a single word — so the two-word rule that keeps the
+    // Latin languages honest silences the four most common things a Korean
+    // types. A romanised Korean phrase is long and decomposes into many clean
+    // syllables, and that is the evidence the second word was standing in for.
+    // Four syllables is the line: 안녕 (2) still needs a neighbour, 안녕하세요
+    // (5) speaks for itself. wordCouldBeKorean has already required a complete
+    // syllable decomposition and rejected anything English-looking, so what
+    // reaches here is a long token that is Korean or nothing.
+    const koSoloRun = w => convertToKorean(w).length >= 4;
+    const allKoRuns = [];
+    let curKoRun = [], curKoStartIdx = -1;
+    for (let wi = 0; wi < koCandWords.length; wi++) {
+      const w = koCandWords[wi];
+      if (wordCouldBeKorean(w)) {
+        if (curKoRun.length === 0) curKoStartIdx = wi;
+        curKoRun.push(w);
+      } else {
+        if (curKoRun.length > 0) allKoRuns.push({ words: [...curKoRun], startIdx: curKoStartIdx });
+        curKoRun = []; curKoStartIdx = -1;
+      }
+    }
+    if (curKoRun.length > 0) allKoRuns.push({ words: curKoRun, startIdx: curKoStartIdx });
+
+    const koRunEntry = [...allKoRuns].reverse().find(
+      r => r.words.length >= koMinRun ||
+           (r.words.length === 1 && koSoloRun(r.words[0])));
+    if (koRunEntry) {
+      const runKo2 = koRunEntry.words;
+      const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
+      const convertedKo2 = convertToKorean(spanKo2);
+      if (HANGUL_RE.test(convertedKo2)) {
+        return {
+          type: 'english_as_korean', lang: 'ko',
+          message: 'Wrong layout? Looks like Korean:',
+          original: spanKo2, converted: convertedKo2,
+          btnLabel: 'Fix → Korean', rejectLabel: 'Not Korean',
+          words: runKo2
+        };
+      }
+    }
+  }
+
   // ── Case R2: English characters typed while Russian keyboard was expected
   if (!textHasHebrew && enabledLangs.ru) {
     const ruCandWords = extractWords(text);
@@ -1904,56 +1966,6 @@ function analyzeText(rawText, scanAll = false) {
           original: spanAr2, converted: convertedAr2,
           btnLabel: 'Fix → Arabic', rejectLabel: 'Not Arabic',
           words: runAr2
-        };
-      }
-    }
-  }
-
-  // ── Case K2: English characters typed while Korean keyboard was expected
-  // Runs last of all the English→X passes. wordCouldBeKorean already demands a
-  // clean syllable decomposition, but English maps onto plausible Hangul easily,
-  // so the established languages keep first claim on any ambiguous run.
-  if (!textHasHebrew && enabledLangs.ko) {
-    const koCandWords = extractWords(text);
-    const koMinRun = textHasHangul ? 1 : 2;
-    // Korean writes whole phrases as one token — 안녕하세요, 감사합니다 and
-    // 알겠습니다 are each a single word — so the two-word rule that keeps the
-    // Latin languages honest silences the four most common things a Korean
-    // types. A romanised Korean phrase is long and decomposes into many clean
-    // syllables, and that is the evidence the second word was standing in for.
-    // Four syllables is the line: 안녕 (2) still needs a neighbour, 안녕하세요
-    // (5) speaks for itself. wordCouldBeKorean has already required a complete
-    // syllable decomposition and rejected anything English-looking, so what
-    // reaches here is a long token that is Korean or nothing.
-    const koSoloRun = w => convertToKorean(w).length >= 4;
-    const allKoRuns = [];
-    let curKoRun = [], curKoStartIdx = -1;
-    for (let wi = 0; wi < koCandWords.length; wi++) {
-      const w = koCandWords[wi];
-      if (wordCouldBeKorean(w)) {
-        if (curKoRun.length === 0) curKoStartIdx = wi;
-        curKoRun.push(w);
-      } else {
-        if (curKoRun.length > 0) allKoRuns.push({ words: [...curKoRun], startIdx: curKoStartIdx });
-        curKoRun = []; curKoStartIdx = -1;
-      }
-    }
-    if (curKoRun.length > 0) allKoRuns.push({ words: curKoRun, startIdx: curKoStartIdx });
-
-    const koRunEntry = [...allKoRuns].reverse().find(
-      r => r.words.length >= koMinRun ||
-           (r.words.length === 1 && koSoloRun(r.words[0])));
-    if (koRunEntry) {
-      const runKo2 = koRunEntry.words;
-      const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
-      const convertedKo2 = convertToKorean(spanKo2);
-      if (HANGUL_RE.test(convertedKo2)) {
-        return {
-          type: 'english_as_korean', lang: 'ko',
-          message: 'Wrong layout? Looks like Korean:',
-          original: spanKo2, converted: convertedKo2,
-          btnLabel: 'Fix → Korean', rejectLabel: 'Not Korean',
-          words: runKo2
         };
       }
     }
