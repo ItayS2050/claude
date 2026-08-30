@@ -1036,10 +1036,28 @@ function isCommonHebrewWord(word) {
 // is enough — real wrong-layout text is the output of an English sentence
 // mapped through a Hebrew keyboard, and virtually never lands on several
 // genuine Hebrew words at once.
+//
+// That last claim holds for long words and fails badly for short ones. Common
+// two-letter English words map onto common two-letter Hebrew words all the
+// time: עם is the keys for "go", אם the keys for "to", גם for "do". Two of
+// those in a sentence was enough to veto it, and both of the misses reported
+// from the wild turned out to be the same word — "מם' עם אם איק מקסא כןסקד",
+// which is "now go to the next fixes", vetoed by עם and אם while the other
+// four words converted to ordinary English.
+//
+// So only words of three Hebrew letters or more count as evidence. Measured
+// over the corpus, that never wrongly blocks a mistyped English sentence,
+// where the old rule blocked one; what protection it gives up is picked up by
+// the English-likeness scoring further down, which is why the false-positive
+// count does not move.
+const HE_EVIDENCE_MIN = 3;
 function looksLikeRealHebrew(words) {
   const he = words.filter(w => HEBREW_RE.test(w));
   if (he.length < 2) return false;
-  const hits = he.filter(isCommonHebrewWord).length;
+  const hits = he.filter(w =>
+    isCommonHebrewWord(w) &&
+    w.replace(/[^\u0590-\u05FF]/g, '').length >= HE_EVIDENCE_MIN
+  ).length;
   return hits >= 2 || hits / he.length >= 0.34;
 }
 

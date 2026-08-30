@@ -952,6 +952,49 @@ console.log('The fix can be accepted without touching the mouse');
   is('both fix toasts mark themselves', (src.match(/dataset\.kldFix = '1'/g) || []).length, 2);
 }
 
+console.log('Two short Hebrew words do not veto a sentence of English');
+{
+  // Reported from the wild twice, and both times the same word. "מם' עם אם
+  // איק מקסא כןסקד" is "now go to the next fixes" typed on a Hebrew keyboard.
+  // Four of its six words convert to ordinary English — now, go, to, the — but
+  // עם and אם are also real Hebrew words, and looksLikeRealHebrew vetoed the
+  // whole sentence on the strength of those two.
+  //
+  // The guard is right to exist: it was added after a real Hebrew email was
+  // offered up for conversion into gibberish, which is the worst thing this
+  // extension can do. What was wrong was counting two-letter words as
+  // evidence. Common short English words map onto common short Hebrew words
+  // constantly — עם is the keys for "go", אם for "to", גם for "do".
+  const CORPUS = require('./corpus.js');
+  kiko.forgetLearned();
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  check('the reported sentence fires', "מם' עם אם איק מקסא כןסקד",
+        'hebrew_as_english', { converted: 'now go to the next fixes' });
+  check('and the earlier report does too', 'סל ישמא אם נקעומ', 'hebrew_as_english');
+
+  // The email the guard was written for. If this ever fires again, the trade
+  // has been made the wrong way round.
+  check('a real Hebrew email is never offered for conversion',
+        'כמובן שאפשר גם יותר נמוך ללא לינה - תלוי מה התקציב', null);
+
+  // And nothing else in the corpus either — this is the direction where a
+  // mistake destroys someone's writing rather than merely annoying them.
+  const offered = CORPUS.silent.he.filter(s => kiko.analyzeText(s) !== null);
+  if (offered.length === 0) pass++;
+  else {
+    fail++;
+    console.log(`  FAIL  ${offered.length} real Hebrew sentences offered for conversion`);
+    console.log(`        ${offered[0]}`);
+  }
+
+  // Long Hebrew words must still carry their full weight, or the guard is gone.
+  check('three real Hebrew words still veto',  'שלום מה שלומך היום', null);
+  check('and so does a short Hebrew sentence', 'תודה רבה על העזרה', null);
+}
+
 console.log('A run is not cut short by a word that only scores as English');
 {
   // Reported from the wild, twice: "vhh nv akunl jcr?" offered only "היי מה"
