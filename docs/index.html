@@ -17,7 +17,20 @@
   <link rel="alternate" hreflang="x-default" href="https://get-kiko.com/">
   <meta property="og:title" content="Kiko — the keyboard layout mistake, fixed">
   <meta property="og:description" content="Six languages, both directions, one click. Free for 30 days.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Analytics for the marketing site only. The extension itself sends
+     nothing, ever — see privacy.html. Nothing here touches typed text; it
+     measures which page someone landed on and whether they clicked install.
+     Replace the id below with the Measurement ID from the GA4 property
+     (Admin → Data streams → your web stream → "G-…"). One place, and every
+     language page picks it up when make-i18n.py regenerates them. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-REPLACE-ME"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-REPLACE-ME');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -524,6 +537,56 @@
     `${l.code === here ? ' aria-current="true"' : ''}>${l.label}</a>`
   ).join('');
   document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });
+
+  // ── What we measure, and why each one earns its place ──────────────────
+  // Page views alone cannot answer the only question that matters: of the
+  // people who arrive, how many install. That needs an event on the button,
+  // because the click leaves for the Web Store and GA never sees the landing.
+  //
+  // No identifiers, no typed text, nothing about the person — which page,
+  // which button, how far down they read.
+  const track = (name, params) => {
+    try { if (typeof gtag === 'function') gtag('event', name, params || {}); } catch {}
+  };
+
+  // The one that matters. `location` distinguishes the nav button from the
+  // hero from the closing one, so a dead CTA is visible rather than averaged
+  // away. Mark this as a Key event in GA and it becomes the conversion rate.
+  document.querySelectorAll('[data-webstore]').forEach((a, i) => {
+    const where = a.closest('nav') ? 'nav' : a.closest('.hero-cta') ? 'hero' : 'footer';
+    a.addEventListener('click', () => track('add_to_chrome', {
+      location: where, page_language: document.documentElement.lang || 'en',
+    }));
+  });
+
+  // Someone who reaches the pricing and clicks through is a different signal
+  // from someone who installs — worth telling apart before 12 September.
+  document.querySelectorAll('[data-checkout]').forEach(a => {
+    a.addEventListener('click', () => track('start_checkout', {
+      page_language: document.documentElement.lang || 'en',
+    }));
+  });
+
+  // Arriving on the wrong language page and switching is a sign the campaign
+  // or the hreflang is pointing people to the wrong place.
+  document.getElementById('langsw')?.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (a) track('switch_language', { from: document.documentElement.lang || 'en',
+                                      to: a.getAttribute('hreflang') });
+  });
+
+  // How far down the page they got. Fires once per threshold per visit, so a
+  // bounce and a careful read are distinguishable. Passive listener: this must
+  // never cost scroll smoothness on the one page we control.
+  const seen = new Set();
+  addEventListener('scroll', () => {
+    const h = document.body.scrollHeight - innerHeight;
+    if (h <= 0) return;
+    const pct = Math.round((scrollY / h) * 100);
+    for (const mark of [25, 50, 75, 100]) {
+      if (pct >= mark && !seen.has(mark)) { seen.add(mark); track('scroll_depth', { percent: mark }); }
+    }
+  }, { passive: true });
 
   // Every "typed" string below was produced by running the extension's own
   // converters over the native text — this is literally what Kiko would show.
