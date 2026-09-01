@@ -139,7 +139,7 @@
     "message": "Free for 30 days. After that it is $$5 a month, or $$40 for the year. No card needed to start."
   },
   "welcomeSkip": {
-    "message": "Skip — enable all languages for now"
+    "message": "Not sure yet — I'll choose in the popup"
   },
   "statDetected": {
     "message": "Detected"
@@ -236,6 +236,12 @@
   },
   "reviewAsk": {
     "message": "Enjoying Kiko?"
+  },
+  "welcomePick": {
+    "message": "Which languages do you type?"
+  },
+  "welcomePickSub": {
+    "message": "Kiko only watches the ones you choose. Picking fewer makes it more accurate."
   },
   "reviewCountOne": {
     "message": "Kiko has fixed one typing mistake for you."

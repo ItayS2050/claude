@@ -31,9 +31,22 @@ document.getElementById('start-btn').addEventListener('click', () => {
   chrome.storage.local.set({ enabledLangs, onboardingDone: true }, () => window.close());
 });
 
+// "Skip" used to switch all six languages on, which is the one answer nobody
+// means. It is also the answer that costs the most accuracy — a language
+// running that you never type interferes with the ones you do. Skipping now
+// records nothing at all: content.js falls back to the languages Chrome says
+// this person reads, and the popup keeps asking until they choose.
 document.getElementById('skip-btn').addEventListener('click', () => {
-  chrome.storage.local.set({
-    enabledLangs: { he: true, ru: true, uk: true, ko: true, el: true, ar: true },
-    onboardingDone: true,
-  }, () => window.close());
+  chrome.storage.local.set({ onboardingDone: false }, () => window.close());
 });
+
+// Pre-tick whatever Chrome says they read, so for most people choosing is
+// confirming rather than hunting. Nothing is saved until they press the button.
+try {
+  const MAP = { he: 'he', iw: 'he', ru: 'ru', uk: 'uk', ko: 'ko', el: 'el', ar: 'ar' };
+  for (const tag of (navigator.languages || [])) {
+    const code = MAP[String(tag).toLowerCase().split('-')[0]];
+    const card = code && document.getElementById('card-' + code);
+    if (card && !selected.has(code)) card.click();
+  }
+} catch {}

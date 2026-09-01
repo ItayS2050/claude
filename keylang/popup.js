@@ -481,6 +481,12 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       });
       maybeShowNudge(data.stats || { converted: 0 }, data.reviewNudge || null,
                      data.entitlement || null);
+      // Nobody has told Kiko what they type, so it is guessing from Chrome's
+      // language list. Keep asking — the language toggles are right below.
+      if (!data.enabledLangs) {
+        const ask = document.getElementById('pick-langs');
+        if (ask) ask.style.display = 'block';
+      }
     }
   );
 });

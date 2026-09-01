@@ -348,7 +348,39 @@ let stats           = { detected: 0, converted: 0, rejected: 0 };
 let detectionEnabled = true;
 let soundEnabled     = true;
 let toastPos        = null;
-let enabledLangs    = { he: true, ru: true, uk: true, ar: true, ko: true, el: true };
+// Which languages Kiko watches before anyone has said. All six used to be on,
+// which is the permissive choice and the wrong one: a language running that
+// the person never types costs accuracy in the ones they do. Measured over the
+// corpus, every language alone scores 123 right and 0 wrong; all six together
+// score 114 right and 24 wrong, and Ukrainian alone goes from 8 right / 0
+// wrong to 7 / 12 once Russian is beside it.
+//
+// Chrome already knows which languages this person reads, so ask it. Someone
+// whose browser lists Hebrew types Hebrew; that guess is free and far better
+// than assuming all six. The welcome screen still asks properly — this only
+// covers the person who closed that tab without answering.
+const BROWSER_TO_KIKO = { he: 'he', iw: 'he', ru: 'ru', uk: 'uk', ko: 'ko', el: 'el', ar: 'ar' };
+
+function langsFromBrowser() {
+  const picked = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
+  let matched = false;
+  try {
+    const tags = navigator.languages && navigator.languages.length
+      ? navigator.languages : [navigator.language || ''];
+    for (const tag of tags) {
+      const code = BROWSER_TO_KIKO[String(tag).toLowerCase().split('-')[0]];
+      if (code) { picked[code] = true; matched = true; }
+    }
+  } catch {}
+  // Nothing recognised — an English-only Chrome belonging to someone who types
+  // Russian looks exactly like one belonging to someone who types nothing else.
+  // Guessing wrong here means Kiko appears broken, so this case keeps the old
+  // permissive behaviour and the popup asks instead.
+  if (!matched) return { he: true, ru: true, uk: true, ko: true, el: true, ar: true };
+  return picked;
+}
+
+let enabledLangs    = langsFromBrowser();
 // Entitlement is computed in background.js and mirrored here. Defaults to true
 // on purpose: if the service worker has not run yet, or storage is unreadable,
 // a paying user must not be locked out of their own text.

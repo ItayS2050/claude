@@ -151,6 +151,42 @@ console.log('Nothing in the extension can send typed text anywhere');
   else bad('expected the licence calls to still be present');
 }
 
+console.log('Kiko only watches languages it has been told about');
+{
+  // The default used to be all six on, and Skip wrote all six explicitly.
+  // Measured over the corpus, every language alone scores 123 right and 0
+  // wrong; all six together score 114 right and 24 wrong. A language running
+  // that you never type interferes with the ones you do, so nothing is on
+  // until the person says so — with Chrome's own language list as the guess
+  // in between.
+  const content = fs.readFileSync(path.join(HERE, 'content.js'), 'utf8');
+  const welcome = fs.readFileSync(path.join(HERE, 'welcome.js'), 'utf8');
+  const popupJs = fs.readFileSync(path.join(HERE, 'popup.js'), 'utf8');
+
+  if (/let enabledLangs\s*=\s*langsFromBrowser\(\)/.test(content)) ok();
+  else bad('content.js still defaults to a hard-coded set of languages');
+
+  if (/navigator\.languages/.test(content)) ok();
+  else bad('content.js does not consult the browser language list');
+
+  // Skip must record nothing at all. Writing every language was the bug.
+  const skip = welcome.slice(welcome.indexOf("getElementById('skip-btn')"));
+  if (!/enabledLangs/.test(skip.slice(0, 400))) ok();
+  else bad('the Skip button still writes enabledLangs');
+
+  // And the label has to match what the button does.
+  const en = JSON.parse(fs.readFileSync(path.join(HERE, '_locales/en/messages.json'), 'utf8'));
+  if (!/enable all/i.test(en.welcomeSkip.message)) ok();
+  else bad(`the Skip label still promises to enable all languages: ${en.welcomeSkip.message}`);
+
+  // Somebody who skipped is running on a guess, so the popup keeps asking.
+  if (/pick-langs/.test(popupJs) && /!data\.enabledLangs/.test(popupJs)) ok();
+  else bad('the popup does not ask the people who skipped');
+  const popupHtml = fs.readFileSync(path.join(HERE, 'popup.html'), 'utf8');
+  if (/id="pick-langs"/.test(popupHtml)) ok();
+  else bad('popup.html has no language prompt to show');
+}
+
 console.log('Every message send handles the receiver being gone');
 {
   // "Unchecked runtime.lastError: Could not establish connection. Receiving end

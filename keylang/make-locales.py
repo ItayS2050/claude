@@ -179,11 +179,10 @@ M = {
  "30 יום חינם. אחר כך $$5 לחודש, או $$40 לשנה. לא צריך כרטיס אשראי כדי להתחיל.",
  "30 дней бесплатно. Потом $$5 в месяц или $$40 в год. Карта для начала не нужна.",
  "30일 무료. 이후 월 $$5 또는 연 $$40. 시작할 때 카드는 필요 없습니다."),
-"welcomeSkip": (
- "Skip — enable all languages for now",
- "דלג — להפעיל בינתיים את כל השפות",
- "Пропустить — включить пока все языки",
- "건너뛰기 — 일단 모든 언어 켜기"),
+"welcomeSkip":   ("Not sure yet — I'll choose in the popup",
+                 "עוד לא בטוח — אבחר דרך התוסף",
+                 "Пока не уверен — выберу в расширении",
+                 "아직 모르겠어요 — 팝업에서 고를게요"),
 
 # ── Popup ─────────────────────────────────────────────────────────────────
 "statDetected":  ("Detected",  "זוהו",    "Найдено",   "감지"),
@@ -246,6 +245,14 @@ M = {
 "reviewAsk":     ("Enjoying Kiko?", "נהנה מ-Kiko?", "Нравится Kiko?", "Kiko가 마음에 드시나요?"),
 # Chrome's i18n has no plural forms, so the singular is its own string rather
 # than "1 mistakes", which reads like a bug and undercuts the ask.
+"welcomePick":   ("Which languages do you type?",
+                 "באילו שפות אתה מקליד?",
+                 "На каких языках вы печатаете?",
+                 "어떤 언어로 입력하시나요?"),
+"welcomePickSub": ("Kiko only watches the ones you choose. Picking fewer makes it more accurate.",
+                 "Kiko יעקוב רק אחרי מה שתבחר. פחות שפות — דיוק גבוה יותר.",
+                 "Kiko следит только за выбранными. Чем меньше языков, тем точнее.",
+                 "선택한 언어만 감시합니다. 적게 고를수록 정확해집니다."),
 "reviewCountOne": ("Kiko has fixed one typing mistake for you.",
                  "‏Kiko תיקן לך שגיאת הקלדה אחת.",
                  "Kiko исправил вам одну опечатку.",

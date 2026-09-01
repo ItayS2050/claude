@@ -101,6 +101,13 @@
       border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
     }
     .review-nudge-later:hover { background: #334155; color: #e2e8f0; }
+    /* Shown only while Kiko is guessing — see popup.js. */
+    .pick-langs {
+      display: none; background: #1e3a5f; border: 1px solid #3b82f6;
+      border-radius: 9px; padding: 11px 13px; margin: 14px 0 0;
+      font-size: 12px; line-height: 1.45; color: #dbeafe;
+    }
+    .pick-langs strong { display: block; color: #7dd3fc; margin-bottom: 3px; font-size: 13px; }
     /* Always present, whatever the nudge state is. Sits under the stats, which
        are the argument for it, and well inside the 600px Chrome gives a popup. */
     .rate-line {
@@ -231,6 +238,15 @@
       <div class="stat-num" id="s-rejected">0</div>
       <div class="stat-lbl" data-i18n="statRejected">Rejected</div>
     </div>
+  </div>
+
+  <!-- Shown only to someone who never answered the welcome screen. Kiko is
+       running on a guess from Chrome's language list until they do, and a
+       guess is worth correcting: a language watched that you never type
+       interferes with the ones you do. -->
+  <div class="pick-langs" id="pick-langs">
+    <strong data-i18n="welcomePick">Which languages do you type?</strong>
+    <span data-i18n="welcomePickSub">Kiko only watches the ones you choose. Picking fewer makes it more accurate.</span>
   </div>
 
   <a href="#" class="rate-line" id="help-rate">⭐ <span data-i18n="reviewHelp">Rate Kiko</span></a>
