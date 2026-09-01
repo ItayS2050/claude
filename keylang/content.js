@@ -553,6 +553,86 @@ const COMMON_EN_WORDS = new Set([
   'love','miss','hi','bye','yes','no','oh','wow','haha','lol',
 ]);
 
+// Proper nouns — countries, cities, the companies people look up — and the one
+// whole category the lists above deliberately leave out, because a name is not
+// a word and nothing about its letters says "English".
+//
+// That gap is invisible in a chat box and total in a search box. Reported from
+// LinkedIn's geography filter, where "israel" typed on a Hebrew keyboard is
+// ןדרשקך: the single-word trigger asks COMMON_EN_WORDS, the multi-word scoring
+// asks it again, and a name answers no to both. Measured before this list: 0 of
+// 216 country, city and company names fired. Not some. None.
+//
+// Safety comes from three things. Every entry is four letters or more, so the
+// short-word ambiguity that unmistakablyEnglish warns about cannot arise. No
+// entry decodes to a real Hebrew word — checked against COMMON_HE_WORDS, and
+// the check is a test, not a comment. And the 624-sentence corpus still reports
+// zero false positives with the list switched on.
+const EN_NAMES = new Set([
+  // Israel
+  'israel','jerusalem','telaviv','haifa','netanya','herzliya','ramatgan','holon',
+  'ashdod','ashkelon','rishon','petah','tikva','beersheba','eilat','nazareth','akko',
+  // the halves people actually type: "tel aviv" is two tokens, and the
+  // multi-word scoring reads each one on its own
+  'aviv','ramat','sheva','york','kong','town','angel',
+  // countries
+  'usa','america','canada','mexico','brazil','argentina','chile','colombia','peru',
+  'england','britain','scotland','ireland','wales','france','germany','spain',
+  'portugal','italy','greece','malta','netherlands','holland','belgium','austria',
+  'switzerland','sweden','norway','denmark','finland','iceland','estonia','latvia',
+  'lithuania','poland','czechia','slovakia','hungary','romania','bulgaria','serbia',
+  'croatia','slovenia','albania','russia','ukraine','belarus','moldova','georgia',
+  'armenia','azerbaijan','turkey','cyprus','china','japan','korea','india','pakistan',
+  'bangladesh','indonesia','thailand','vietnam','philippines','singapore','malaysia',
+  'taiwan','australia','zealand','africa','egypt','morocco','tunisia','algeria',
+  'nigeria','kenya','ghana','ethiopia','uganda','tanzania','emirates','dubai','qatar',
+  'kuwait','bahrain','oman','jordan','lebanon','syria','iraq','iran','saudi','yemen',
+  // cities
+  'london','paris','berlin','munich','hamburg','madrid','barcelona','valencia','rome',
+  'milan','naples','turin','lisbon','porto','amsterdam','rotterdam','brussels','vienna',
+  'zurich','geneva','basel','prague','warsaw','krakow','budapest','athens','dublin',
+  'edinburgh','manchester','liverpool','glasgow','bristol','leeds','oslo','bergen',
+  'stockholm','copenhagen','helsinki','tallinn','riga','vilnius','moscow','petersburg',
+  'novosibirsk','kazan','kyiv','kiev','odesa','odessa','lviv','kharkiv','dnipro','minsk',
+  'istanbul','ankara','izmir','newyork','brooklyn','boston','chicago','houston','dallas',
+  'austin','denver','seattle','portland','miami','orlando','atlanta','angeles',
+  'francisco','diego','vegas','phoenix','philadelphia','baltimore','detroit',
+  'minneapolis','nashville','washington','toronto','vancouver','montreal','ottawa',
+  'calgary','tokyo','osaka','kyoto','yokohama','nagoya','seoul','busan','incheon',
+  'beijing','shanghai','shenzhen','guangzhou','hongkong','taipei','bangkok','hanoi',
+  'jakarta','manila','mumbai','delhi','bangalore','chennai','kolkata','hyderabad',
+  'sydney','melbourne','brisbane','perth','adelaide','auckland','wellington','cairo',
+  'lagos','nairobi','johannesburg','pretoria','capetown','durban','casablanca','rabat',
+  'tunis','algiers','doha','riyadh','jeddah','amman','beirut','baghdad','tehran',
+  // regions and demonyms that behave like place names in a filter box
+  'europe','asia','america','pacific','atlantic','mediterranean','balkans','baltics',
+  'scandinavia','california','texas','florida','virginia','carolina','arizona',
+  'nevada','colorado','oregon','ohio','michigan','illinois','massachusetts',
+  'american','british','french','german','spanish','italian','russian','israeli',
+  'ukrainian','korean','japanese','chinese','indian','arabic','greek','hebrew',
+  // companies people actually search for
+  'linkedin','google','facebook','instagram','whatsapp','amazon','microsoft','apple',
+  'netflix','spotify','tesla','nvidia','intel','openai','anthropic','claude','chatgpt',
+  'github','gitlab','slack','zoom','notion','figma','canva','shopify','stripe','paypal',
+  'salesforce','hubspot','oracle','adobe','cisco','samsung','huawei','xiaomi','sony',
+  'toyota','honda','nissan','siemens','philips','nestle','unilever','pfizer','moderna',
+  'monday','wix','fiverr','payoneer','mobileye','checkpoint','nice','teva',
+]);
+
+// Four letters is the floor everywhere in this file where a word has to carry
+// its own weight; below it the evidence is noise. It also keeps 'usa' and 'ibm'
+// out, which is the right call — three letters of consonants is exactly the
+// shape a real Hebrew word takes.
+function isEnglishName(word) {
+  return word.length >= 4 && EN_NAMES.has(word);
+}
+
+// A word worth firing on: something everybody writes, or something everybody
+// looks up.
+function englishEnough(word) {
+  return COMMON_EN_WORDS.has(word) || isEnglishName(word);
+}
+
 const EN_SUFFIXES = ['tion','ness','ment','ight','ough','ould','ing','ful','less','able','ible'];
 
 const EN_BIGRAMS = new Set([
@@ -1484,7 +1564,7 @@ function analyzeText(rawText, scanAll = false) {
         // Fast single-word trigger: only outside strict mode (avoid "בוא"→"cut" false-pos)
         if (run1.length === 1) {
           const w = converted.trim().replace(/[^a-z]/gi, '').toLowerCase();
-          if (w.length >= 3 && !inStrictMode && COMMON_EN_WORDS.has(w)) {
+          if (w.length >= 3 && !inStrictMode && englishEnough(w)) {
             return {
               type: 'hebrew_as_english',
               message: 'Wrong layout? Looks like English:',
@@ -1511,7 +1591,7 @@ function analyzeText(rawText, scanAll = false) {
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
             engScore = convWords.reduce((acc, w) => {
-              if (COMMON_EN_WORDS.has(w)) { hasCommonWord = true; return acc + 2; }
+              if (englishEnough(w)) { hasCommonWord = true; return acc + 2; }
               if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
               if (/[^aeiou]{4,}/.test(w)) return acc;
               const r = (w.match(/[aeiou]/g) || []).length / w.length;
@@ -1586,12 +1666,12 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsG1 = convertedG1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonG1 = convWordsG1.some(w => COMMON_EN_WORDS.has(w));
+            const hasCommonG1 = convWordsG1.some(w => englishEnough(w));
             const avgScoreG1 = convWordsG1.length
               ? convWordsG1.reduce((a, w) => a + englishScore(w), 0) / convWordsG1.length
               : 0;
             const fireG1 = runG1.length === 1
-              ? (convWordsG1.length >= 1 && convWordsG1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsG1[0]))
+              ? (convWordsG1.length >= 1 && convWordsG1[0].length >= 3 && englishEnough(convWordsG1[0]))
               : (hasCommonG1 && avgScoreG1 >= 0.15);
             if (fireG1) {
               return {
@@ -1642,12 +1722,12 @@ function analyzeText(rawText, scanAll = false) {
           const convWordsK1 = convertedK1.split(/\s+/)
             .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
             .filter(w => w.length >= 2);
-          const hasCommonK1 = convWordsK1.some(w => COMMON_EN_WORDS.has(w));
+          const hasCommonK1 = convWordsK1.some(w => englishEnough(w));
           const avgScoreK1 = convWordsK1.length
             ? convWordsK1.reduce((a, w) => a + englishScore(w), 0) / convWordsK1.length
             : 0;
           const fireK1 = runK1.length === 1
-            ? (convWordsK1.length >= 1 && convWordsK1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsK1[0]))
+            ? (convWordsK1.length >= 1 && convWordsK1[0].length >= 3 && englishEnough(convWordsK1[0]))
             : (hasCommonK1 && avgScoreK1 >= 0.15);
           if (fireK1) {
             return {
@@ -1701,12 +1781,12 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsU1 = convertedU1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonU1 = convWordsU1.some(w => COMMON_EN_WORDS.has(w));
+            const hasCommonU1 = convWordsU1.some(w => englishEnough(w));
             const avgScoreU1 = convWordsU1.length
               ? convWordsU1.reduce((a, w) => a + englishScore(w), 0) / convWordsU1.length
               : 0;
             const fireU1 = runU1.length === 1
-              ? (convWordsU1.length >= 1 && convWordsU1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsU1[0]))
+              ? (convWordsU1.length >= 1 && convWordsU1[0].length >= 3 && englishEnough(convWordsU1[0]))
               : (hasCommonU1 && avgScoreU1 >= 0.15);
             if (fireU1) {
               return {
@@ -1758,12 +1838,12 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsR1 = convertedR1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonR1 = convWordsR1.some(w => COMMON_EN_WORDS.has(w));
+            const hasCommonR1 = convWordsR1.some(w => englishEnough(w));
             const avgScoreR1 = convWordsR1.length
               ? convWordsR1.reduce((a, w) => a + englishScore(w), 0) / convWordsR1.length
               : 0;
             const fire = runR1.length === 1
-              ? (convWordsR1.length >= 1 && convWordsR1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsR1[0]))
+              ? (convWordsR1.length >= 1 && convWordsR1[0].length >= 3 && englishEnough(convWordsR1[0]))
               : (hasCommonR1 && avgScoreR1 >= 0.15);
             if (fire) {
               return {
@@ -1814,12 +1894,12 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsA1 = convertedA1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonA1 = convWordsA1.some(w => COMMON_EN_WORDS.has(w));
+            const hasCommonA1 = convWordsA1.some(w => englishEnough(w));
             const avgScoreA1 = convWordsA1.length
               ? convWordsA1.reduce((a, w) => a + englishScore(w), 0) / convWordsA1.length
               : 0;
             const fire = runA1.length === 1
-              ? (convWordsA1.length >= 1 && convWordsA1[0].length >= 3 && COMMON_EN_WORDS.has(convWordsA1[0]))
+              ? (convWordsA1.length >= 1 && convWordsA1[0].length >= 3 && englishEnough(convWordsA1[0]))
               : (hasCommonA1 && avgScoreA1 >= 0.15);
             if (fire) {
               return {

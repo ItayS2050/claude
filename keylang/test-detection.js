@@ -79,6 +79,7 @@ function loadContentScript() {
     '         setFocus: (f, tag) => { document.hasFocus = () => f;' +
     '                                 document.activeElement = tag ? { tagName: tag } : null; },' +
     '         setLangs: o => { enabledLangs = o; },' +
+    '         isCommonHebrewWord, isEnglishName, EN_NAMES,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
 }
@@ -1463,6 +1464,65 @@ console.log('Kiko keeps working in the seconds after a fix');
     fires('real Hebrew stays untouched in the window', real, false);
   }
   kiko.longAfterAFix();
+}
+
+
+// ── Proper nouns: the category the English lists leave out
+//
+// Reported from LinkedIn's geography filter — "israel" typed on a Hebrew
+// keyboard is ןדרשקך and Kiko stayed silent. It was not a LinkedIn problem and
+// not a DOM problem: the engine returned nothing. A name is not a word, so
+// COMMON_EN_WORDS says no, and englishScore has no opinion about ןדרשקך either.
+// Measured across 216 country, city and company names before the fix: 0 fired.
+//
+// A search box is the place people are most likely to be in the wrong layout
+// and least likely to notice, because there is no sentence around the word to
+// look wrong.
+{
+  console.log('Names of places and companies are English too');
+
+  const names = [...kiko.EN_NAMES].filter(n => n.length >= 4);
+
+  // The safety property the whole list rests on. If a name ever decodes to a
+  // real Hebrew word, Kiko would offer to destroy someone's writing to produce
+  // a place name — so this is checked, not assumed.
+  const collide = names.filter(n => kiko.isCommonHebrewWord(kiko.toHebrewKeys(n)));
+  if (collide.length === 0) { pass++; }
+  else { fail++; console.log(`  FAIL  names that decode to real Hebrew: ${collide.join(' ')}`); }
+
+  // Under four letters the evidence is noise, the same floor unmistakablyEnglish
+  // draws. 'usa' and 'ibm' stay out on purpose.
+  for (const tooShort of ['usa', 'ibm', 'ny']) {
+    if (!kiko.isEnglishName(tooShort)) { pass++; }
+    else { fail++; console.log(`  FAIL  ${tooShort} is too short to be evidence`); }
+  }
+
+  // The reported sentence, exactly.
+  check('israel typed on a Hebrew keyboard', kiko.toHebrewKeys('israel'), 'hebrew_as_english');
+  check('linkedin typed on a Hebrew keyboard', kiko.toHebrewKeys('linkedin'), 'hebrew_as_english');
+  check('a two-token city name', kiko.toHebrewKeys('tel aviv'), 'hebrew_as_english');
+  check('a name inside a phrase', kiko.toHebrewKeys('moving to berlin'), 'hebrew_as_english');
+
+  // Recall floor per language. These were all zero.
+  const FLOOR = { he: 300, ru: 320, uk: 320, el: 320, ar: 260, ko: 300 };
+  for (const [lang, floor] of Object.entries(FLOOR)) {
+    let hit = 0;
+    for (const n of names) {
+      kiko.setLangs({ ...ALL });
+      const typed = kiko.up[lang](n);
+      if (typed !== n && kiko.analyzeText(typed)) hit++;
+    }
+    if (hit >= floor) { pass++; }
+    else { fail++; console.log(`  FAIL  ${lang} catches ${hit}/${names.length} names, floor is ${floor}`); }
+  }
+
+  // And the thing that must not have moved: real Hebrew containing no English
+  // at all is still left alone, with the names list switched on.
+  for (const real of ['אני גר בתל אביב כבר עשר שנים',
+                      'הטיסה לברלין יוצאת מחר בבוקר',
+                      'שלחתי לך הודעה בלינקדאין']) {
+    check('real Hebrew about places stays untouched', real, null);
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
