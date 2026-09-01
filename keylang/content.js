@@ -1179,7 +1179,22 @@ function couldBeHebrewExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedHebrew.has(lower))  return true;
   if (EN_WORDS.has(lower))       return false;
-  if (englishScore(lower) >= 0.20) return false;
+  // englishScore divides by length - 1, so a five-letter word scores 0.25 on a
+  // single common bigram and a four-letter word 0.33. At 0.20 that rejected
+  // eighteen of twenty ordinary Hebrew words — אפשר, לקבוע, פגישה, החשבון,
+  // אשמח, לשמוע — and cost Hebrew nine points of recall, the worst of the six
+  // languages by some way.
+  //
+  // Measured across the threshold: 0.30 takes Hebrew from 87.5% to 96.9% with
+  // the false-positive count still at zero. 0.35 reaches 100% but costs two,
+  // which is not a trade this product makes — precision is weighted about
+  // eleven times recall, and converting text somebody wrote on purpose is the
+  // expensive mistake. 0.30 rather than 0.33 for margin: both score the same
+  // today, and 0.35 is where the first false positive appears.
+  //
+  // A length floor was tried too, as in unmistakablyEnglish, and made it worse
+  // here — on this gate the low threshold is doing useful work on short words.
+  if (englishScore(lower) >= 0.30) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
   // Final-form letters (ך ם ן ף ץ) only appear at word-end in valid Hebrew.

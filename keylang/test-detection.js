@@ -952,6 +952,61 @@ console.log('The fix can be accepted without touching the mouse');
   is('both fix toasts mark themselves', (src.match(/dataset\.kldFix = '1'/g) || []).length, 2);
 }
 
+console.log('Ordinary Hebrew words are not mistaken for English');
+{
+  // Hebrew was the weakest of the six at 87.5% recall, and the cause was one
+  // number: couldBeHebrewExactly rejected any word scoring 0.20 or above on
+  // English-likeness. englishScore divides by length - 1, so a five-letter
+  // word reaches 0.25 on a single common bigram. Eighteen of twenty ordinary
+  // Hebrew words were being thrown out — אפשר, לקבוע, פגישה, החשבון, לשמוע.
+  const CORPUS = require('./corpus.js');
+  kiko.forgetLearned();
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  // Each of these is a real sentence Kiko used to walk past. Two of them were
+  // worse than missed: Arabic filled the silence with gibberish.
+  for (const [typed, meant] of [
+    ['tpar kecug pdhav kacug vct',   'אפשר לקבוע פגישה לשבוע הבא'],
+    ['vhksho juzrho nch, vxpr ctrcg', 'הילדים חוזרים מבית הספר בארבע'],
+    ['tpar kako cfryhx tarth tu cnzuni', 'אפשר לשלם בכרטיס אשראי או במזומן'],
+    ['tanj kanug nnl cveso',         'אשמח לשמוע ממך בהקדם'],
+    [',gsfi tu,h fahvhv navu jsa',   'תעדכן אותי כשיהיה משהו חדש'],
+  ]) {
+    check(`"${meant}" is caught`, typed, 'english_as_hebrew');
+  }
+
+  // Catching them is not the same as fixing all of them. Three of those five
+  // still convert only part of the sentence — אפשר לקבוע פגישה and then stop —
+  // because words like אשראי and בהקדם score 0.75 on English-likeness and are
+  // still refused. Raising the threshold far enough to take them costs false
+  // positives, so the span gap stays open and is measured here rather than
+  // hidden: every sentence Kiko catches, does it convert the whole thing.
+  const whole = CORPUS.silent.he.filter(sentence => {
+    const typed = kiko.down.he(sentence);
+    const d = kiko.analyzeText(typed);
+    if (!d || (d.lang || 'he') !== 'he') return false;
+    const strip = x => x.replace(/[^\p{L}]/gu, '');
+    return strip(d.original) === strip(typed);
+  }).length;
+  if (whole >= 18) pass++;
+  else { fail++; console.log(`  FAIL  only ${whole} Hebrew sentences convert whole, floor is 18`); }
+
+  // Hebrew recall over the whole corpus, as a floor. It was 28 of 32.
+  const caught = CORPUS.silent.he.filter(s => {
+    const d = kiko.analyzeText(kiko.toHebrewKeys ? kiko.down.he(s) : kiko.down.he(s));
+    return d && (d.lang || 'he') === 'he';
+  }).length;
+  if (caught >= 31) pass++;
+  else { fail++; console.log(`  FAIL  Hebrew catches ${caught}/${CORPUS.silent.he.length}, floor is 31`); }
+
+  // And the direction that matters more: none of this may cost precision.
+  const wrong = CORPUS.silent.he.filter(s => kiko.analyzeText(s) !== null).length;
+  if (wrong === 0) pass++;
+  else { fail++; console.log(`  FAIL  ${wrong} correct Hebrew sentences offered for conversion`); }
+}
+
 console.log('Two short Hebrew words do not veto a sentence of English');
 {
   // Reported from the wild twice, and both times the same word. "מם' עם אם
