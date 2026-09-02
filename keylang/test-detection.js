@@ -1525,5 +1525,54 @@ console.log('Kiko keeps working in the seconds after a fix');
   }
 }
 
+
+// ── The word the cursor is inside is a prefix, not a word
+//
+// Reported live: Kiko struck through "vps and abo" while the user was still
+// writing "vps and above". "above" is English and leaves the run; "abo" is
+// three letters nobody has an opinion about, so it stayed and tipped a
+// two-word run over the line. Finishing the word made the toast vanish —
+// which is the tell. It was never about the sentence.
+//
+// The rule is a split, not a cut: the fragment gets no say in whether Kiko
+// speaks, but once the rest of the line has earned the toast the fragment is
+// part of the sentence and belongs in the fix.
+{
+  console.log('A half-typed word is never the reason to speak');
+
+  const burst = (text) => { kiko.setLangs({ ...ALL }); return kiko.analyzeText(text, false, true); };
+  const rest  = (text) => { kiko.setLangs({ ...ALL }); return kiko.analyzeText(text, false, false); };
+
+  // The report, exactly, at every length it was seen.
+  for (const typed of ['vps and abo',
+                       'i need only vps and abo',
+                       'companies with less than 200 employees are out. ' +
+                       'also consultancy - i need only vps and abo']) {
+    for (const [when, run] of [['while typing', burst], ['at rest', rest]]) {
+      if (!run(typed)) { pass++; }
+      else { fail++; console.log(`  FAIL  ${when}: ${JSON.stringify(typed)} still fires`); }
+    }
+  }
+
+  // Real wrong-layout text is untouched at rest, and the fix still covers the
+  // whole line including its last word — judging without the fragment must not
+  // turn into replacing without it.
+  const whole = rest('akuo nvhs ekhu');
+  if (whole && whole.converted === 'שלום מהיד קליו') { pass++; }
+  else { fail++; console.log(`  FAIL  the fix stops short: ${whole && whole.converted}`); }
+
+  for (const typed of ['ghbdtn rfr', 'dkssud gksrnr', 'geia soy']) {
+    if (rest(typed)) { pass++; }
+    else { fail++; console.log(`  FAIL  ${JSON.stringify(typed)} went silent at rest`); }
+  }
+
+  // A short Hebrew or Korean last word is not a Latin fragment and must not be
+  // trimmed — one Korean token is a whole phrase, and that broke first.
+  for (const typed of ['בשךך צק', kiko.toHebrewKeys('israel')]) {
+    if (rest(typed)) { pass++; }
+    else { fail++; console.log(`  FAIL  ${JSON.stringify(typed)} lost its only word`); }
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

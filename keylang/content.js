@@ -2307,28 +2307,72 @@ function bestOfLanguages(text, scanAll) {
   return best;
 }
 
+// The word the cursor is inside is a prefix, not a word, and judging it is how
+// Kiko came to strike through "vps and abo" in the middle of someone writing
+// "vps and above". "above" is English and gets thrown out of the run; "abo" is
+// three letters nobody has an opinion about, so it stayed in and tipped a
+// two-word run over the line. Finishing the word made the toast disappear,
+// which is the tell: it was never about the sentence.
+//
+// So while the keys are still going, the trailing fragment is cut off and the
+// rest is judged on its own. Nothing is lost by waiting — the moment typing
+// stops, the quiet pass sees the whole line, fragment included. Measured: if
+// this cut applied at rest too it would cost 140 catches out of 159 down to
+// 122, which is why it is scoped to the burst and not made unconditional.
+// A pause is not proof the word is finished either — people stop mid-word to
+// think — so a very short fragment is dropped whether or not the keys are still
+// going. Three characters is the line because every last word that a detection
+// in the corpus actually depends on is four characters or more: all eighteen of
+// them. So this costs nothing measurable and still refuses to have an opinion
+// about "abo".
+function withoutTheWordInProgress(line, midBurst) {
+  if (!/[^\s.,;:!?()"'\[\]{}\-–—]$/.test(line)) return line;  // ends on a separator: nothing in progress
+  const fragment = (line.match(/\S+$/) || [''])[0];
+  if (!midBurst) {
+    // At rest the bar is much higher, and it has to be: cutting every trailing
+    // word at rest costs 140 catches out of 159 down to 122, and it silences
+    // Korean almost entirely, where one word is a whole phrase. So only a short
+    // Latin fragment with a real run in front of it — the exact shape of "abo"
+    // in "vps and abo" — is refused. Every last word a corpus detection depends
+    // on is four characters or more, all eighteen, so this costs nothing.
+    const rest = line.slice(0, line.length - fragment.length).trim();
+    if (!(fragment.length <= 3 && /^[A-Za-z]+$/.test(fragment) &&
+          rest.split(/\s+/).filter(Boolean).length >= 2)) return line;
+  }
+  return line.replace(/\S+$/, '').trimEnd();
+}
+
 // Analyze each line independently (last → first) so a correctly-typed line
 // on one row can't bleed into a wrong-layout run on another row.
-function analyzeByLines(text, scanAll = false) {
+function analyzeByLines(text, scanAll = false, midBurst = false) {
   const lines = text.split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
-    if (line.trim().length < 3) continue;
-    const result = bestOfLanguages(line, scanAll);
+    // Only the last line can hold the cursor, so only it has a word in progress.
+    // Two passes, and the split between them is the whole point: the fragment
+    // gets no say in *whether* to speak, but once something else has earned the
+    // toast, the fragment is part of the sentence and belongs in the fix. Judge
+    // without it, replace with it.
+    const judged = i === lines.length - 1
+      ? withoutTheWordInProgress(line, midBurst)
+      : line;
+    if (judged.trim().length < 3) continue;
+    if (!bestOfLanguages(judged, scanAll)) continue;
+    const result = bestOfLanguages(line, scanAll) || bestOfLanguages(judged, scanAll);
     if (result) return result;
   }
   return null;
 }
 
-function analyze(el) {
-  return analyzeByLines(getTextBeforeCursor(el));
+function analyze(el, midBurst = false) {
+  return analyzeByLines(getTextBeforeCursor(el), false, midBurst);
 }
 
-function analyzeFullField(el) {
+function analyzeFullField(el, midBurst = false) {
   const fullText = el.isContentEditable
     ? (el.innerText || el.textContent || '')
     : (el.value || '');
-  return analyzeByLines(fullText, true);
+  return analyzeByLines(fullText, true, midBurst);
 }
 
 // ── Text replacement ──────────────────────────────────────────
@@ -3452,16 +3496,19 @@ function convertSelection(text, sel) {
 
 // ── Input monitoring ──────────────────────────────────────────
 
+// Calls fn with midBurst = true when maxWait forced the call while the keys
+// were still going, false when it fired because typing actually stopped. The
+// difference matters: mid-burst, the word under the cursor is half-written.
 function debounce(fn, ms, maxWait = 0) {
   let t, lastFired = 0;
-  return (...a) => {
+  return () => {
     clearTimeout(t);
     const now = Date.now();
     if (maxWait && now - lastFired >= maxWait) {
       lastFired = now;
-      fn(...a);
+      fn(true);
     } else {
-      t = setTimeout(() => { lastFired = Date.now(); fn(...a); }, ms);
+      t = setTimeout(() => { lastFired = Date.now(); fn(false); }, ms);
     }
   };
 }
@@ -3478,14 +3525,14 @@ function fieldLength(el) {
 function attachTo(el) {
   if (el._kldVer === KIKO_VERSION) return;
   el._kldVer = KIKO_VERSION;
-  const check = debounce(() => {
+  const check = debounce((midBurst) => {
     if (!isLive()) return;
     if (!detectionEnabled) return;
     if (Date.now() < fixCooldownUntil) return;
     // Analyze the full field so long sentences aren't split when the debounce
     // fires mid-typing. Fall back to cursor-position analysis if full-field
     // returns nothing (catches the word currently being typed).
-    const detection = analyzeFullField(el) || analyze(el);
+    const detection = analyzeFullField(el, midBurst) || analyze(el, midBurst);
     if (detection) {
       showToast(el, detection);
     } else if (lastElement === el && dismissedSignature) {
@@ -3498,7 +3545,12 @@ function attachTo(el) {
         dismissedWordSet   = new Set();
       }
     }
-  }, 200, 1500);
+    // 200ms was not a pause. An average typist leaves 150–250ms between the
+    // letters of a single word, so the quiet pass was landing mid-word about as
+    // often as the burst pass was — and mid-word is where the false positives
+    // live. 350ms is still far below the time it takes to notice a toast, and
+    // it is long enough that the word on screen is a word.
+  }, 350, 1500);
   el.addEventListener('input',          check);
 
   // Deleting is how someone takes back a mistake, and retyping it is a fresh
