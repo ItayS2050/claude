@@ -79,7 +79,8 @@ function loadContentScript() {
     '         setFocus: (f, tag) => { document.hasFocus = () => f;' +
     '                                 document.activeElement = tag ? { tagName: tag } : null; },' +
     '         setLangs: o => { enabledLangs = o; },' +
-    '         isCommonHebrewWord, isEnglishName, EN_NAMES,' +
+    '         isCommonHebrewWord, isEnglishName, EN_NAMES, englishScore,' +
+    '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
 }
@@ -1571,6 +1572,72 @@ console.log('Kiko keeps working in the seconds after a fix');
   for (const typed of ['בשךך צק', kiko.toHebrewKeys('israel')]) {
     if (rest(typed)) { pass++; }
     else { fail++; console.log(`  FAIL  ${JSON.stringify(typed)} lost its only word`); }
+  }
+}
+
+
+// ── The end of the sentence
+//
+// Reported as "why did it stop the sentence?": someone typing שנה טובה ומתוקה
+// was shown שנה טובה and left holding "un,uev". ומתוקה is as ordinary as Hebrew
+// gets — but through a Latin keyboard it carries the bigrams "un" and "ue" and
+// scores 0.40, over the line, so it was called English and thrown out of its own
+// sentence. Eight of the eleven words Kiko was leaving behind went the same way:
+// בהמשך, בכביש, בקרוב, אשראי, במזומן, ראשון, בהקדם, בקומה.
+//
+// A word list answers this and a bigram score cannot. What the list must not do
+// is start eating real English out of a Hebrew sentence, which is the whole
+// reason the guard exists.
+{
+  console.log('A sentence is converted to its end');
+
+  // Earlier blocks teach and reject words and close the entitlement; start clean.
+  kiko.forgetLearned();
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  const CORPUS = require('./corpus.js');
+  let whole = 0;
+  for (const sentence of CORPUS.silent.he) {
+    const typed = kiko.down.he(sentence);   // Hebrew script -> the keys that produce it
+    kiko.setLangs({ ...ALL });
+    const d = kiko.analyzeText(typed);
+    if (d && d.original.trim() === typed.trim()) whole++;
+  }
+  // Was 18 before the fragment fix, 24 after it, 31 with the dictionary. The
+  // floor is the number, not a margin below it: this is the report.
+  if (whole >= 31) { pass++; }
+  else { fail++; console.log(`  FAIL  only ${whole} Hebrew sentences convert whole, floor is 31`); }
+
+  check('the whole greeting, not two thirds of it',
+        'abv yucv un,uev', 'english_as_hebrew', { converted: 'שנה טובה ומתוקה' });
+
+  // The other half of the same coin. ומץוקה puts a final ץ in the middle of a
+  // word, which is not Hebrew, so stopping short is the right answer here —
+  // the user typed a full stop where the ת key is.
+  check('a word that converts to invalid Hebrew is still left out',
+        'abv yucv un.uev', 'english_as_hebrew', { converted: 'שנה טובה' });
+
+  // The guard still guards. These are the four words that made the score
+  // necessary in the first place.
+  check('trailing English is still left alone',
+        'I spoke with akuo nv akunl yesterday', 'english_as_hebrew',
+        { converted: 'שלום מה שלומך' });
+  // That an English word still breaks a run in half is pinned above, twice.
+  // Plurals: the list holds the stem, people write the plural. Without the
+  // stemming step "invoices" and "reminders" are words Kiko would eat.
+  for (const word of ['invoices', 'reminders']) {
+    if (kiko.unmistakablyEnglish(word)) { pass++; }
+    else { fail++; console.log(`  FAIL  the plural "${word}" is not recognised as English`); }
+  }
+  for (const word of ['meeting', 'quick', 'later', 'yesterday', 'deck', 'files']) {
+    if (kiko.unmistakablyEnglish(word)) { pass++; }
+    else { fail++; console.log(`  FAIL  "${word}" is not recognised as English`); }
+  }
+  // And the words the list must not claim.
+  for (const word of ['cvnal', 'ceruc', 'cfcha', 'cveso', 'ceunv', 'rtaui']) {
+    if (!kiko.unmistakablyEnglish(word)) { pass++; }
+    else { fail++; console.log(`  FAIL  "${word}" (${kiko.toHebrewKeys(word)}) is claimed as English`); }
   }
 }
 
