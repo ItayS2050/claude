@@ -1,14 +1,19 @@
 // The popup: capture at the top, everything you already captured underneath.
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
-  setLane, classify, parse, nextOccurrence, BUCKETS, bucketOf,
+  setLane, setClient, removeClient, establishedClients, classify, parse,
+  nextOccurrence, BUCKETS, bucketOf,
 } from './store.js';
+import { detectClient, remember } from './clients.js';
+import { aiStatus, aiExtract } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
 const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
   preview: $('preview'), hint: $('hint'), lanes: $('lanes'), filters: $('filters'), list: $('list'),
   summary: $('summary'), clearDone: $('clearDone'), voiceLang: $('voiceLang'),
-  toast: $('toast'), toastMsg: $('toastMsg'), undo: $('undo') };
+  toast: $('toast'), toastMsg: $('toastMsg'), undo: $('undo'),
+  sheet: $('sheet'), sheetBody: $('sheetBody'),
+  openSettings: $('openSettings'), closeSettings: $('closeSettings') };
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -48,16 +53,37 @@ async function persist() {
 async function addFromInput(source = 'type') {
   const raw = el.input.value.trim();
   if (!raw) return;
-  const task = taskFromInput(raw, source, new Date(), settings.learned || {});
+  const task = taskFromInput(raw, source, new Date(), settings);
   if (!task) return;
   tasks.unshift(task);
   flashId = task.id;
   el.input.value = '';
   updatePreview();
   await persist();
+
+  // Record the name so the next task mentioning it is filed without needing
+  // "for", and so a name seen twice earns its own filter chip. Reloading after
+  // picks up any task already written that this sighting now explains.
+  if (task.client) {
+    settings = { ...settings, clients: remember(settings.clients || {}, task.client) };
+    await saveSettings(settings);
+    tasks = await loadTasks();
+  }
   render();
   el.list.scrollTop = 0;
   setTimeout(() => { flashId = null; }, 1200);
+  if (!task.client && settings.aiAssist) enrichWithAi(task.id, task.text);
+}
+
+// The patterns handle "campaigns for stream". They do not handle "chase the
+// northwind renewal", where the name is not in a position that gives it away.
+// When the machine has an on-device model, ask it about exactly those.
+async function enrichWithAi(id, text) {
+  const { client } = await aiExtract(text);
+  if (!client) return;
+  await setClient(id, client);
+  [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+  render();
 }
 
 el.add.addEventListener('click', () => addFromInput());
@@ -80,9 +106,15 @@ function updatePreview() {
 
   const p = parse(raw);
   const guess = classify(p.text || raw, p.tags, settings.learned || {});
+  const found = detectClient(p.text || raw, settings.clients || {},
+    (w) => classify(w).lane !== null);
   const pills = [];
-  if (guess.lane) {
-    pills.push(`<span class="pill"><span class="dot ${guess.lane}" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px"></span>${guess.lane}</span>`);
+  if (found.client) {
+    pills.push(`<span class="pill">◆ ${escapeHtml(found.client)}${found.isNew ? ' (new)' : ''}</span>`);
+  }
+  const previewLane = guess.lane || (found.client ? 'work' : null);
+  if (previewLane) {
+    pills.push(`<span class="pill"><span class="dot ${previewLane}" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px"></span>${previewLane}</span>`);
   }
   if (p.due) pills.push(`<span class="pill">${escapeHtml(dueLabel(p.due, p.hasTime, true))}</span>`);
   if (p.repeat) pills.push(`<span class="pill">repeats ${p.repeat}</span>`);
@@ -309,6 +341,9 @@ function visible() {
     if (t.done) return false;
     if (filter === 'today') return t.due != null && t.due <= +endOfToday;
     if (filter.startsWith('tag:')) return t.tags.includes(filter.slice(4));
+    if (filter.startsWith('client:')) {
+      return (t.client || '').toLowerCase() === filter.slice(7).toLowerCase();
+    }
     return true;
   });
 }
@@ -322,10 +357,14 @@ function renderFilters() {
     done: tasks.filter((t) => t.done && inLane(t)).length,
   };
 
-  const tags = [...new Set(open.flatMap((t) => t.tags))].sort().slice(0, 6);
+  const tags = [...new Set(open.flatMap((t) => t.tags))].sort().slice(0, 4);
+  const clientChips = establishedClients(settings.clients || {})
+    .filter((c) => open.some((t) => (t.client || '').toLowerCase() === c.name.toLowerCase()))
+    .slice(0, 4);
   const chips = [
     { id: 'all', label: 'Open', n: counts.all },
     { id: 'today', label: 'Today', n: counts.today },
+    ...clientChips.map((c) => ({ id: `client:${c.name}`, label: `◆ ${c.name}`, n: 0 })),
     ...tags.map((t) => ({ id: `tag:${t}`, label: `#${t}`, n: 0 })),
     { id: 'done', label: 'Done', n: counts.done },
   ];
@@ -396,6 +435,9 @@ function taskHtml(t) {
   } else {
     meta.push(`<span class="due" data-act="sched" data-id="${t.id}">Set a time</span>`);
   }
+  if (t.client) {
+    meta.push(`<span class="client"><button data-act="client-filter" data-client="${escapeHtml(t.client)}">◆ ${escapeHtml(t.client)}</button><button class="x" data-act="client-clear" data-id="${t.id}" title="Not for ${escapeHtml(t.client)}">×</button></span>`);
+  }
   if (t.repeat) meta.push(`<span class="rep">↻ ${t.repeat}</span>`);
   for (const tag of t.tags) meta.push(`<button class="tag" data-act="tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`);
   if (t.source === 'voice') meta.push('<span class="rep" title="Added by voice">🎙</span>');
@@ -458,6 +500,15 @@ function wireList() {
     if (act === 'prio') node.addEventListener('click', () => {
       const t = tasks.find((x) => x.id === id);
       patch(id, { priority: t.priority ? 0 : 1 });
+    });
+    if (act === 'client-filter') node.addEventListener('click', () => {
+      filter = `client:${node.dataset.client}`;
+      render();
+    });
+    if (act === 'client-clear') node.addEventListener('click', async () => {
+      await setClient(id, null);
+      [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+      render();
     });
     if (act === 'tag') node.addEventListener('click', () => {
       filter = `tag:${node.dataset.tag}`;
@@ -543,6 +594,7 @@ function emptyState() {
   if (query) return `<div class="empty"><p>Nothing matches “${escapeHtml(query)}”.</p></div>`;
   if (filter === 'done') return '<div class="empty"><p>Nothing completed yet.</p></div>';
   if (filter.startsWith('tag:')) return `<div class="empty"><p>No open tasks tagged ${escapeHtml(filter.slice(4))}.</p></div>`;
+  if (filter.startsWith('client:')) return `<div class="empty"><p>Nothing open for <strong>${escapeHtml(filter.slice(7))}</strong>.</p></div>`;
   if (filter === 'today') return '<div class="empty"><div class="big">☀️</div><p>Nothing due today.</p></div>';
   if (lane !== 'all') {
     return `<div class="empty">
@@ -561,6 +613,154 @@ function emptyState() {
       <code>pay rent in 20 minutes !</code>
     </p>
   </div>`;
+}
+
+// --- settings --------------------------------------------------------------
+// Everything here exists because of a complaint people make about reminder
+// extensions: alarms with no volume control, a snooze fixed at one length, a
+// list with no way out of it, and a learned client you cannot unlearn.
+
+let aiState = 'unavailable';
+
+el.openSettings.addEventListener('click', async () => {
+  aiState = await aiStatus();
+  renderSettings();
+  el.sheet.classList.add('open');
+});
+el.closeSettings.addEventListener('click', () => el.sheet.classList.remove('open'));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && el.sheet.classList.contains('open')) el.sheet.classList.remove('open');
+});
+
+function renderSettings() {
+  const clients = establishedClients(settings.clients || {});
+  const aiLabel = {
+    available: 'Ready on this computer',
+    downloadable: 'Supported — Chrome will download the model on first use',
+    downloading: 'Chrome is downloading the model',
+    unavailable: 'Not supported on this computer',
+  }[aiState] || 'Not supported on this computer';
+
+  el.sheetBody.innerHTML = `
+    <h3>Reminders</h3>
+    <div class="row">
+      <div><div class="label">Notification sound</div>
+        <div class="sub">Off still shows the notification, silently</div></div>
+      <button class="switch ${settings.sound ? 'on' : ''}" data-set="sound"><i></i></button>
+    </div>
+    <div class="row">
+      <div><div class="label">Snooze length</div>
+        <div class="sub">The button on the notification itself</div></div>
+      <select data-set="snoozeMinutes">
+        ${[5, 10, 15, 30, 60, 120].map((m) => `
+          <option value="${m}" ${settings.snoozeMinutes === m ? 'selected' : ''}>
+            ${m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? 's' : ''}`}
+          </option>`).join('')}
+      </select>
+    </div>
+
+    <h3>Filing</h3>
+    <div class="row">
+      <div><div class="label">On-device AI assist</div>
+        <div class="sub">${escapeHtml(aiLabel)}. Nothing leaves your computer.</div></div>
+      <button class="switch ${settings.aiAssist ? 'on' : ''} ${aiState === 'unavailable' ? 'disabled' : ''}"
+              data-set="aiAssist" ${aiState === 'unavailable' ? 'disabled' : ''}><i></i></button>
+    </div>
+    <div class="row" style="display:block">
+      <div class="label">Clients and projects</div>
+      <div class="sub" style="margin-bottom:6px">Learned from what you write. Remove one to stop it being used.</div>
+      ${clients.length
+        ? clients.map((c) => `
+          <div class="client-row">
+            <span>◆ ${escapeHtml(c.name)}<span class="count">${c.count} task${c.count === 1 ? '' : 's'}</span></span>
+            <button data-forget="${escapeHtml(c.name)}">Remove</button>
+          </div>`).join('')
+        : '<div class="sub">None yet. Write “for acme” in a task and it appears here.</div>'}
+    </div>
+
+    <h3>Your data</h3>
+    <div class="row">
+      <div><div class="label">Back up everything</div>
+        <div class="sub">${tasks.length} task${tasks.length === 1 ? '' : 's'} to a JSON file</div></div>
+      <button class="btn" data-act-set="export">Export</button>
+    </div>
+    <div class="row">
+      <div><div class="label">Restore from a backup</div>
+        <div class="sub">Adds tasks it does not already have</div></div>
+      <button class="btn" data-act-set="import">Import</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>`;
+
+  el.sheetBody.querySelectorAll('[data-set]').forEach((node) => {
+    const key = node.dataset.set;
+    if (node.tagName === 'SELECT') {
+      node.addEventListener('change', () => applySetting(key, Number(node.value)));
+    } else if (!node.disabled) {
+      node.addEventListener('click', () => applySetting(key, !settings[key]));
+    }
+  });
+  el.sheetBody.querySelectorAll('[data-forget]').forEach((node) => {
+    node.addEventListener('click', async () => {
+      await removeClient(node.dataset.forget);
+      [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+      renderSettings();
+      render();
+    });
+  });
+  el.sheetBody.querySelector('[data-act-set="export"]').addEventListener('click', exportBackup);
+  el.sheetBody.querySelector('[data-act-set="import"]').addEventListener('click', () => $('importFile').click());
+  $('importFile').addEventListener('change', importBackup);
+}
+
+async function applySetting(key, value) {
+  settings = { ...settings, [key]: value };
+  await saveSettings(settings);
+  renderSettings();
+}
+
+function exportBackup() {
+  const payload = JSON.stringify({ jot: 1, exported: new Date().toISOString(), tasks, settings }, null, 2);
+  const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jot-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  showToast(`Exported ${tasks.length} tasks`);
+}
+
+async function importBackup(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const incoming = Array.isArray(data.tasks) ? data.tasks : null;
+    if (!incoming) throw new Error('no tasks in that file');
+
+    snapshot();
+    // Merge rather than replace: restoring a backup should never cost you the
+    // tasks you have written since you made it.
+    const have = new Set(tasks.map((t) => t.id));
+    const added = incoming.filter((t) => t && t.id && !have.has(t.id));
+    tasks = [...added, ...tasks];
+    if (data.settings?.clients || data.settings?.learned) {
+      settings = {
+        ...settings,
+        clients: { ...(data.settings.clients || {}), ...(settings.clients || {}) },
+        learned: { ...(data.settings.learned || {}), ...(settings.learned || {}) },
+      };
+      await saveSettings(settings);
+    }
+    await persist();
+    [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+    render();
+    renderSettings();
+    showToast(added.length ? `Restored ${added.length} tasks` : 'Nothing new in that backup');
+  } catch (err) {
+    showToast(`Could not read that file: ${err.message}`);
+  } finally {
+    event.target.value = '';
+  }
 }
 
 // --- formatting ------------------------------------------------------------

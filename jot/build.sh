@@ -15,6 +15,8 @@ FILES=(
   store.js
   nlp.js
   classify.js
+  clients.js
+  ai.js
   welcome.html
   welcome.js
   icon16.png
@@ -51,6 +53,7 @@ PY
 # the two seconds saved.
 node test-nlp.js > /dev/null || { echo "test-nlp.js is failing" >&2; exit 1; }
 node test-classify.js > /dev/null || { echo "test-classify.js is failing" >&2; exit 1; }
+node test-clients.js > /dev/null || { echo "test-clients.js is failing" >&2; exit 1; }
 node test-store.js > /dev/null || { echo "test-store.js is failing" >&2; exit 1; }
 
 mkdir -p dist

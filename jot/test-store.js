@@ -101,14 +101,46 @@ check('a hand-filed task stays where it was put', [moved.lane, moved.laneLocked]
 check('the correction is remembered',
   (await store.loadSettings()).learned.acme, 'personal');
 
-const nextOne = store.taskFromInput('acme kickoff', 'type', new Date(),
-  (await store.loadSettings()).learned);
+const nextOne = store.taskFromInput('acme kickoff', 'type', new Date(), await store.loadSettings());
 check('the next task with that word follows the correction', nextOne.lane, 'personal');
 
 // Unsorting is a deliberate state, not a re-guess waiting to happen.
 await store.setLane(homeTask.id, null);
 const unsorted = (await store.loadTasks()).find((x) => x.id === homeTask.id);
 check('deliberately unfiled stays unfiled', [unsorted.lane, unsorted.laneLocked], [null, true]);
+
+// --- clients ---
+memory.tasks = []; delete memory.settings;
+const campaign = store.taskFromInput('finish campaigns for stream tomorrow');
+check('the client comes out of the sentence', campaign.client, 'stream');
+check('the date still comes out too', campaign.due !== null, true);
+check('the title keeps the client, loses the date', campaign.text, 'Finish campaigns for stream');
+check('a client makes it work even with no work words', campaign.lane, 'work');
+check('and says so', campaign.laneBecause, 'for stream');
+
+await store.addTask(campaign);
+check('adding records the client', (await store.loadSettings()).clients.stream.count, 1);
+
+// Once the name is known it is spotted without the "for".
+const bare = store.taskFromInput('stream banner sizes', 'type', new Date(), await store.loadSettings());
+check('a known client is matched bare', bare.client, 'stream');
+await store.addTask(bare);
+check('the second sighting establishes it',
+  store.establishedClients((await store.loadSettings()).clients).map((c) => c.name), ['stream']);
+
+// A personal task is not dragged into work just for naming someone.
+const personalClient = store.taskFromInput('buy milk for dinner', 'type', new Date(), await store.loadSettings());
+check('no client invented from an ordinary phrase', personalClient.client, null);
+check('and it stays personal', personalClient.lane, 'personal');
+
+// Correcting a client sticks, and removing one cleans up every task using it.
+await store.setClient(campaign.id, 'Stream Media');
+const recliented = (await store.loadTasks()).find((t) => t.id === campaign.id);
+check('a hand-set client sticks', [recliented.client, recliented.clientLocked], ['Stream Media', true]);
+await store.removeClient('stream');
+check('removing a client clears it off its tasks',
+  (await store.loadTasks()).filter((t) => t.client === 'stream').length, 0);
+check('and out of the registry', 'stream' in (await store.loadSettings()).clients, false);
 
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);

@@ -36,15 +36,40 @@ each row says where it went, and hovering it says *why* ("filed under work —
 "acme kickoff" once and every future task mentioning acme follows. Anything it
 cannot place stays unfiled and visible in **All**, never hidden in a lane.
 
+**Clients and projects, learned from your sentences.** Write "finish campaigns
+for stream" and the task is filed under **stream** — no setting up, no project
+picker. The name is taken from the shape of the sentence ("for X", "with X",
+"@X"), and a name that turns up twice is promoted to a real client: from then on
+"stream banner sizes" is matched too, without the "for". Clients get their own
+filter chips, and a client is a strong enough signal to file the task as work
+even when nothing else in it sounds like work. Remove a wrong one in Settings
+and it comes off every task at once.
+
+**Optional on-device AI.** Chrome 148+ on a capable machine can run Gemini Nano
+locally. When it is there and you switch it on, Jot asks it about the sentences
+the patterns could not place — "chase the northwind renewal", where the name
+sits in no revealing position. It never leaves your computer, costs nothing, and
+an answer that does not appear verbatim in your own text is discarded as a
+hallucination. Off by default, and hidden entirely on machines that cannot run it.
+
 **Organised without being filed.** Within a lane, tasks group themselves into
 Overdue, Today, Tomorrow, This week, Later and No date. Overdue is red, today is
 highlighted, `#tags` become filter chips, and the toolbar badge counts what is
 due.
 
-**Reminds you.** A Chrome notification at the due time, with **Done** and
-**Snooze** on it. Repeating tasks roll to their next occurrence when ticked off
-instead of disappearing. Reminders more than twelve hours stale are marked seen
-but stay quiet, so reopening Chrome after a weekend does not bury you.
+**Reminds you, and never loses one.** A Chrome notification at the due time,
+with **Done** and **Snooze** on it. Repeating tasks roll to their next
+occurrence when ticked off instead of disappearing.
+
+Chrome cannot fire anything while it is closed, so reopening it after a weekend
+means several reminders come due at once. Jot shows one summary — "5 reminders
+while you were away", listing them — rather than firing five notifications or,
+worse, silently marking them seen. The second is the commonest complaint about
+reminder extensions and it is worth being careful about.
+
+Snooze length and the notification sound are yours to set, and everything can be
+exported to a JSON file and restored — an import merges, so restoring an old
+backup never costs you what you wrote since.
 
 Everything else is where you would expect: click a title to rename it, click the
 date to reschedule, hover for the flag and the bin, and every destructive action
@@ -54,7 +79,9 @@ gets an undo.
 
 Tasks live in `chrome.storage.local` on your own machine. There is no account,
 no server, and no analytics. Dictation uses Chrome's built-in speech
-recognition; Jot keeps the text it returns and never stores audio.
+recognition; Jot keeps the text it returns and never stores audio. The optional
+AI assist runs inside Chrome on your own machine — no request leaves it, and it
+is off unless you turn it on.
 
 ## Install from source
 
@@ -67,6 +94,7 @@ recognition; Jot keeps the text it returns and never stores audio.
 ```
 node test-nlp.js      # the language parser, against a fixed clock
 node test-classify.js # the work/personal split, both languages
+node test-clients.js  # client detection, and the phrases that must NOT be one
 node test-store.js    # the task model: completion, repeats, grouping, filing
 ./build.sh            # runs both, then writes dist/jot-<version>.zip
 python3 make-icons.py  # regenerates the PNGs
