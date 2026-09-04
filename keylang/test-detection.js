@@ -80,7 +80,8 @@ function loadContentScript() {
     '                                 document.activeElement = tag ? { tagName: tag } : null; },' +
     '         setLangs: o => { enabledLangs = o; },' +
     '         isCommonHebrewWord, isEnglishName, EN_NAMES, englishScore,' +
-    '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew,' +
+    '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew, isRealRun,' +
+    '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
 }
@@ -1244,17 +1245,22 @@ console.log('The language that explains the sentence wins, not the one asked fir
   kiko.setEntitled(true);
   kiko.longAfterAFix();
 
+  // Both of these used to be pinned at the truncated output the run assembly
+  // could reach. They now reach the whole sentence, which is the point of
+  // collectRuns/growRun — the language still has to win, and now it wins with
+  // everything the person typed instead of the tail of it.
   check('Russian keeps the line Hebrew took three words of',
         'Vj;tv kb vs yfpyfxbnm dcnhtxe yf cktle.otq ytltkt',
         'english_as_russian',
-        { converted: 'назначить встречу на следующей неделе' });
+        { converted: 'можем ли мы назначить встречу на следующей неделе' });
   check('Korean keeps a line Arabic covered more of',
         'rhoscksgdkdy rjrwjdgkwl dksgdmtueh ehlqslek',
-        'english_as_korean', { converted: '괜찮아요 걱정하지' });
+        'english_as_korean', { converted: '괜찮아요 걱정하지 않으셔도 됩니다' });
 
   // The ceiling. Every corpus sentence, mistyped, with all six languages on:
   // how many end up converted into a script the writer was not using. It was
-  // 47 before this change and is 24 now. The number may only come down.
+  // 47 before this change, 24 after it, 17 once the other five languages could
+  // assemble a whole run. The number may only come down.
   const LANGS = ['he','ru','uk','ko','el','ar'];
   let usable = 0, wrong = 0;
   for (const code of LANGS) {
@@ -1266,7 +1272,7 @@ console.log('The language that explains the sentence wins, not the one asked fir
       if (d && (d.lang || 'he') !== code) wrong++;
     }
   }
-  if (wrong <= 24) pass++;
+  if (wrong <= 17) pass++;
   else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 24`); }
   if (usable >= 159) pass++;
   else { fail++; console.log(`  FAIL  only ${usable} sentences are measurable, expected 159`); }
@@ -1639,6 +1645,77 @@ console.log('Kiko keeps working in the seconds after a fix');
     if (!kiko.unmistakablyEnglish(word)) { pass++; }
     else { fail++; console.log(`  FAIL  "${word}" (${kiko.toHebrewKeys(word)}) is claimed as English`); }
   }
+}
+
+
+// ── One comma should not end the sentence
+//
+// Hebrew converted 31 of 31 corpus sentences whole. Russian managed 6 of 25,
+// Arabic 3 of 20, Greek 0 of 11 — not one. The difference was never the
+// language or the keyboard table: Case 2 for Hebrew could bridge a word it did
+// not recognise and then grow outward from the run it had confirmed, and the
+// other five stopped dead at the first word that failed the test.
+//
+// "Γεια σου, τι κάνεις σήμερα" is "Geia soy, ti k;aneiw s;hmera". σου, ends in
+// a comma; the comma is not on the Greek layout; the run broke there. Every
+// Greek sentence in the corpus broke somewhere for a reason of that shape.
+{
+  console.log('One comma does not end the sentence');
+
+  kiko.forgetLearned();
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  const CORPUS = require('./corpus.js');
+  const FLOOR = { he: 31, ru: 15, uk: 13, ko: 34, el: 7, ar: 13 };
+  for (const [code, floor] of Object.entries(FLOOR)) {
+    let whole = 0;
+    for (const sentence of CORPUS.silent[code]) {
+      const typed = kiko.down[code](sentence);
+      kiko.setLangs({ ...ALL });
+      const d = kiko.analyzeText(typed);
+      if (d && d.original.trim() === typed.trim()) whole++;
+    }
+    if (whole >= floor) { pass++; }
+    else { fail++; console.log(`  FAIL  ${code} converts ${whole} sentences whole, floor is ${floor}`); }
+  }
+
+  // A trailing comma is punctuation to Greek and a letter to Hebrew, so it has
+  // to be tried both ways rather than stripped or kept.
+  check('a Greek sentence survives its own comma',
+        'Geia soy, ti k;aneiw s;hmera', 'english_as_greek',
+        { converted: 'γεια σου, τι κάνεις σήμερα' });
+  check('a word that really ends in ת still converts',
+        't, vhuo', 'english_as_hebrew', { converted: 'את היום' });
+
+  // Growing a run must not eat English. These are the two shapes that broke
+  // first when it was switched on.
+  check('shouting is not a burst', 'FYI the RFP is due EOD', null);
+  // Growing is where the acronym guard earns its place: the run is already
+  // confirmed by then, and every letter of ASAP sits on all six layouts.
+  check('a run does not grow into an acronym — Greek',
+        'Geia soy ti ASAP', 'english_as_greek', { converted: 'γεια σου τι' });
+  // Which language wins this one is a separate argument (Hebrew still takes it,
+  // and it is one of the 17 above). What matters here is that EOD stays out.
+  {
+    kiko.setLangs({ ...ALL });
+    const d = kiko.analyzeText('yfpyfxbnm dcnhtxe EOD');
+    if (d && !d.original.includes('EOD')) { pass++; }
+    else { fail++; console.log(`  FAIL  a run grew into EOD: ${d && d.original}`); }
+  }
+  check('a run does not grow into an acronym — Hebrew',
+        'akuo nvhs ekhu ASAP', 'english_as_hebrew',
+        { converted: 'שלום מהיד קליו' });
+  check('a list of initials is not a sentence', 's, i, n,', null);
+
+  // The list-of-initials rule is about the run, not the word: one short token
+  // beside a real one is fine, a run of nothing but short tokens is not.
+  for (const entry of [{ words: ['s,', 'i,', 'n,'] }, { words: ['d', 'b'] }]) {
+    if (!kiko.isRealRun(entry)) { pass++; }
+    else { fail++; console.log(`  FAIL  ${entry.words.join(' ')} counts as a real run`); }
+  }
+  if (kiko.isRealRun({ words: ['t,', 'vhuo'] })) { pass++; }
+  else { fail++; console.log('  FAIL  a short token beside a real word is not a run'); }
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

@@ -863,7 +863,44 @@ function russianScore(word) {
   return hits / (s.length - 1);
 }
 
+// Trailing punctuation is not part of the word — except when it is. A comma is
+// the ת key in Hebrew and the б key in Russian, so it cannot simply be stripped:
+// it has to be tried both ways, once as a letter and once as punctuation.
+//
+// Hebrew has done this since early on. The other five never did, and it is the
+// single largest reason a fix stops in the middle of a sentence. "Γεια σου, τι
+// κάνεις σήμερα" was offered as nothing at all, because σου, ends in a comma,
+// the comma is not on the Greek layout, and the word was refused before any
+// scoring saw it. Measured across the corpus, Greek converted 0 of 11 sentences
+// whole.
+function orWithoutTrailingPunctuation(word, test) {
+  if (test(word)) return true;
+  const trimmed = word.replace(/[,.;:!?)\]}"']+$/, '');
+  return trimmed.length >= 2 && trimmed !== word && test(trimmed);
+}
+
+// A single letter with punctuation hung off it is a list item, an initial, a
+// spreadsheet column. "s, i, n," maps onto דת ןת מת cleanly enough to look like
+// a three-word Hebrew run, and it was offered as one on a page of English prose.
+//
+// It cannot simply be refused: "t," really is את, and "t, vhuo" really is
+// את היום. The rule is therefore about the run, not the word — a token this
+// short may belong to a run, but a run made of nothing else is not evidence of
+// anything. Every run has to contain at least one word with two letters in it.
+function hasTwoLetters(word) {
+  return (word.match(/[a-zA-Z]/g) || []).length >= 2;
+}
+
+function isRealRun(entry) {
+  return entry.words.some(hasTwoLetters);
+}
+
 function wordCouldBeRussian(word) {
+  return orWithoutTrailingPunctuation(word, russianExactly);
+}
+
+function russianExactly(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
@@ -935,6 +972,11 @@ function ukrainianScore(word) {
 }
 
 function wordCouldBeUkrainian(word) {
+  return orWithoutTrailingPunctuation(word, ukrainianExactly);
+}
+
+function ukrainianExactly(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
@@ -994,6 +1036,11 @@ function arabicScore(word) {
 }
 
 function wordCouldBeArabic(word) {
+  return orWithoutTrailingPunctuation(word, arabicExactly);
+}
+
+function arabicExactly(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
@@ -1051,6 +1098,11 @@ function greekScore(word) {
 }
 
 function wordCouldBeGreek(word) {
+  return orWithoutTrailingPunctuation(word, greekExactly);
+}
+
+function greekExactly(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
@@ -1094,6 +1146,11 @@ function koreanScore(word) {
 }
 
 function wordCouldBeKorean(word) {
+  return orWithoutTrailingPunctuation(word, koreanExactly);
+}
+
+function koreanExactly(word) {
+  if (looksLikeAcronym(word)) return false;
   if (word.length < 2) return false;
   const lower = word.toLowerCase();
   if (learnedEnglish.has(lower)) return false;
@@ -1358,6 +1415,7 @@ function unmistakablyEnglish(lower) {
 }
 
 function mapsToHebrew(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
@@ -1401,12 +1459,96 @@ function keysMapToHebrew(word) {
 }
 
 function physicallyMapsToHebrew(word) {
+  if (looksLikeAcronym(word)) return false;
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
   if (learnedEnglish.has(lower)) return false;
   if (unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   return mapped.every(c => c !== undefined && HEBREW_RE.test(c));
+}
+
+// The run assembly Hebrew has had all along, made available to the other five.
+//
+// Hebrew converts 31 of 31 corpus sentences whole. Russian converts 6 of 25,
+// Arabic 3 of 20, Greek 0 of 11. That difference is not the language and not
+// the keyboard table. It is that Case 2 for Hebrew can bridge one word it does
+// not recognise and then extend outward from the run it confirmed, while Cases
+// R2, U2, A2, E2 and K2 stop dead at the first word that fails the test.
+//
+// One comma does it. "Γεια σου, τι κάνεις σήμερα" typed on a QWERTY keyboard is
+// "Geia soy, ti k;aneiw s;hmera", and σου, ends in a comma the Greek layout does
+// not have — so the run broke there, every time, in every Greek sentence.
+//
+//   accepts   the language's own wordCouldBeX
+//   bridges   may sit *inside* a run, never extend one outward
+//   grows     may extend a confirmed run at either end
+function collectRuns(words, accepts, bridges) {
+  const runs = [];
+  let cur = [], gap = [], startIdx = -1;
+  for (let wi = 0; wi < words.length; wi++) {
+    const w = words[wi];
+    if (accepts(w)) {
+      if (gap.length > 0) cur.push(...gap);
+      gap = [];
+      if (cur.length === 0) startIdx = wi;
+      cur.push(w);
+    } else if (cur.length > 0 && gap.length < 2 && bridges(w)) {
+      // Enclosure is what makes a bridge safe: the gap is only kept when
+      // another accepted word follows it, so a trailing English word is
+      // dropped rather than swallowed.
+      gap.push(w);
+    } else {
+      if (cur.length > 0) runs.push({ words: [...cur], startIdx });
+      cur = []; gap = []; startIdx = -1;
+    }
+  }
+  if (cur.length > 0) runs.push({ words: cur, startIdx });
+  return runs;
+}
+
+function growRun(words, entry, grows) {
+  let run = [...entry.words];
+  for (let i = entry.startIdx - 1; i >= 0; i--) {
+    if (!grows(words[i])) break;
+    run.unshift(words[i]);
+  }
+  const lastIdx = entry.startIdx + entry.words.length - 1;
+  for (let i = lastIdx + 1; i < words.length; i++) {
+    if (!grows(words[i])) break;
+    run.push(words[i]);
+  }
+  return run;
+}
+
+// Can these keystrokes be this script at all? Used for bridging and for growing
+// a run, never for starting one — the run has already been earned by words that
+// passed the language's own test.
+function keysMapToScript(map, word, maxLen) {
+  const lower = word.toLowerCase();
+  if (lower.length < 2 || (maxLen && lower.length > maxLen)) return false;
+  if (learnedEnglish.has(lower)) return false;
+  return [...lower].every(c => map[c] !== undefined);
+}
+
+function scriptBridge(map) {
+  return word => !looksLikeAcronym(word) && orWithoutTrailingPunctuation(
+    word, w => keysMapToScript(map, w, MAX_BRIDGE_LEN));
+}
+
+// Growing is the same test without the length cap, plus the English guard —
+// "Slack" and "meeting" at the end of a Russian sentence are the brand and the
+// noun, and eating them is the destructive mistake this product must not make.
+// EN_LEXICON is what makes this safe enough to switch on.
+function scriptGrower(map) {
+  return word => {
+    // "FYI the RFP is due EOD" grew into a Russian sentence without this: every
+    // one of those letters is on the Cyrillic layout. Shouting is not a burst.
+    if (looksLikeAcronym(word)) return false;
+    const lower = word.toLowerCase();
+    if (unmistakablyEnglish(lower.replace(/[^a-z]/g, ''))) return false;
+    return orWithoutTrailingPunctuation(word, w => keysMapToScript(map, w, 0));
+  };
 }
 
 // Returns the actual text substring spanning from firstWord to lastWord (inclusive),
@@ -1993,7 +2135,8 @@ function analyzeText(rawText, scanAll = false) {
   if (curRun.length > 0) allRuns.push({ words: curRun, startIdx: curStartIdx });
 
   // Use the last (most recent) run that meets the minimum threshold
-  const runEntry = [...allRuns].reverse().find(r => r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun);
+  const runEntry = [...allRuns].reverse().find(r =>
+    isRealRun(r) && r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun);
   let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
 
@@ -2078,25 +2221,13 @@ function analyzeText(rawText, scanAll = false) {
     // syllable decomposition and rejected anything English-looking, so what
     // reaches here is a long token that is Korean or nothing.
     const koSoloRun = w => convertToKorean(w).length >= 4;
-    const allKoRuns = [];
-    let curKoRun = [], curKoStartIdx = -1;
-    for (let wi = 0; wi < koCandWords.length; wi++) {
-      const w = koCandWords[wi];
-      if (wordCouldBeKorean(w)) {
-        if (curKoRun.length === 0) curKoStartIdx = wi;
-        curKoRun.push(w);
-      } else {
-        if (curKoRun.length > 0) allKoRuns.push({ words: [...curKoRun], startIdx: curKoStartIdx });
-        curKoRun = []; curKoStartIdx = -1;
-      }
-    }
-    if (curKoRun.length > 0) allKoRuns.push({ words: curKoRun, startIdx: curKoStartIdx });
+    const allKoRuns = collectRuns(koCandWords, wordCouldBeKorean, scriptBridge(EN_TO_KO));
 
-    const koRunEntry = [...allKoRuns].reverse().find(
-      r => r.words.length >= koMinRun ||
-           (r.words.length === 1 && koSoloRun(r.words[0])));
+    const koRunEntry = [...allKoRuns].reverse().find(r => isRealRun(r) &&
+      (r.words.length >= koMinRun ||
+       (r.words.length === 1 && koSoloRun(r.words[0]))));
     if (koRunEntry) {
-      const runKo2 = koRunEntry.words;
+      const runKo2 = growRun(koCandWords, koRunEntry, scriptGrower(EN_TO_KO));
       const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
       const convertedKo2 = convertToKorean(spanKo2);
       if (HANGUL_RE.test(convertedKo2)) {
@@ -2115,23 +2246,11 @@ function analyzeText(rawText, scanAll = false) {
   if (!textHasHebrew && enabledLangs.ru) {
     const ruCandWords = extractWords(text);
     const ruMinRun = textHasRussian ? 1 : 2;
-    const allRuRuns = [];
-    let curRuRun = [], curRuStartIdx = -1;
-    for (let wi = 0; wi < ruCandWords.length; wi++) {
-      const w = ruCandWords[wi];
-      if (wordCouldBeRussian(w)) {
-        if (curRuRun.length === 0) curRuStartIdx = wi;
-        curRuRun.push(w);
-      } else {
-        if (curRuRun.length > 0) allRuRuns.push({ words: [...curRuRun], startIdx: curRuStartIdx });
-        curRuRun = []; curRuStartIdx = -1;
-      }
-    }
-    if (curRuRun.length > 0) allRuRuns.push({ words: curRuRun, startIdx: curRuStartIdx });
+    const allRuRuns = collectRuns(ruCandWords, wordCouldBeRussian, scriptBridge(EN_TO_RU));
 
-    const ruRunEntry = [...allRuRuns].reverse().find(r => r.words.length >= ruMinRun);
+    const ruRunEntry = [...allRuRuns].reverse().find(r => isRealRun(r) && r.words.length >= ruMinRun);
     if (ruRunEntry) {
-      const runRu2 = ruRunEntry.words;
+      const runRu2 = growRun(ruCandWords, ruRunEntry, scriptGrower(EN_TO_RU));
       const spanRu2 = findRunSpan(text, runRu2[0], runRu2[runRu2.length - 1]) || runRu2.join(' ');
       const convertedRu2 = convertToRussian(spanRu2.toLowerCase());
       if (RUSSIAN_RE.test(convertedRu2)) {
@@ -2152,23 +2271,11 @@ function analyzeText(rawText, scanAll = false) {
   if (!textHasHebrew && enabledLangs.uk) {
     const ukCandWords = extractWords(text);
     const ukMinRun = textHasRussian || textHasUkOnly ? 1 : 2;
-    const allUkRuns = [];
-    let curUkRun = [], curUkStartIdx = -1;
-    for (let wi = 0; wi < ukCandWords.length; wi++) {
-      const w = ukCandWords[wi];
-      if (wordCouldBeUkrainian(w)) {
-        if (curUkRun.length === 0) curUkStartIdx = wi;
-        curUkRun.push(w);
-      } else {
-        if (curUkRun.length > 0) allUkRuns.push({ words: [...curUkRun], startIdx: curUkStartIdx });
-        curUkRun = []; curUkStartIdx = -1;
-      }
-    }
-    if (curUkRun.length > 0) allUkRuns.push({ words: curUkRun, startIdx: curUkStartIdx });
+    const allUkRuns = collectRuns(ukCandWords, wordCouldBeUkrainian, scriptBridge(EN_TO_UK));
 
-    const ukRunEntry = [...allUkRuns].reverse().find(r => r.words.length >= ukMinRun);
+    const ukRunEntry = [...allUkRuns].reverse().find(r => isRealRun(r) && r.words.length >= ukMinRun);
     if (ukRunEntry) {
-      const runUk2 = ukRunEntry.words;
+      const runUk2 = growRun(ukCandWords, ukRunEntry, scriptGrower(EN_TO_UK));
       const spanUk2 = findRunSpan(text, runUk2[0], runUk2[runUk2.length - 1]) || runUk2.join(' ');
       const convertedUk2 = convertToUkrainian(spanUk2.toLowerCase());
       if (CYRILLIC_RE.test(convertedUk2)) {
@@ -2187,23 +2294,11 @@ function analyzeText(rawText, scanAll = false) {
   if (!textHasHebrew && !textHasRussian && enabledLangs.ar) {
     const arCandWords = extractWords(text);
     const arMinRun = textHasArabic ? 1 : 2;
-    const allArRuns2 = [];
-    let curArRun2 = [], curArStartIdx2 = -1;
-    for (let wi = 0; wi < arCandWords.length; wi++) {
-      const w = arCandWords[wi];
-      if (wordCouldBeArabic(w)) {
-        if (curArRun2.length === 0) curArStartIdx2 = wi;
-        curArRun2.push(w);
-      } else {
-        if (curArRun2.length > 0) allArRuns2.push({ words: [...curArRun2], startIdx: curArStartIdx2 });
-        curArRun2 = []; curArStartIdx2 = -1;
-      }
-    }
-    if (curArRun2.length > 0) allArRuns2.push({ words: curArRun2, startIdx: curArStartIdx2 });
+    const allArRuns2 = collectRuns(arCandWords, wordCouldBeArabic, scriptBridge(EN_TO_AR));
 
-    const arRunEntry2 = [...allArRuns2].reverse().find(r => r.words.length >= arMinRun);
+    const arRunEntry2 = [...allArRuns2].reverse().find(r => isRealRun(r) && r.words.length >= arMinRun);
     if (arRunEntry2) {
-      const runAr2 = arRunEntry2.words;
+      const runAr2 = growRun(arCandWords, arRunEntry2, scriptGrower(EN_TO_AR));
       const spanAr2 = findRunSpan(text, runAr2[0], runAr2[runAr2.length - 1]) || runAr2.join(' ');
       const convertedAr2 = convertToArabic(spanAr2.toLowerCase());
       if (ARABIC_RE.test(convertedAr2)) {
@@ -2224,23 +2319,11 @@ function analyzeText(rawText, scanAll = false) {
   if (!textHasHebrew && enabledLangs.el) {
     const elCandWords = extractWords(text);
     const elMinRun = textHasGreek ? 1 : 2;
-    const allElRuns = [];
-    let curElRun = [], curElStartIdx = -1;
-    for (let wi = 0; wi < elCandWords.length; wi++) {
-      const w = elCandWords[wi];
-      if (wordCouldBeGreek(w)) {
-        if (curElRun.length === 0) curElStartIdx = wi;
-        curElRun.push(w);
-      } else {
-        if (curElRun.length > 0) allElRuns.push({ words: [...curElRun], startIdx: curElStartIdx });
-        curElRun = []; curElStartIdx = -1;
-      }
-    }
-    if (curElRun.length > 0) allElRuns.push({ words: curElRun, startIdx: curElStartIdx });
+    const allElRuns = collectRuns(elCandWords, wordCouldBeGreek, scriptBridge(EN_TO_EL));
 
-    const elRunEntry = [...allElRuns].reverse().find(r => r.words.length >= elMinRun);
+    const elRunEntry = [...allElRuns].reverse().find(r => isRealRun(r) && r.words.length >= elMinRun);
     if (elRunEntry) {
-      const runEl2 = elRunEntry.words;
+      const runEl2 = growRun(elCandWords, elRunEntry, scriptGrower(EN_TO_EL));
       const spanEl2 = findRunSpan(text, runEl2[0], runEl2[runEl2.length - 1]) || runEl2.join(' ');
       const convertedEl2 = convertToGreek(spanEl2.toLowerCase());
       if (GREEK_RE.test(convertedEl2)) {
