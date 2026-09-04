@@ -1,6 +1,7 @@
 // The task list and everything that reads or writes it. Shared by the popup and
 // the service worker, so both agree on what a task is and where it lives.
 import { parse, nextOccurrence } from './nlp.js';
+import { classify, learn } from './classify.js';
 
 const KEY = 'tasks';
 const SETTINGS_KEY = 'settings';
@@ -8,6 +9,7 @@ const SETTINGS_KEY = 'settings';
 export const DEFAULT_SETTINGS = {
   sound: true,          // play Chrome's notification sound
   snoozeMinutes: 10,
+  learned: {},          // words the user has re-filed, and where they put them
 };
 
 export function uid() {
@@ -15,9 +17,10 @@ export function uid() {
 }
 
 export async function loadTasks() {
-  const got = await chrome.storage.local.get(KEY);
+  const got = await chrome.storage.local.get([KEY, SETTINGS_KEY]);
   const list = Array.isArray(got[KEY]) ? got[KEY] : [];
-  return list.map(normalise);
+  const learned = got[SETTINGS_KEY]?.learned || {};
+  return list.map((t) => normalise(t, learned));
 }
 
 export async function saveTasks(tasks) {
@@ -35,7 +38,13 @@ export async function saveSettings(settings) {
 
 // Old records gain new fields as the extension grows; fill the gaps on read so
 // nothing downstream has to test for undefined.
-function normalise(t) {
+function normalise(t, learned = {}) {
+  // Work/personal is recomputed from the text every time unless the user has
+  // said otherwise. That way a task filed wrongly today gets filed correctly
+  // once the word list learns the word — and a task the user moved by hand
+  // stays exactly where they put it, including deliberately unsorted.
+  const guess = t.laneLocked ? { lane: t.lane ?? null, because: 'you filed this' }
+                             : classify(t.text || '', t.tags || [], learned);
   return {
     id: t.id || uid(),
     text: t.text || '',
@@ -50,11 +59,14 @@ function normalise(t) {
     created: t.created || Date.now(),
     notified: Boolean(t.notified),
     source: t.source || 'type',
+    lane: guess.lane,
+    laneLocked: Boolean(t.laneLocked),
+    laneBecause: guess.because,
   };
 }
 
 /** Build a task from raw input. Returns null if there is nothing to save. */
-export function taskFromInput(raw, source = 'type', now = new Date()) {
+export function taskFromInput(raw, source = 'type', now = new Date(), learned = {}) {
   const parsed = parse(raw, now);
   // "tomorrow at 5" on its own is a reminder with no subject — keep the words
   // rather than saving a blank row.
@@ -70,7 +82,7 @@ export function taskFromInput(raw, source = 'type', now = new Date()) {
     tags: parsed.tags,
     created: Date.now(),
     source,
-  });
+  }, learned);
 }
 
 export async function addTask(task) {
@@ -131,4 +143,17 @@ export function dueCount(tasks, now = Date.now()) {
   return tasks.filter((t) => !t.done && t.due != null && t.due <= +today).length;
 }
 
-export { parse, nextOccurrence };
+/** Move a task between lanes by hand, and remember the words that put it there. */
+export async function setLane(id, lane) {
+  const tasks = await loadTasks();
+  const i = tasks.findIndex((t) => t.id === id);
+  if (i === -1) return null;
+  tasks[i] = { ...tasks[i], lane, laneLocked: true, laneBecause: 'you filed this' };
+  await saveTasks(tasks);
+
+  const settings = await loadSettings();
+  await saveSettings({ ...settings, learned: learn(settings.learned || {}, tasks[i].text, lane) });
+  return tasks[i];
+}
+
+export { parse, nextOccurrence, classify };

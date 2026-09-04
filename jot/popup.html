@@ -18,6 +18,8 @@
     --danger: #f87171;
     --warn: #fbbf24;
     --ok: #4ade80;
+    --work: #38bdf8;
+    --personal: #34d399;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
   @media (prefers-color-scheme: light) {
@@ -128,6 +130,51 @@
   }
   .pill.muted { background: var(--surface-2); color: var(--muted); font-weight: 500; }
   .hint { margin-top: 8px; font-size: 11px; color: var(--faint); }
+
+
+  /* ---------- work / personal switch ---------- */
+  .lanes {
+    flex: none;
+    display: flex;
+    gap: 2px;
+    margin: 8px 12px 0;
+    padding: 3px;
+    background: var(--surface-2);
+    border-radius: 10px;
+  }
+  .lane-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 4px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: background .12s, color .12s, box-shadow .12s;
+  }
+  .lane-btn:hover { color: var(--text); }
+  .lane-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .lane-btn .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .lane-btn .n { color: var(--faint); font-weight: 600; }
+  .dot.work { background: var(--work); }
+  .dot.personal { background: var(--personal); }
+  .dot.none { background: none; border: 1.5px solid var(--faint); }
+
+  /* the same dot on each row, and the only control needed to correct it */
+  .lane-dot {
+    width: 18px; height: 24px;
+    display: grid; place-items: center;
+    flex: none;
+    margin-left: -4px;
+  }
+  .lane-dot i { width: 7px; height: 7px; border-radius: 50%; display: block; transition: transform .12s; }
+  .lane-dot:hover i { transform: scale(1.5); }
+  .lane-dot i.work { background: var(--work); }
+  .lane-dot i.personal { background: var(--personal); }
+  .lane-dot i.none { border: 1.5px solid var(--faint); }
 
   /* ---------- filters ---------- */
   .filters {
@@ -343,6 +390,8 @@
   <div class="preview" id="preview"></div>
   <div class="hint" id="hint"></div>
 </div>
+
+<div class="lanes" id="lanes"></div>
 
 <div class="filters" id="filters"></div>
 

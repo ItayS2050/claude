@@ -1,12 +1,12 @@
 // The popup: capture at the top, everything you already captured underneath.
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
-  parse, nextOccurrence, BUCKETS, bucketOf,
+  setLane, classify, parse, nextOccurrence, BUCKETS, bucketOf,
 } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
-  preview: $('preview'), hint: $('hint'), filters: $('filters'), list: $('list'),
+  preview: $('preview'), hint: $('hint'), lanes: $('lanes'), filters: $('filters'), list: $('list'),
   summary: $('summary'), clearDone: $('clearDone'), voiceLang: $('voiceLang'),
   toast: $('toast'), toastMsg: $('toastMsg'), undo: $('undo') };
 
@@ -15,6 +15,7 @@ const DAY = 24 * HOUR;
 
 let tasks = [];
 let settings = {};
+let lane = 'all';         // all | work | personal — which hat you are wearing
 let filter = 'all';       // all | today | done | tag:<name>
 let query = '';
 let editingId = null;     // task whose title is being edited
@@ -47,7 +48,7 @@ async function persist() {
 async function addFromInput(source = 'type') {
   const raw = el.input.value.trim();
   if (!raw) return;
-  const task = taskFromInput(raw, source);
+  const task = taskFromInput(raw, source, new Date(), settings.learned || {});
   if (!task) return;
   tasks.unshift(task);
   flashId = task.id;
@@ -78,7 +79,11 @@ function updatePreview() {
   if (!raw) { el.preview.classList.remove('show'); el.preview.innerHTML = ''; el.hint.textContent = ''; return; }
 
   const p = parse(raw);
+  const guess = classify(p.text || raw, p.tags, settings.learned || {});
   const pills = [];
+  if (guess.lane) {
+    pills.push(`<span class="pill"><span class="dot ${guess.lane}" style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px"></span>${guess.lane}</span>`);
+  }
   if (p.due) pills.push(`<span class="pill">${escapeHtml(dueLabel(p.due, p.hasTime, true))}</span>`);
   if (p.repeat) pills.push(`<span class="pill">repeats ${p.repeat}</span>`);
   if (p.priority) pills.push(`<span class="pill">${p.priority > 1 ? 'urgent' : 'important'}</span>`);
@@ -266,10 +271,31 @@ el.clearDone.addEventListener('click', async () => {
 
 // --- rendering -------------------------------------------------------------
 function render() {
+  renderLanes();
   renderFilters();
   renderList();
   renderFoot();
   updatePreview();
+}
+
+function inLane(t) {
+  return lane === 'all' || t.lane === lane;
+}
+
+function renderLanes() {
+  const open = tasks.filter((t) => !t.done);
+  const buttons = [
+    { id: 'all', label: 'All', dot: null, n: open.length },
+    { id: 'work', label: 'Work', dot: 'work', n: open.filter((t) => t.lane === 'work').length },
+    { id: 'personal', label: 'Personal', dot: 'personal', n: open.filter((t) => t.lane === 'personal').length },
+  ];
+  el.lanes.innerHTML = buttons.map((b) => `
+    <button class="lane-btn ${lane === b.id ? 'active' : ''}" data-lane="${b.id}">
+      ${b.dot ? `<span class="dot ${b.dot}"></span>` : ''}${b.label}${b.n ? `<span class="n">${b.n}</span>` : ''}
+    </button>`).join('');
+  el.lanes.querySelectorAll('[data-lane]').forEach((b) => {
+    b.addEventListener('click', () => { lane = b.dataset.lane; render(); });
+  });
 }
 
 function visible() {
@@ -277,6 +303,7 @@ function visible() {
   const q = query.trim().toLowerCase();
 
   return tasks.filter((t) => {
+    if (!inLane(t)) return false;
     if (q && !(`${t.text} ${t.tags.map((x) => `#${x}`).join(' ')}`.toLowerCase().includes(q))) return false;
     if (filter === 'done') return t.done;
     if (t.done) return false;
@@ -288,16 +315,16 @@ function visible() {
 
 function renderFilters() {
   const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
-  const open = tasks.filter((t) => !t.done);
+  const open = tasks.filter((t) => !t.done && inLane(t));
   const counts = {
     all: open.length,
     today: open.filter((t) => t.due != null && t.due <= +endOfToday).length,
-    done: tasks.filter((t) => t.done).length,
+    done: tasks.filter((t) => t.done && inLane(t)).length,
   };
 
   const tags = [...new Set(open.flatMap((t) => t.tags))].sort().slice(0, 6);
   const chips = [
-    { id: 'all', label: 'All', n: counts.all },
+    { id: 'all', label: 'Open', n: counts.all },
     { id: 'today', label: 'Today', n: counts.today },
     ...tags.map((t) => ({ id: `tag:${t}`, label: `#${t}`, n: 0 })),
     { id: 'done', label: 'Done', n: counts.done },
@@ -382,6 +409,9 @@ function taskHtml(t) {
       <button class="check" data-act="toggle" data-id="${t.id}" aria-label="Complete">
         <svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg>
       </button>
+      <button class="lane-dot" data-act="lane" data-id="${t.id}" title="${escapeHtml(laneTitle(t))}">
+        <i class="${t.lane || 'none'}"></i>
+      </button>
       <div class="body" dir="auto">
         ${titleHtml}
         <div class="meta">${meta.join('')}</div>
@@ -396,6 +426,14 @@ function taskHtml(t) {
       </div>
     </div>
     ${schedId === t.id ? schedHtml(t) : ''}`;
+}
+
+// The dot has to explain itself: a guess you cannot see the reason for is a
+// guess you stop trusting.
+function laneTitle(t) {
+  const where = t.lane ? `Filed under ${t.lane}` : 'Not filed';
+  const why = t.laneBecause ? ` — ${t.laneBecause}` : '';
+  return `${where}${why}. Click to change.`;
 }
 
 function schedHtml(t) {
@@ -423,6 +461,14 @@ function wireList() {
     });
     if (act === 'tag') node.addEventListener('click', () => {
       filter = `tag:${node.dataset.tag}`;
+      render();
+    });
+    if (act === 'lane') node.addEventListener('click', async () => {
+      const t = tasks.find((x) => x.id === id);
+      const order = ['work', 'personal', null];
+      const next = order[(order.indexOf(t.lane) + 1) % order.length];
+      await setLane(id, next);
+      [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
       render();
     });
     if (act === 'sched') node.addEventListener('click', () => {
@@ -484,8 +530,10 @@ function renderFoot() {
   const open = tasks.filter((t) => !t.done).length;
   const done = tasks.filter((t) => t.done).length;
   const late = tasks.filter((t) => !t.done && t.due != null && t.due < Date.now()).length;
+  const unsorted = tasks.filter((t) => !t.done && !t.lane).length;
   el.summary.textContent = tasks.length
-    ? `${open} open${late ? ` · ${late} overdue` : ''}${done ? ` · ${done} done` : ''}`
+    ? `${open} open${late ? ` · ${late} overdue` : ''}${
+        lane === 'all' && unsorted ? ` · ${unsorted} unfiled` : ''}${done ? ` · ${done} done` : ''}`
     : '';
   el.clearDone.hidden = done === 0;
   el.voiceLang.textContent = `🎙 ${(settings.voiceLang || 'en-US').slice(0, 2).toUpperCase()}`;
@@ -496,6 +544,14 @@ function emptyState() {
   if (filter === 'done') return '<div class="empty"><p>Nothing completed yet.</p></div>';
   if (filter.startsWith('tag:')) return `<div class="empty"><p>No open tasks tagged ${escapeHtml(filter.slice(4))}.</p></div>`;
   if (filter === 'today') return '<div class="empty"><div class="big">☀️</div><p>Nothing due today.</p></div>';
+  if (lane !== 'all') {
+    return `<div class="empty">
+      <div class="big">${lane === 'work' ? '💼' : '🏠'}</div>
+      <p>Nothing filed under <strong>${lane}</strong> yet.</p>
+      <p style="margin-top:8px">Jot files new tasks by what they say. Click the dot
+      beside any task in <strong>All</strong> to move it here.</p>
+    </div>`;
+  }
   return `<div class="empty">
     <div class="big">✓</div>
     <p>Type it or say it — Jot works out when.</p>

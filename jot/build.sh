@@ -14,6 +14,7 @@ FILES=(
   popup.js
   store.js
   nlp.js
+  classify.js
   welcome.html
   welcome.js
   icon16.png
@@ -49,6 +50,7 @@ PY
 # The parser decides when every reminder fires; shipping it untested is not worth
 # the two seconds saved.
 node test-nlp.js > /dev/null || { echo "test-nlp.js is failing" >&2; exit 1; }
+node test-classify.js > /dev/null || { echo "test-classify.js is failing" >&2; exit 1; }
 node test-store.js > /dev/null || { echo "test-store.js is failing" >&2; exit 1; }
 
 mkdir -p dist

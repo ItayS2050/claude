@@ -28,9 +28,18 @@ reads "Call mom", not "call mom tomorrow at 5". A preview under the box shows
 what it understood *before* you press Enter, so a wrong guess is never a
 surprise.
 
-**Organised without being filed.** Tasks group themselves into Overdue, Today,
-Tomorrow, This week, Later and No date. Overdue is red, today is highlighted,
-`#tags` become filter chips, and the toolbar badge counts what is due.
+**Work and personal, sorted for you.** Every task is filed into one of two
+lanes by what it says — "send the invoice to acme" is work, "call mom" is
+personal, and the switch at the top shows one lane at a time. A coloured dot on
+each row says where it went, and hovering it says *why* ("filed under work —
+'invoice'"). One click on the dot moves it, and Jot remembers the words: correct
+"acme kickoff" once and every future task mentioning acme follows. Anything it
+cannot place stays unfiled and visible in **All**, never hidden in a lane.
+
+**Organised without being filed.** Within a lane, tasks group themselves into
+Overdue, Today, Tomorrow, This week, Later and No date. Overdue is red, today is
+highlighted, `#tags` become filter chips, and the toolbar badge counts what is
+due.
 
 **Reminds you.** A Chrome notification at the due time, with **Done** and
 **Snooze** on it. Repeating tasks roll to their next occurrence when ticked off
@@ -57,11 +66,15 @@ recognition; Jot keeps the text it returns and never stores audio.
 
 ```
 node test-nlp.js      # the language parser, against a fixed clock
-node test-store.js    # the task model: completion, repeats, grouping
+node test-classify.js # the work/personal split, both languages
+node test-store.js    # the task model: completion, repeats, grouping, filing
 ./build.sh            # runs both, then writes dist/jot-<version>.zip
 python3 make-icons.py  # regenerates the PNGs
 ```
 
-`nlp.js` turns a line of text into `{text, due, repeat, priority, tags}` and has
-no dependencies — it is the piece worth testing first when something files
-itself under the wrong day.
+`nlp.js` turns a line of text into `{text, due, repeat, priority, tags}` and
+`classify.js` decides work or personal from the same text. Both are dependency
+-free word-and-regex work — no model, no network — which is what lets the
+composer re-run them on every keystroke to show you the guess before you commit
+to it. They are the two files worth checking first when something lands in the
+wrong day or the wrong lane.

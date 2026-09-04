@@ -3,23 +3,30 @@
 // browser. Run it alongside test-nlp.js after touching store.js.
 import { readFileSync } from 'node:fs';
 
-const memory = { tasks: [], settings: {} };
+const memory = { tasks: [] };
 globalThis.chrome = {
   storage: {
     local: {
-      async get(key) { return key in memory ? { [key]: memory[key] } : {}; },
+      // chrome.storage.local.get takes a string or an array of keys; the real
+      // one omits keys that were never set, so this does too.
+      async get(keys) {
+        const wanted = Array.isArray(keys) ? keys : [keys];
+        return Object.fromEntries(wanted.filter((k) => k in memory).map((k) => [k, memory[k]]));
+      },
       async set(obj) { Object.assign(memory, structuredClone(obj)); },
     },
   },
 };
 
-const load = async (file) => {
+// Node cannot resolve './nlp.js' from a data: URL, so each local import is
+// replaced by the module's own source inlined as another data: URL.
+const inline = (file) => {
   const src = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')
-    // The module graph is flat; point store.js at the copy we already inlined.
-    .replace("from './nlp.js'", `from 'data:text/javascript;base64,${
-      Buffer.from(readFileSync(new URL('./nlp.js', import.meta.url), 'utf8')).toString('base64')}'`);
-  return import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'));
+    .replace(/from '\.\/([\w-]+\.js)'/g, (_, dep) => `from '${inline(dep)}'`);
+  return 'data:text/javascript;base64,' + Buffer.from(src).toString('base64');
 };
+
+const load = (file) => import(inline(file));
 
 const store = await load('store.js');
 
@@ -74,6 +81,34 @@ const list = [
   { due: t - H, done: true, tags: [] },
 ];
 check('dueCount counts today and overdue only', store.dueCount(list, t), 2);
+
+// --- work / personal filing ---
+memory.tasks = []; delete memory.settings;
+const workTask = store.taskFromInput('send the invoice to acme');
+const homeTask = store.taskFromInput('call mom');
+await store.addTask(workTask);
+await store.addTask(homeTask);
+const filed = await store.loadTasks();
+check('work task files itself as work', filed.find((x) => x.id === workTask.id).lane, 'work');
+check('personal task files itself as personal', filed.find((x) => x.id === homeTask.id).lane, 'personal');
+check('the reason is recorded for the tooltip',
+  filed.find((x) => x.id === workTask.id).laneBecause, '“invoice”');
+
+// Moving one by hand sticks, and teaches the words for next time.
+await store.setLane(workTask.id, 'personal');
+const moved = (await store.loadTasks()).find((x) => x.id === workTask.id);
+check('a hand-filed task stays where it was put', [moved.lane, moved.laneLocked], ['personal', true]);
+check('the correction is remembered',
+  (await store.loadSettings()).learned.acme, 'personal');
+
+const nextOne = store.taskFromInput('acme kickoff', 'type', new Date(),
+  (await store.loadSettings()).learned);
+check('the next task with that word follows the correction', nextOne.lane, 'personal');
+
+// Unsorting is a deliberate state, not a re-guess waiting to happen.
+await store.setLane(homeTask.id, null);
+const unsorted = (await store.loadTasks()).find((x) => x.id === homeTask.id);
+check('deliberately unfiled stays unfiled', [unsorted.lane, unsorted.laneLocked], [null, true]);
 
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
