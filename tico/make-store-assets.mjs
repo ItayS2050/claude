@@ -201,8 +201,15 @@ const FRAMES = [
      'Optional on-device AI — nothing is ever uploaded']],
 ];
 
-const page = await ctx.newPage();
-await page.setViewportSize({ width: 1280, height: 800 });
+// The frames must come out at exactly the pixel sizes the store accepts —
+// 1280x800 for a screenshot, 440x280 and 1400x560 for the tiles. The extension
+// context runs at deviceScaleFactor 2 so the embedded popup photograph is
+// crisp, and anything rendered in it comes out doubled, which the store
+// rejects outright. So the frames are drawn in a separate plain browser at
+// scale 1; by now the popup shots are already captured as data URLs and no
+// longer need the extension.
+const framer = await chromium.launch({ channel: 'chromium' });
+const page = await framer.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 
 for (const [name, shot, headline, sub, bullets] of FRAMES) {
   await page.setContent(frame(shot, headline, sub, bullets));
@@ -248,4 +255,5 @@ await page.waitForTimeout(140);
 await page.screenshot({ path: join(OUT, 'promo-marquee-1400x560.png') });
 console.log('store/promo-marquee-1400x560.png  1400×560');
 
+await framer.close();
 await ctx.close();
