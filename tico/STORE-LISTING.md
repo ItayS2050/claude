@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Jot
+# Chrome Web Store Listing — Tico
 
 Everything the submission form asks for, in the order it asks. Paste each block
 into the matching field. Assets are in `store/`, regenerated with
@@ -8,11 +8,11 @@ into the matching field. Assets are in `store/`, regenerated with
 
 ## Store listing tab
 
-### Extension name (max 75 — this is 35)
-Jot – Quick Tasks & Voice Reminders
+### Extension name (max 75 — this is 36)
+Tico – Quick Tasks & Voice Reminders
 
-### Short description (max 132 — this is 120)
-Capture a task by typing or talking, in one click. Jot reads "tomorrow at 5" as a real reminder and keeps the list tidy.
+### Short description (max 132 — this is 107)
+Tell Tico the task — type it or say it. Tico works out when it's due, files it, and brings it back on time.
 
 ### Category
 Productivity → Workflow & Planning
@@ -26,11 +26,13 @@ English (UK)
 
 **The task you will forget is the one that took too long to write down.**
 
+Tico is a squirrel. You hand it a thought, it stashes it, and it brings it back at exactly the moment you needed it — which is the only job a to-do list has ever really had.
+
 Click the icon — or press Alt+Shift+T from any page — and the box is already waiting with the cursor in it. Type the task, or press the microphone and say it. That's the whole thing.
 
 **Write it the way you'd say it**
 
-Jot reads the timing out of your own sentence and turns it into a real reminder, then takes those words back out of the title so the task reads cleanly:
+Tico reads the timing out of your own sentence and turns it into a real reminder, then takes those words back out of the title so the task reads cleanly:
 
 • "call mom tomorrow at 5" → tomorrow, 17:00
 • "pay rent in 20 minutes" → a reminder in 20 minutes
@@ -42,21 +44,21 @@ A preview under the box shows exactly what it understood *before* you press Ente
 
 **Say it instead**
 
-Press the mic, talk, stop. Jot transcribes, works out the date and saves it — you never touch the keyboard. Dictation works in English, Hebrew, Russian and Arabic, and Hebrew tasks are read and displayed right-to-left properly.
+Press the mic, talk, stop. Tico transcribes, works out the date and saves it — you never touch the keyboard. Dictation works in English, Hebrew, Russian and Arabic, and Hebrew tasks are read and displayed right-to-left properly.
 
 **Work and personal, kept apart**
 
-Every task is filed automatically into work or personal by what it says. "Send the invoice to acme" is work. "Call mom" is personal. A coloured dot on every task shows where it went, and hovering it tells you which word decided — because a guess you cannot see the reason for is a guess you stop trusting. One click moves a task, and Jot remembers your correction for next time.
+Every task is filed automatically into work or personal by what it says. "Send the invoice to acme" is work. "Call mom" is personal. A coloured dot on every task shows where it went, and hovering it tells you which word decided — because a guess you cannot see the reason for is a guess you stop trusting. One click moves a task, and Tico remembers your correction for next time.
 
 **It learns your clients on its own**
 
-Write "finish campaigns for stream" and the task is filed under Stream. No project picker, no setup, no configuring anything first. Mention a name twice and Jot recognises it everywhere after that — "stream banner sizes" lands in the same place, without the "for". Every client gets its own filter, and a wrong one is removed in a click.
+Write "finish campaigns for stream" and the task is filed under Stream. No project picker, no setup, no configuring anything first. Mention a name twice and Tico recognises it everywhere after that — "stream banner sizes" lands in the same place, without the "for". Every client gets its own filter, and a wrong one is removed in a click.
 
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.
 
-And because Chrome can't fire anything while it's closed, reopening after a weekend can mean several reminders are due at once. Jot shows one summary — "5 reminders while you were away", naming them — instead of firing five notifications at you, or worse, silently marking them as seen. Nothing is ever swallowed.
+And because Chrome can't fire anything while it's closed, reopening after a weekend can mean several reminders are due at once. Tico shows one summary — "5 reminders while you were away", naming them — instead of firing five notifications at you, or worse, silently marking them as seen. Nothing is ever swallowed.
 
 **Organised without you filing anything**
 
@@ -64,7 +66,7 @@ Overdue in red, then Today, Tomorrow, This week, Later, and No date. The toolbar
 
 **Everything stays on your computer**
 
-No account. No sign-up. No servers. No analytics. No ads. Your tasks live in local storage on your own machine and Jot has no backend to send them to. Export the lot to a file whenever you want — the import merges, so restoring an old backup never costs you what you've written since.
+No account. No sign-up. No servers. No analytics. No ads. Your tasks live in local storage on your own machine and Tico has no backend to send them to. A squirrel does not tell anyone where it buried things. Export the lot to a file whenever you want — the import merges, so restoring an old backup never costs you what you've written since.
 
 Optional: on a computer that supports Chrome's built-in AI, you can switch on an on-device assist for spotting client names. It runs inside Chrome, nothing is uploaded, and it's off unless you turn it on.
 
@@ -73,7 +75,7 @@ Optional: on a computer that supports Chrome's built-in AI, you can switch on an
 ---
 
 ### Homepage URL
-https://github.com/ItayS2050/claude/tree/main/jot
+https://github.com/ItayS2050/claude/tree/main/tico
 
 (A proper landing page would convert better than a source repository. Worth
 building before the paid version, not before the free one.)
@@ -86,7 +88,7 @@ https://github.com/ItayS2050/claude/issues
 ## Privacy tab
 
 ### Single purpose description
-Jot is a task and reminder notepad. Its single purpose is to let the user capture a task — by typing or dictation — and remind them about it at the time they said. Everything else it does (reading the due date out of the wording, sorting tasks by when they are due, grouping them as work or personal, and grouping them by client) serves that one purpose and happens entirely on the user's own device.
+Tico is a task and reminder notepad. Its single purpose is to let the user capture a task — by typing or dictation — and remind them about it at the time they said. Everything else it does (reading the due date out of the wording, sorting tasks by when they are due, grouping them as work or personal, and grouping them by client) serves that one purpose and happens entirely on the user's own device.
 
 ### Permission justifications
 
@@ -96,9 +98,9 @@ Jot is a task and reminder notepad. Its single purpose is to let the user captur
 
 **notifications** — This is how a reminder reaches the user at its due time, with Done and Snooze buttons on it. There is no other way for the extension to tell them.
 
-**contextMenus** — Adds a single "Add to Jot" item to the right-click menu when text is selected, so a task can be captured from a page without opening the popup. It appears only on a text selection and reads only what the user has deliberately selected.
+**contextMenus** — Adds a single "Add to Tico" item to the right-click menu when text is selected, so a task can be captured from a page without opening the popup. It appears only on a text selection and reads only what the user has deliberately selected.
 
-*Note: Jot requests no host permissions at all, and does not declare the microphone as a permission. It cannot read the pages you visit. Dictation asks for the microphone the same way any website does — once, from a normal tab, and only if the user presses the mic button.*
+*Note: Tico requests no host permissions at all, and does not declare the microphone as a permission. It cannot read the pages you visit. Dictation asks for the microphone the same way any website does — once, from a normal tab, and only if the user presses the mic button.*
 
 ### Data usage — certifications
 - **Personally identifiable information:** Not collected
@@ -111,7 +113,7 @@ Jot is a task and reminder notepad. Its single purpose is to let the user captur
 - **User activity:** Not collected
 - **Website content:** Not collected
 
-Jot transmits nothing off the device, so every category is "not collected".
+Tico transmits nothing off the device, so every category is "not collected".
 
 Tick all three certifications:
 - I do not sell or transfer user data to third parties, outside of the approved use cases
@@ -119,7 +121,7 @@ Tick all three certifications:
 - I do not use or transfer user data to determine creditworthiness or for lending purposes
 
 ### Privacy policy URL
-https://get-kiko.com/jot-privacy.html
+https://get-kiko.com/tico-privacy.html
 
 ---
 
@@ -145,15 +147,29 @@ through its own storage — not mockups. Regenerate them after any UI change:
 
 ## Before you submit
 
-1. `./build.sh` — runs all four test suites, then writes `dist/jot-<version>.zip`
+1. `./build.sh` — runs all four test suites, then writes `dist/tico-<version>.zip`
 2. Upload that zip. Do not upload the folder or the repo.
-3. Publish `docs/jot-privacy.html` first and check the URL loads — a dead
+3. Publish `docs/tico-privacy.html` first and check the URL loads — a dead
    privacy policy URL is a rejection.
 4. Set visibility to **Public**.
 
 Review normally takes one to three days for an extension with no host
 permissions and no microphone permission declared. The thing most likely to
 slow it down is the privacy policy, which is why it is spelled out above.
+
+## The character
+
+Tico is a squirrel holding an acorn. The acorn is the user's thought, kept
+safe. It is worth protecting that idea in the copy — "stash it", "hand it to
+Tico", "it brings it back" — because the phrase a user repeats to a colleague
+is what actually spreads a small extension, and no competitor in this category
+has one.
+
+The 16px icon is a separate drawing from the 128px one, not a shrink of it
+(`brand/mascots.py`, `squirrel_small`). At sixteen pixels a stroke has to be a
+fifth of the canvas to read at all, so the small cut has a fatter tail, a
+bigger head, and no muzzle or paw. Keep them in sync by eye when either
+changes.
 
 ## After it is live
 

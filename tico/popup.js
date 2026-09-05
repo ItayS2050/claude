@@ -214,7 +214,7 @@ function stopVoice() {
   }
   el.mic.classList.remove('on');
   el.field.classList.remove('listening');
-  el.input.placeholder = 'What needs doing?  (try “call mom tomorrow at 5”)';
+  el.input.placeholder = 'Tell Tico…  (try “call mom tomorrow at 5”)';
 }
 
 el.mic.addEventListener('click', toggleVoice);
@@ -592,21 +592,21 @@ function renderFoot() {
 
 function emptyState() {
   if (query) return `<div class="empty"><p>Nothing matches “${escapeHtml(query)}”.</p></div>`;
-  if (filter === 'done') return '<div class="empty"><p>Nothing completed yet.</p></div>';
+  if (filter === 'done') return '<div class="empty"><p>Nothing ticked off yet.</p></div>';
   if (filter.startsWith('tag:')) return `<div class="empty"><p>No open tasks tagged ${escapeHtml(filter.slice(4))}.</p></div>`;
   if (filter.startsWith('client:')) return `<div class="empty"><p>Nothing open for <strong>${escapeHtml(filter.slice(7))}</strong>.</p></div>`;
-  if (filter === 'today') return '<div class="empty"><div class="big">☀️</div><p>Nothing due today.</p></div>';
+  if (filter === 'today') return '<div class="empty"><div class="big">☀️</div><p>Nothing due today. Tico is having a quiet one.</p></div>';
   if (lane !== 'all') {
     return `<div class="empty">
       <div class="big">${lane === 'work' ? '💼' : '🏠'}</div>
       <p>Nothing filed under <strong>${lane}</strong> yet.</p>
-      <p style="margin-top:8px">Jot files new tasks by what they say. Click the dot
+      <p style="margin-top:8px">Tico files new tasks by what they say. Click the dot
       beside any task in <strong>All</strong> to move it here.</p>
     </div>`;
   }
   return `<div class="empty">
-    <div class="big">✓</div>
-    <p>Type it or say it — Jot works out when.</p>
+    <img src="icon128.png" alt="" style="width:52px;height:52px;border-radius:14px;opacity:.9">
+    <p style="margin-top:12px">Tell Tico and forget it.<br>It works out when things are due.</p>
     <p style="margin-top:10px">
       <code>call mom tomorrow at 5</code><br>
       <code>standup every monday 9:30</code><br>
@@ -719,11 +719,11 @@ async function applySetting(key, value) {
 }
 
 function exportBackup() {
-  const payload = JSON.stringify({ jot: 1, exported: new Date().toISOString(), tasks, settings }, null, 2);
+  const payload = JSON.stringify({ tico: 1, exported: new Date().toISOString(), tasks, settings }, null, 2);
   const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `jot-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `tico-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   showToast(`Exported ${tasks.length} tasks`);

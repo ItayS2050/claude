@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Jot – Quick Tasks & Voice Reminders",
-  "version": "1.2.1",
-  "description": "Capture a task by typing or talking, in one click. Jot reads \"tomorrow at 5\" as a real reminder and keeps the list tidy.",
+  "name": "Tico – Quick Tasks & Voice Reminders",
+  "version": "2.0.0",
+  "description": "Tell Tico the task — type it or say it. Tico works out when it's due, files it, and brings it back on time.",
   "permissions": [
     "storage",
     "alarms",
@@ -15,7 +15,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Jot – Quick Tasks (Alt+Shift+T)",
+    "default_title": "Tico – stash a task (Alt+Shift+T)",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -27,7 +27,7 @@
       "suggested_key": {
         "default": "Alt+Shift+T"
       },
-      "description": "Open Jot"
+      "description": "Open Tico"
     }
   },
   "icons": {

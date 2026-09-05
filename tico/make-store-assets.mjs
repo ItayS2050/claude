@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, 'store');
-const PROFILE = '/tmp/jot-store-profile';
+const PROFILE = '/tmp/tico-store-profile';
 
 mkdirSync(OUT, { recursive: true });
 rmSync(PROFILE, { recursive: true, force: true });
@@ -157,7 +157,7 @@ const FRAME_CSS = `
 const frame = (shot, headline, sub, bullets) => `
 <style>${FRAME_CSS}</style>
 <div class="copy">
-  <div class="brand"><img src="data:image/png;base64,${ICON}"><span>Jot</span></div>
+  <div class="brand"><img src="data:image/png;base64,${ICON}"><span>Tico</span></div>
   <h1>${headline}</h1>
   <p class="sub">${sub}</p>
   <ul>${bullets.map((b) => `<li><span class="tick">✓</span><span>${b}</span></li>`).join('')}</ul>
@@ -166,8 +166,8 @@ const frame = (shot, headline, sub, bullets) => `
 
 const FRAMES = [
   ['shot1-capture', shots.capture,
-    'Write it the way<br>you would <em>say it</em>.',
-    'Jot reads the timing out of your own words and turns it into a real reminder.',
+    'Tell Tico.<br>Forget it.',
+    'Hand over the thought and Tico reads the timing out of your own words — then brings it back at the right moment.',
     ['<b>“call mom tomorrow at 5”</b> → tomorrow, 17:00',
      'The date leaves the title. The task just reads “Call mom”',
      'See what it understood <b>before</b> you press Enter']],
@@ -177,13 +177,13 @@ const FRAMES = [
     'Overdue, today, tomorrow, this week — and work kept apart from the rest of your life.',
     ['Work and personal split <b>automatically</b>',
      'A dot on every task says where it went, and why',
-     'One click moves it, and Jot remembers']],
+     'One click moves it, and Tico remembers']],
 
   ['shot3-voice', shots.voice,
     'Or just <em>say it</em>.',
     'Press the mic, talk, stop. It transcribes, works out the date, and saves itself.',
     ['Dictation in English, Hebrew, Russian and Arabic',
-     'Nothing is recorded — Chrome transcribes, Jot keeps the text',
+     'Nothing is recorded — Chrome transcribes, Tico keeps the text',
      '<b>Alt + Shift + T</b> from any page']],
 
   ['shot4-clients', shots.clients,
@@ -195,7 +195,7 @@ const FRAMES = [
 
   ['shot5-settings', shots.settings,
     'Yours, and<br>only yours.',
-    'No account, no server, no analytics. Your tasks never leave your computer.',
+    'No account, no server, no analytics. A squirrel does not tell anyone where it buried things.',
     ['Export everything to a file whenever you like',
      'Snooze length and sound are yours to set',
      'Optional on-device AI — nothing is ever uploaded']],
@@ -233,7 +233,7 @@ const tile = (w, h, titleSize, subSize, iconSize, sub) => `
   p { font-size: ${subSize}px; color: #a9b0c6; max-width: ${Math.round(w * 0.78)}px; line-height: 1.4; }
 </style>
 <img src="data:image/png;base64,${ICON}">
-<h1>Jot</h1>
+<h1>Tico</h1>
 <p>${sub}</p>`;
 
 await page.setViewportSize({ width: 440, height: 280 });
@@ -243,7 +243,7 @@ await page.screenshot({ path: join(OUT, 'promo-small-440x280.png') });
 console.log('store/promo-small-440x280.png  440×280');
 
 await page.setViewportSize({ width: 1400, height: 560 });
-await page.setContent(tile(1400, 560, 92, 27, 128, 'Type it or say it. Jot works out when it is due,<br>and keeps work and life apart.'));
+await page.setContent(tile(1400, 560, 92, 27, 128, 'Type it or say it. Tico works out when it is due,<br>and keeps work and life apart.'));
 await page.waitForTimeout(140);
 await page.screenshot({ path: join(OUT, 'promo-marquee-1400x560.png') });
 console.log('store/promo-marquee-1400x560.png  1400×560');

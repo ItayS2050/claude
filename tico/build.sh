@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Package Jot for the Chrome Web Store: only the files the extension loads at
+# Package Tico for the Chrome Web Store: only the files the extension loads at
 # runtime. The tests, the icon generator and this script stay out of the zip.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['version'])")
-OUT="dist/jot-${VERSION}.zip"
+OUT="dist/tico-${VERSION}.zip"
 
 FILES=(
   manifest.json

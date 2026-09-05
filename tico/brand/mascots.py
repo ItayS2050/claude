@@ -58,6 +58,22 @@ def dog(c):
     c.ellipse(80, 96, 12, 5, AMBER, rot=-0.25)       # colour and some character
 
 
+def squirrel_small(c):
+    """The 16px cut, drawn rather than downsampled.
+
+    Shrinking the full drawing turns the tail to mush: at 16 pixels a stroke
+    needs to be about a fifth of the canvas to read as a shape at all. So
+    everything is fatter, the muzzle and paw are gone, and the acorn survives
+    only as a blob of colour — which is enough, because colour is what the eye
+    catches at that size."""
+    c.taper([(72, 112), (108, 96), (112, 52), (86, 28), (64, 40)], 34, 20, WHITE)
+    c.ellipse(58, 86, 26, 28, WHITE)                 # body
+    c.ellipse(40, 32, 10, 16, WHITE, rot=0.38)       # ear
+    c.circle(44, 58, 22, WHITE)                      # head
+    c.circle(34, 92, 11, AMBER)                      # acorn
+    c.circle(36, 52, 6, DARK)                        # eye
+
+
 MASCOTS = {'squirrel': squirrel, 'pelican': pelican, 'dog': dog}
 
 for name, drawfn in MASCOTS.items():

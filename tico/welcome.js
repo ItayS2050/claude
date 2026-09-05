@@ -14,7 +14,7 @@ async function check() {
     if (p.state === 'granted') {
       grant.disabled = true;
       grant.textContent = 'Microphone allowed';
-      say('Dictation is ready. Open Jot and press the mic.', 'ok');
+      say('Dictation is ready. Open Tico and press the mic.', 'ok');
     } else if (p.state === 'denied') {
       say('Chrome is blocking the microphone for this extension. Open chrome://settings/content/microphone and remove the block, then reload this page.', 'bad');
     }
@@ -30,7 +30,7 @@ grant.addEventListener('click', async () => {
     // The permission is what we came for, not the audio. Release the device.
     stream.getTracks().forEach((t) => t.stop());
     grant.textContent = 'Microphone allowed';
-    say('Dictation is ready. Open Jot and press the mic.', 'ok');
+    say('Dictation is ready. Open Tico and press the mic.', 'ok');
   } catch (err) {
     grant.disabled = false;
     if (err && err.name === 'NotAllowedError') {

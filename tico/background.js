@@ -4,8 +4,8 @@ import {
   loadTasks, saveTasks, loadSettings, addTask, completeTask, taskFromInput, dueCount,
 } from './store.js';
 
-const TICK = 'jot-tick';
-const NOTIF = 'jot:';
+const TICK = 'tico-tick';
+const NOTIF = 'tico:';
 
 // One alarm that ticks every minute, rather than one alarm per task. The
 // service worker is torn down constantly; a single repeating alarm survives
@@ -33,15 +33,15 @@ chrome.runtime.onStartup.addListener(async () => {
 function buildMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: 'jot-add',
-      title: 'Add “%s” to Jot',
+      id: 'tico-add',
+      title: 'Add “%s” to Tico',
       contexts: ['selection'],
     });
   });
 }
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
-  if (info.menuItemId !== 'jot-add' || !info.selectionText) return;
+  if (info.menuItemId !== 'tico-add' || !info.selectionText) return;
   const settings = await loadSettings();
   const task = taskFromInput(info.selectionText.trim().slice(0, 300), 'page', new Date(), settings);
   if (!task) return;
@@ -50,7 +50,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   chrome.notifications.create(`${NOTIF}added:${task.id}`, {
     type: 'basic',
     iconUrl: chrome.runtime.getURL('icon128.png'),
-    title: 'Added to Jot',
+    title: 'Added to Tico',
     message: task.text,
     silent: true,
   });

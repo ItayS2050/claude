@@ -1,8 +1,12 @@
-# Jot — quick tasks & voice reminders
+# Tico 🐿️ — quick tasks & voice reminders
 
-A Chrome extension for the thought you need to get out of your head *right now*.
+*Tell Tico. Forget it. It comes back at the right moment.*
+
+A Chrome extension for the thought you need to get out of your head *right
+now* — a squirrel that takes what you hand it, knows where it put it, and
+brings it back when you need it.
 Click the icon (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>), type or
-speak the task, press Enter. Jot works out when it is due, files it under the
+speak the task, press Enter. Tico works out when it is due, files it under the
 right day, and reminds you.
 
 ## What it does
@@ -32,7 +36,7 @@ surprise.
 lanes by what it says — "send the invoice to acme" is work, "call mom" is
 personal, and the switch at the top shows one lane at a time. A coloured dot on
 each row says where it went, and hovering it says *why* ("filed under work —
-'invoice'"). One click on the dot moves it, and Jot remembers the words: correct
+'invoice'"). One click on the dot moves it, and Tico remembers the words: correct
 "acme kickoff" once and every future task mentioning acme follows. Anything it
 cannot place stays unfiled and visible in **All**, never hidden in a lane.
 
@@ -46,7 +50,7 @@ even when nothing else in it sounds like work. Remove a wrong one in Settings
 and it comes off every task at once.
 
 **Optional on-device AI.** Chrome 148+ on a capable machine can run Gemini Nano
-locally. When it is there and you switch it on, Jot asks it about the sentences
+locally. When it is there and you switch it on, Tico asks it about the sentences
 the patterns could not place — "chase the northwind renewal", where the name
 sits in no revealing position. It never leaves your computer, costs nothing, and
 an answer that does not appear verbatim in your own text is discarded as a
@@ -62,7 +66,7 @@ with **Done** and **Snooze** on it. Repeating tasks roll to their next
 occurrence when ticked off instead of disappearing.
 
 Chrome cannot fire anything while it is closed, so reopening it after a weekend
-means several reminders come due at once. Jot shows one summary — "5 reminders
+means several reminders come due at once. Tico shows one summary — "5 reminders
 while you were away", listing them — rather than firing five notifications or,
 worse, silently marking them seen. The second is the commonest complaint about
 reminder extensions and it is worth being careful about.
@@ -79,7 +83,7 @@ gets an undo.
 
 Tasks live in `chrome.storage.local` on your own machine. There is no account,
 no server, and no analytics. Dictation uses Chrome's built-in speech
-recognition; Jot keeps the text it returns and never stores audio. The optional
+recognition; Tico keeps the text it returns and never stores audio. The optional
 AI assist runs inside Chrome on your own machine — no request leaves it, and it
 is off unless you turn it on.
 
@@ -96,7 +100,7 @@ node test-nlp.js      # the language parser, against a fixed clock
 node test-classify.js # the work/personal split, both languages
 node test-clients.js  # client detection, and the phrases that must NOT be one
 node test-store.js    # the task model: completion, repeats, grouping, filing
-./build.sh            # runs both, then writes dist/jot-<version>.zip
+./build.sh            # runs both, then writes dist/tico-<version>.zip
 python3 make-icons.py  # regenerates the PNGs
 ```
 
