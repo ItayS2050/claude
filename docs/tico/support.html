@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tico – Support</title>
+  <link rel="icon" href="icon128.png">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 28px; color: #0f172a; }
+    h2 { font-size: 18px; margin-top: 34px; color: #0f172a; }
+    p, li { color: #334155; }
+    code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 14px; }
+    kbd { background:#f8fafc; border:1px solid #cbd5e1; border-bottom-width:2px; border-radius:5px; padding:1px 6px; font:600 13px ui-monospace,monospace; }
+    a { color: #4f46e5; }
+  </style>
+</head>
+<body>
+  <h1><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px;vertical-align:-5px"> Tico Support</h1>
+  <p>Something not working, or an idea for what it should do next? Email
+     <a href="mailto:itay@selltech.io">itay@selltech.io</a> or
+     <a href="https://github.com/ItayS2050/claude/issues">open an issue</a>.
+     Include what you typed and what you expected — with a parser, the exact
+     wording is usually the whole answer.</p>
+
+  <h2>The microphone does nothing</h2>
+  <p>Dictation needs permission once, and it has to be granted from a normal
+     tab — a browser popup closes the instant a permission prompt appears, which
+     is why Tico opens a page for it. Right-click the Tico icon → Options, or
+     reinstall to see the welcome page again, and press <strong>Allow
+     microphone</strong>. If Chrome is blocking it outright, check
+     <code>chrome://settings/content/microphone</code>.</p>
+
+  <h2>A reminder did not appear</h2>
+  <p>Chrome cannot fire anything while it is closed — no extension can. When you
+     next open Chrome, Tico shows one summary naming every reminder that came due
+     while you were away, so nothing is lost, but it does arrive late. If Chrome
+     was open and a reminder still did not show, check that notifications are
+     allowed for Chrome in your operating system's settings.</p>
+
+  <h2>It filed something under the wrong thing</h2>
+  <p>Click the coloured dot on the task to move it between work and personal —
+     Tico remembers the words and gets it right next time. For a wrong client,
+     click the × on the chip to take it off that task, or open Settings to remove
+     the name entirely.</p>
+
+  <h2>It read the date wrong</h2>
+  <p>The preview under the box shows what Tico understood before you press Enter,
+     so you can fix the wording first. Afterwards, click the date on any task to
+     reschedule it. Tico reads "tomorrow at 5", "in 20 minutes", "every monday
+     9:30", "friday", "12/10", and the Hebrew equivalents.</p>
+
+  <h2>Moving to another computer</h2>
+  <p>Settings → <strong>Export</strong> writes everything to a file. On the other
+     machine, Settings → <strong>Import</strong>. The import merges rather than
+     replaces, so it never costs you tasks you wrote in the meantime.</p>
+
+  <h2>Keyboard</h2>
+  <p><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> opens Tico from any page.
+     <kbd>Ctrl</kbd>+<kbd>M</kbd> starts dictation. <kbd>Enter</kbd> saves,
+     <kbd>Esc</kbd> clears.</p>
+
+  <hr style="border:none;border-top:1px solid #e2e8f0;margin:40px 0 20px">
+  <p style="font-size:14px"><a href="/tico/">← Back to Tico</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
+</body>
+</html>

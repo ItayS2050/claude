@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tico — tasks and reminders, captured in one click</title>
+<meta name="description" content="Tell Tico the task — type it or say it. Tico reads &quot;tomorrow at 5&quot; as a real reminder, keeps work apart from life, and learns your clients. Free Chrome extension.">
+<link rel="icon" href="icon128.png">
+<link rel="canonical" href="https://get-kiko.com/tico/">
+<meta property="og:title" content="Tico — tell it, and forget it">
+<meta property="og:description" content="Type it or say it. Tico works out when it is due and brings it back on time.">
+<meta property="og:image" content="https://get-kiko.com/tico/og.png">
+<meta property="og:url" content="https://get-kiko.com/tico/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d13;
+    --surface: #14171f;
+    --surface-2: #1b1f2a;
+    --line: #262b39;
+    --text: #eceef4;
+    --muted: #99a0b5;
+    --faint: #626a80;
+    --brand: #7c83ff;
+    --brand-2: #9ba2ff;
+    --brand-soft: rgba(124, 131, 255, .14);
+    --work: #38bdf8;
+    --personal: #34d399;
+    --amber: #fbbf24;
+    --r: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(11, 13, 19, .82);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 17px; }
+  .logo img { width: 30px; height: 30px; border-radius: 9px; }
+  nav { display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  @media (max-width: 680px) { nav .hide-sm { display: none; } }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--brand); color: #fff; text-decoration: none;
+    border: none; border-radius: 11px; padding: 11px 20px;
+    font: 600 15px Inter, system-ui, sans-serif; cursor: pointer;
+    transition: filter .15s, transform .15s;
+  }
+  .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn.small { padding: 8px 15px; font-size: 14px; border-radius: 9px; }
+  .btn.soon { background: var(--surface-2); color: var(--muted); cursor: default; }
+  .btn.soon:hover { filter: none; transform: none; }
+  .btn svg { width: 17px; height: 17px; fill: currentColor; }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; padding: 96px 0 76px; overflow: hidden; }
+  .hero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(760px 480px at 78% 6%, rgba(124,131,255,.20), transparent 62%),
+      radial-gradient(620px 420px at 4% 88%, rgba(56,189,248,.11), transparent 60%);
+  }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: 1.08fr .92fr; gap: 54px; align-items: center; }
+  h1 { font-size: 58px; line-height: 1.04; letter-spacing: -.033em; font-weight: 800; }
+  h1 em { font-style: normal; color: var(--brand-2); }
+  .lede { font-size: 20px; color: var(--muted); margin-top: 20px; max-width: 480px; }
+  .cta-row { display: flex; align-items: center; gap: 16px; margin-top: 30px; flex-wrap: wrap; }
+  .cta-note { font-size: 13.5px; color: var(--faint); }
+  .hero-shot { justify-self: center; }
+  .hero-shot img {
+    /* The popup is far taller than the headline beside it, so centring it
+       pushed the top of the image up behind the sticky header. Capped and
+       cropped from the top, which is the half worth seeing anyway. */
+    width: 330px; max-width: 100%; height: 470px; object-fit: cover; object-position: top;
+    border-radius: 16px; display: block;
+    box-shadow: 0 40px 90px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .hero-shot { position: relative; }
+  .hero-shot::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 90px;
+    border-radius: 0 0 16px 16px; pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+  }
+  @media (max-width: 900px) {
+    .hero .wrap { grid-template-columns: 1fr; }
+    h1 { font-size: 42px; }
+    .hero-shot { display: none; }
+  }
+
+  /* ---------- live demo ---------- */
+  section { padding: 76px 0; }
+  .eyebrow {
+    font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--brand-2); margin-bottom: 12px;
+  }
+  h2 { font-size: 34px; line-height: 1.15; letter-spacing: -.024em; font-weight: 800; }
+  .sub { font-size: 17px; color: var(--muted); margin-top: 12px; max-width: 620px; }
+
+  .demo {
+    margin-top: 30px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 20px; padding: 26px;
+  }
+  .demo-field {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface-2); border: 1.5px solid var(--line);
+    border-radius: 13px; padding: 4px 6px 4px 16px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .demo-field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+  #demoInput {
+    flex: 1; min-width: 0; background: none; border: none; outline: none;
+    color: var(--text); font: 400 16px Inter, system-ui, sans-serif; padding: 13px 0;
+  }
+  #demoInput::placeholder { color: var(--faint); }
+  .demo-out { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 9px; min-height: 34px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 999px; padding: 6px 13px; font-size: 13.5px; font-weight: 600;
+    background: var(--brand-soft); color: var(--brand-2);
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .chip.title { background: var(--surface-2); color: var(--text); }
+  .chip.work .dot { background: var(--work); }
+  .chip.personal .dot { background: var(--personal); }
+  .chip.client { background: rgba(251,191,36,.14); color: var(--amber); }
+  .chip.none { background: none; color: var(--faint); font-weight: 500; }
+  .try { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .try button {
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 9px; padding: 7px 12px; font: 500 13px Inter, system-ui, sans-serif;
+    cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .try button:hover { border-color: var(--brand); color: var(--text); }
+
+  /* ---------- feature grid ---------- */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 38px; }
+  @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 26px 24px;
+  }
+  .card h3 { font-size: 17.5px; font-weight: 700; margin-bottom: 9px; }
+  .card p { font-size: 14.5px; color: var(--muted); }
+  .card .ico {
+    width: 38px; height: 38px; border-radius: 11px; margin-bottom: 16px;
+    display: grid; place-items: center; font-size: 18px;
+    background: var(--brand-soft);
+  }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 54px; align-items: center; }
+  @media (max-width: 880px) { .split { grid-template-columns: 1fr; } }
+  ul.ticks { list-style: none; margin-top: 22px; display: grid; gap: 13px; }
+  ul.ticks li { display: flex; gap: 12px; font-size: 15.5px; color: var(--muted); }
+  ul.ticks b { color: var(--text); font-weight: 600; }
+  .tick {
+    flex: none; width: 22px; height: 22px; border-radius: 7px; margin-top: 1px;
+    background: var(--brand-soft); color: var(--brand-2);
+    display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  }
+
+  .quiet { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+  /* ---------- faq ---------- */
+  details {
+    border-bottom: 1px solid var(--line); padding: 18px 0;
+  }
+  details summary {
+    cursor: pointer; font-size: 16.5px; font-weight: 600; list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: '+'; color: var(--faint); font-size: 21px; font-weight: 400; }
+  details[open] summary::after { content: '–'; }
+  details p { color: var(--muted); font-size: 15px; margin-top: 11px; max-width: 760px; }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--line); padding: 40px 0 56px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
+  footer a { color: var(--muted); text-decoration: none; font-size: 14px; }
+  footer a:hover { color: var(--text); }
+  .foot-links { display: flex; gap: 20px; flex-wrap: wrap; }
+  .sibling {
+    display: inline-flex; align-items: center; gap: 9px; margin-top: 14px;
+    font-size: 13.5px; color: var(--faint); text-decoration: none;
+  }
+  .sibling img { width: 22px; height: 22px; border-radius: 7px; }
+  .sibling:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="/tico/"><img src="icon128.png" alt="">Tico</a>
+    <nav>
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#privacy">Privacy</a>
+      <a class="hide-sm" href="#faq">FAQ</a>
+      <a class="btn small" id="ctaTop" href="#">Add to Chrome</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Tell Tico.<br><em>Forget it.</em></h1>
+      <p class="lede">
+        The task you forget is the one that took too long to write down. Type it
+        or say it — Tico works out when it is due, files it, and brings it back
+        on time.
+      </p>
+      <div class="cta-row">
+        <a class="btn" id="ctaHero" href="#">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 4.5a5.5 5.5 0 0 1 4.76 2.75h-6.3a2.75 2.75 0 0 0-2.3 4.02L6.1 9.6A5.5 5.5 0 0 1 12 6.5Zm-5.5 5.5c0-.6.1-1.18.28-1.72l3.1 5.37A5.5 5.5 0 0 1 6.5 12Zm5.5 5.5c-.3 0-.6-.03-.88-.08l3.15-5.45a2.75 2.75 0 0 0-.3-3.22h4.2A5.5 5.5 0 0 1 12 17.5Z"/></svg>
+          Add to Chrome — free
+        </a>
+        <span class="cta-note">Free. No account. Nothing leaves your computer.</span>
+      </div>
+    </div>
+    <div class="hero-shot"><img src="popup.png" alt="Tico's popup, showing tasks grouped by when they are due"></div>
+  </div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="eyebrow">Try it right here</div>
+    <h2>Write it the way you would say it.</h2>
+    <p class="sub">
+      This is the real thing — the same code that ships in the extension, running
+      on this page. Type a task and watch what Tico pulls out of it.
+    </p>
+
+    <div class="demo">
+      <div class="demo-field">
+        <input id="demoInput" dir="auto" autocomplete="off" spellcheck="false"
+               value="finish campaigns for stream tomorrow at 10">
+      </div>
+      <div class="demo-out" id="demoOut"></div>
+      <div class="try" id="tryRow"></div>
+    </div>
+  </div>
+</section>
+
+<section class="quiet">
+  <div class="wrap">
+    <div class="eyebrow">What you get</div>
+    <h2>A list that files itself.</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🎙</div>
+        <h3>Say it instead</h3>
+        <p>Press the mic, talk, stop. Tico transcribes it, reads the date out of
+           it and saves it — in English, Hebrew, Russian or Arabic. Nothing is
+           ever recorded.</p>
+      </div>
+      <div class="card">
+        <div class="ico">◐</div>
+        <h3>Work apart from life</h3>
+        <p>Every task lands in work or personal by what it says, with a dot that
+           tells you which word decided. One click moves it, and Tico remembers
+           the correction.</p>
+      </div>
+      <div class="card">
+        <div class="ico">◆</div>
+        <h3>Learns your clients</h3>
+        <p>"finish campaigns <b>for stream</b>" is filed under Stream. Mention a
+           name twice and Tico spots it everywhere after that — no project
+           picker, no setup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow">Reminders</div>
+      <h2>It does not quietly lose things.</h2>
+      <p class="sub">
+        Chrome cannot fire a reminder while it is closed, so coming back after a
+        weekend can mean several are due at once. Most extensions either bury you
+        or mark them seen and say nothing. Tico shows you one summary and names
+        every one of them.
+      </p>
+      <ul class="ticks">
+        <li><span class="tick">✓</span><span><b>Done</b> and <b>Snooze</b> on the notification itself</span></li>
+        <li><span class="tick">✓</span><span>Repeating tasks roll forward instead of vanishing</span></li>
+        <li><span class="tick">✓</span><span>Overdue in red, and a count on the toolbar icon</span></li>
+        <li><span class="tick">✓</span><span>Every delete has an undo</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card" style="padding:22px">
+        <div style="display:flex;gap:13px;align-items:flex-start">
+          <img src="icon128.png" alt="" style="width:38px;height:38px;border-radius:11px;flex:none">
+          <div>
+            <div style="font-weight:700;font-size:15px">5 reminders while you were away</div>
+            <div style="color:var(--muted);font-size:13.5px;margin-top:7px;line-height:1.75">
+              Renew the domain · Fri 09:00<br>
+              Call the dentist · Sat 11:30<br>
+              Submit expenses · Sat 17:00<br>
+              Water the plants · Sun 09:00<br>
+              Reply to sarah · Mon 08:00
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="color:var(--faint);font-size:13px;margin-top:12px;text-align:center">
+        One notification, not five. Nothing silently marked as seen.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="quiet" id="privacy">
+  <div class="wrap">
+    <div class="eyebrow">Privacy</div>
+    <h2>A squirrel does not tell anyone<br>where it buried things.</h2>
+    <p class="sub">
+      Tico has no account, no server, no analytics and no ads. Your tasks are
+      stored on your own computer and there is no backend for them to go to —
+      not because we promise not to look, but because there is nowhere to look.
+    </p>
+    <ul class="ticks">
+      <li><span class="tick">✓</span><span>No host permissions at all — <b>Tico cannot read the pages you visit</b></span></li>
+      <li><span class="tick">✓</span><span>Dictation uses Chrome's own speech engine; Tico keeps the text, never audio</span></li>
+      <li><span class="tick">✓</span><span>The optional AI assist runs <b>inside Chrome on your machine</b>, and is off unless you turn it on</span></li>
+      <li><span class="tick">✓</span><span>Export everything to a file whenever you like</span></li>
+    </ul>
+    <p style="margin-top:22px"><a href="privacy.html" style="color:var(--brand-2);font-size:15px">Read the full privacy policy →</a></p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap" style="max-width:860px">
+    <div class="eyebrow">Questions</div>
+    <h2>Before you install.</h2>
+    <div style="margin-top:26px">
+      <details open>
+        <summary>Is it really free?</summary>
+        <p>Yes, and the whole capture loop stays free. If a paid tier ever
+           arrives it will be for things that cost something to run — syncing
+           between your computers, for instance — and anyone already using Tico
+           keeps what they have.</p>
+      </details>
+      <details>
+        <summary>Do my tasks sync between computers?</summary>
+        <p>Not yet. Today everything lives on the machine you wrote it on, which
+           is what makes the privacy promise above unconditional. You can export
+           to a file and import it anywhere. Proper sync is the next thing being
+           built.</p>
+      </details>
+      <details>
+        <summary>What happens when Chrome is closed?</summary>
+        <p>Nothing fires — no extension can run while the browser is shut. What
+           Tico does differently is what happens next: when you open Chrome
+           again it shows you a single summary naming every reminder you missed,
+           rather than firing them all at once or silently marking them as
+           handled.</p>
+      </details>
+      <details>
+        <summary>Does dictation work in Hebrew?</summary>
+        <p>Yes — English, Hebrew, Russian and Arabic, switched with one button in
+           the corner. Hebrew tasks are also displayed right-to-left properly,
+           and Tico reads Hebrew dates: "מחר", "בעוד 20 דקות", "כל יום".</p>
+      </details>
+      <details>
+        <summary>What does it do with the microphone?</summary>
+        <p>Only what you ask it to. The microphone opens while you are dictating
+           and closes the moment you stop. No audio is stored or sent anywhere —
+           Chrome does the transcription and Tico keeps only the text. Tico does
+           not even declare the microphone as an extension permission; it asks
+           once, the way any website does.</p>
+      </details>
+      <details>
+        <summary>Who makes it?</summary>
+        <p>The same person who makes <a href="/" style="color:var(--brand-2)">Kiko</a>,
+           the keyboard-layout fixer. Small extensions that each do one thing,
+           with no accounts and no servers behind them.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:40px">
+  <div class="wrap" style="text-align:center">
+    <h2>Get it out of your head.</h2>
+    <p class="sub" style="margin:12px auto 26px">One click, and it is Tico's problem.</p>
+    <a class="btn" id="ctaFoot" href="#">Add to Chrome — free</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <a class="logo" href="/tico/" style="font-size:15px"><img src="icon128.png" alt="">Tico</a>
+      <a class="sibling" href="/"><img src="/icon128.png" alt="">Also from us: Kiko, the keyboard layout fixer</a>
+    </div>
+    <div class="foot-links">
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="support.html">Support</a>
+      <a href="https://github.com/ItayS2050/claude/tree/main/tico">Source</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module">
+  // The demo runs the extension's own parser, copied here unmodified. If the
+  // page and the product ever disagree, that is a bug in one of them — which is
+  // the point of not writing a separate fake for marketing.
+  import { parse } from './nlp.js';
+  import { classify } from './classify.js';
+  import { detectClient } from './clients.js';
+
+  const input = document.getElementById('demoInput');
+  const out = document.getElementById('demoOut');
+
+  const EXAMPLES = [
+    'finish campaigns for stream tomorrow at 10',
+    'call mom tomorrow at 5',
+    'pay rent in 20 minutes',
+    'standup every monday at 9:30',
+    'send the invoice to acme friday !',
+    'לקנות חלב מחר',
+  ];
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const when = (due, hasTime) => {
+    const d = new Date(due);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(d).setHours(0, 0, 0, 0) - +today) / 86400000);
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const day = days === 0 ? 'Today' : days === 1 ? 'Tomorrow'
+      : days > 1 && days < 7 ? d.toLocaleDateString([], { weekday: 'long' })
+      : d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+    return hasTime ? `${day} at ${time}` : day;
+  };
+
+  function render() {
+    const raw = input.value.trim();
+    if (!raw) { out.innerHTML = '<span class="chip none">Type something above.</span>'; return; }
+
+    const p = parse(raw);
+    const client = detectClient(p.text || raw, {}, (w) => classify(w).lane !== null).client;
+    const lane = classify(p.text || raw, p.tags).lane || (client ? 'work' : null);
+
+    const chips = [`<span class="chip title">${esc(p.text || raw)}</span>`];
+    if (p.due) chips.push(`<span class="chip">${esc(when(p.due, p.hasTime))}</span>`);
+    if (p.repeat) chips.push(`<span class="chip">repeats ${esc(p.repeat)}</span>`);
+    if (client) chips.push(`<span class="chip client">◆ ${esc(client)}</span>`);
+    if (lane) chips.push(`<span class="chip ${lane}"><span class="dot"></span>${lane}</span>`);
+    if (p.priority) chips.push(`<span class="chip">${p.priority > 1 ? 'urgent' : 'important'}</span>`);
+    for (const t of p.tags) chips.push(`<span class="chip">#${esc(t)}</span>`);
+    if (!p.due && !client && !lane) chips.push('<span class="chip none">no date found — try adding “tomorrow at 5”</span>');
+
+    out.innerHTML = chips.join('');
+  }
+
+  input.addEventListener('input', render);
+  document.getElementById('tryRow').innerHTML =
+    EXAMPLES.map((e) => `<button data-ex="${esc(e)}">${esc(e)}</button>`).join('');
+  document.getElementById('tryRow').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ex]');
+    if (!b) return;
+    input.value = b.dataset.ex;
+    render();
+    input.focus();
+  });
+  render();
+
+  // Until the listing is live there is no store URL to send anyone to, and a
+  // button that 404s is worse than one that says "not yet". Replace the id
+  // below after publishing and every button on the page starts working.
+  const EXTENSION_ID = 'REPLACE_WITH_EXTENSION_ID';
+  const live = !EXTENSION_ID.startsWith('REPLACE');
+  const url = `https://chromewebstore.google.com/detail/${EXTENSION_ID}`;
+  for (const id of ['ctaTop', 'ctaHero', 'ctaFoot']) {
+    const el = document.getElementById(id);
+    if (live) { el.href = url; continue; }
+    el.classList.add('soon');
+    el.removeAttribute('href');
+    el.textContent = id === 'ctaTop' ? 'Coming soon' : 'Coming to the Chrome Web Store';
+  }
+</script>
+</body>
+</html>

@@ -75,13 +75,10 @@ Optional: on a computer that supports Chrome's built-in AI, you can switch on an
 ---
 
 ### Homepage URL
-https://github.com/ItayS2050/claude/tree/main/tico
-
-(A proper landing page would convert better than a source repository. Worth
-building before the paid version, not before the free one.)
+https://get-kiko.com/tico/
 
 ### Support URL
-https://github.com/ItayS2050/claude/issues
+https://get-kiko.com/tico/support.html
 
 ---
 
@@ -121,7 +118,7 @@ Tick all three certifications:
 - I do not use or transfer user data to determine creditworthiness or for lending purposes
 
 ### Privacy policy URL
-https://get-kiko.com/tico-privacy.html
+https://get-kiko.com/tico/privacy.html
 
 ---
 

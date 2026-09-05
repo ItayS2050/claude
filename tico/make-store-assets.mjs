@@ -10,15 +10,17 @@
 // it no longer resembles is the fastest way to earn a one-star review.
 
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, 'store');
+const SITE = join(HERE, '..', 'docs', 'tico');   // the landing page shares these
 const PROFILE = '/tmp/tico-store-profile';
 
 mkdirSync(OUT, { recursive: true });
+mkdirSync(SITE, { recursive: true });
 rmSync(PROFILE, { recursive: true, force: true });
 
 const ICON = readFileSync(join(HERE, 'icon128.png')).toString('base64');
@@ -254,6 +256,48 @@ await page.setContent(tile(1400, 560, 92, 27, 128, 'Type it or say it. Tico work
 await page.waitForTimeout(140);
 await page.screenshot({ path: join(OUT, 'promo-marquee-1400x560.png') });
 console.log('store/promo-marquee-1400x560.png  1400×560');
+
+// --- the website needs a bare popup and a social card ---------------------
+
+// The landing page wants the popup on its own, not inside a marketing frame.
+writeFileSync(join(SITE, 'popup.png'), Buffer.from(shots.list.data, 'base64'));
+console.log('docs/tico/popup.png');
+copyFileSync(join(HERE, 'icon128.png'), join(SITE, 'icon128.png'));
+console.log('docs/tico/icon128.png');
+
+// 1200x630 is what Twitter, LinkedIn, Slack and iMessage all crop to.
+await page.setViewportSize({ width: 1200, height: 630 });
+await page.setContent(`
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1200px; height: 630px; display: flex; align-items: center; gap: 54px;
+    padding: 0 76px; background: #0d0f16;
+    background-image:
+      radial-gradient(900px 560px at 86% 10%, rgba(124,131,255,.26), transparent 62%),
+      radial-gradient(700px 480px at 6% 94%, rgba(56,189,248,.15), transparent 60%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: #e7e9ef; overflow: hidden;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; margin-bottom: 26px; }
+  .brand img { width: 44px; height: 44px; border-radius: 12px; }
+  .brand span { font-size: 21px; font-weight: 700; color: #b9bdd0; }
+  h1 { font-size: 62px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; }
+  h1 em { font-style: normal; color: #9ba2ff; }
+  p { font-size: 22px; color: #99a0b5; margin-top: 20px; max-width: 470px; line-height: 1.45; }
+  .shot { flex: none; }
+  .shot img { width: 320px; border-radius: 14px;
+              box-shadow: 0 34px 74px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.09); }
+</style>
+<div>
+  <div class="brand"><img src="data:image/png;base64,\${ICON}"><span>Tico</span></div>
+  <h1>Tell Tico.<br><em>Forget it.</em></h1>
+  <p>Type it or say it. Tico works out when it is due and brings it back on time.</p>
+</div>
+<div class="shot"><img src="data:image/png;base64,\${shots.list.data}"></div>`);
+await page.waitForTimeout(160);
+await page.screenshot({ path: join(SITE, 'og.png') });
+console.log('docs/tico/og.png  1200x630');
 
 await framer.close();
 await ctx.close();

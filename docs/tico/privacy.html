@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tico – Privacy Policy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 28px; color: #0f172a; }
+    h2 { font-size: 18px; margin-top: 36px; color: #0f172a; }
+    p, li { color: #334155; }
+    .updated { color: #64748b; font-size: 14px; }
+    code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px;vertical-align:-5px"> Tico Privacy Policy</h1>
+  <p class="updated">Last updated: September 2026</p>
+
+  <h2>What Tico does</h2>
+  <p>Tico is a Chrome extension for capturing tasks and reminders. You type or dictate a task, Tico works out from your wording when it is due, files it as work or personal, and reminds you at the time.</p>
+
+  <h2>What Tico collects</h2>
+  <p><strong>Nothing. Tico has no servers, no account, no analytics and no database. Nothing you write in it is transmitted anywhere.</strong></p>
+  <p>Specifically:</p>
+  <ul>
+    <li>Your tasks, their due dates, your clients and projects, and your settings are stored on your own computer using <code>chrome.storage.local</code>. They never leave it.</li>
+    <li>Working out the due date, the work/personal split and the client name is done by pattern matching inside the extension. No text is sent anywhere to do it.</li>
+    <li>Tico has no cookies, no tracking, no telemetry, no crash reporting and no advertising.</li>
+    <li>Tico does not read the pages you visit or your browsing history. It only ever sees text you have deliberately selected and sent to it with the right-click menu.</li>
+    <li>Tico never sells or shares data, because it never has any to sell or share.</li>
+  </ul>
+
+  <h2>Dictation</h2>
+  <p>Pressing the microphone uses the speech recognition built into Chrome. In most Chrome builds that transcription is performed by Google, and audio is handled under <a href="https://policies.google.com/privacy">Google's privacy policy</a> — the same as any website that offers voice input. Tico receives only the resulting text, stores it as an ordinary task on your computer, and never keeps or transmits audio. The microphone is used only while you hold a dictation session open, and Tico works completely without it if you would rather type.</p>
+
+  <h2>Optional on-device AI</h2>
+  <p>If your computer supports Chrome's built-in AI, you may switch on "AI assist" in Settings to help identify client and project names. That model runs locally inside Chrome. Nothing is uploaded, no API is called, and the feature is off unless you turn it on.</p>
+
+  <h2>Backups</h2>
+  <p>"Export" writes a file to your own computer, and nowhere else. What you do with that file afterwards is up to you.</p>
+
+  <h2>Permissions, and why each one exists</h2>
+  <ul>
+    <li><strong>storage</strong> — to keep your tasks on your device between sessions.</li>
+    <li><strong>alarms</strong> — to wake the extension once a minute so a reminder can fire at its due time.</li>
+    <li><strong>notifications</strong> — to show the reminder.</li>
+    <li><strong>contextMenus</strong> — to add "Add to Tico" when you right-click selected text.</li>
+  </ul>
+  <p>Tico requests no access to your browsing history, your tabs, or the content of the websites you visit, and does not declare the microphone as an extension permission. Dictation asks for the microphone the way any website does — once, and only if you press the mic button.</p>
+
+  <h2>Children</h2>
+  <p>Tico is not directed at children and collects no data from anyone, of any age.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy ever changes, the date at the top changes with it. If Tico ever starts transmitting anything — for example if optional cross-device sync is added later — that will be described here before it ships, and it will be optional.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: <a href="mailto:itay@selltech.io">itay@selltech.io</a></p>
+  <hr style="border:none;border-top:1px solid #e2e8f0;margin:40px 0 20px">
+  <p style="font-size:14px"><a href="/tico/">← Back to Tico</a> · <a href="terms.html">Terms</a> · <a href="support.html">Support</a></p>
+</body>
+</html>

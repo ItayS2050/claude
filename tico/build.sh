@@ -56,6 +56,17 @@ node test-classify.js > /dev/null || { echo "test-classify.js is failing" >&2; e
 node test-clients.js > /dev/null || { echo "test-clients.js is failing" >&2; exit 1; }
 node test-store.js > /dev/null || { echo "test-store.js is failing" >&2; exit 1; }
 
+# The landing page runs the real parser by keeping a copy of these three
+# files. A copy that drifts turns the demo into a lie about the product, so
+# the build refuses to package until they match.
+for f in nlp.js classify.js clients.js; do
+  site="../docs/tico/$f"
+  if [[ -f "$site" ]] && ! cmp -s "$f" "$site"; then
+    echo "$site has drifted from $f — run: cp $f $site" >&2
+    exit 1
+  fi
+done
+
 mkdir -p dist
 rm -f "$OUT"
 zip -q "$OUT" "${FILES[@]}"
