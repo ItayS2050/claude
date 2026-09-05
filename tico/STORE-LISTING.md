@@ -99,6 +99,31 @@ Tico is a task and reminder notepad. Its single purpose is to let the user captu
 
 *Note: Tico requests no host permissions at all, and does not declare the microphone as a permission. It cannot read the pages you visit. Dictation asks for the microphone the same way any website does — once, from a normal tab, and only if the user presses the mic button.*
 
+### Are you using remote code?
+**No, I am not using remote code.**
+
+Every line Tico runs is in the uploaded package. There is no `eval`, no `new
+Function`, no dynamic `import()`, no `importScripts`, no `fetch`, no
+`XMLHttpRequest`, no `WebSocket`, and no script or stylesheet loaded from any
+URL — the only two script tags in the package point at local files, and the
+ES-module imports are all relative paths.
+
+Verified two ways rather than asserted: a grep of every shipped file for those
+patterns, and a runtime check that loaded the extension, exercised the whole
+product (adding tasks, completing, re-filing, settings, rescheduling, the
+welcome page, a full reminder cycle) and logged every network request it made.
+Thirteen requests, all `chrome-extension://` — its own packaged files. Zero
+external.
+
+Two things a reviewer might reasonably ask about, neither of which is remote
+code, because neither fetches or executes code:
+
+- **Dictation** uses `webkitSpeechRecognition`, a browser API. Chrome performs
+  the transcription; Tico receives text. No code is downloaded or run.
+- **The optional AI assist** uses `LanguageModel`, Chrome's built-in on-device
+  model API. Chrome downloads a *model*, not executable code, and only if the
+  user turns the feature on. It is off by default.
+
 ### Data usage — certifications
 - **Personally identifiable information:** Not collected
 - **Health information:** Not collected
