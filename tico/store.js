@@ -3,9 +3,11 @@
 import { parse, nextOccurrence } from './nlp.js';
 import { classify, learn } from './classify.js';
 import { detectClient, matchKnown, remember, forget, establishedClients } from './clients.js';
+import { touch } from './sync.js';
 
 const KEY = 'tasks';
 const SETTINGS_KEY = 'settings';
+const TOMBS_KEY = 'tombstones';
 
 export const DEFAULT_SETTINGS = {
   sound: true,          // play Chrome's notification sound
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   briefHour: 8,         // the morning brief, 0 = off
   briefDays: 'all',     // all | sun-thu | mon-fri
   lastBrief: null,      // the day the last one went out, so it goes once
+  syncEnabled: false,   // carry the list between this Chrome's other machines
 };
 
 export function uid() {
@@ -39,7 +42,34 @@ export async function loadSettings() {
 }
 
 export async function saveSettings(settings) {
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+  // Stamped on every write so the two machines can tell whose settings are
+  // newer without a central clock.
+  await chrome.storage.local.set({
+    [SETTINGS_KEY]: { ...settings, settingsUpdated: Date.now() },
+  });
+}
+
+export async function loadTombstones() {
+  const got = await chrome.storage.local.get(TOMBS_KEY);
+  return got[TOMBS_KEY] || {};
+}
+
+export async function saveTombstones(tombstones) {
+  await chrome.storage.local.set({ [TOMBS_KEY]: tombstones });
+}
+
+/**
+ * Delete, and remember having deleted. Without the tombstone the other machine
+ * still has the task and hands it straight back on the next merge.
+ */
+export async function deleteTasks(ids) {
+  const doomed = new Set(ids);
+  const tasks = await loadTasks();
+  await saveTasks(tasks.filter((t) => !doomed.has(t.id)));
+  const tombs = await loadTombstones();
+  const now = Date.now();
+  for (const id of doomed) tombs[id] = now;
+  await saveTombstones(tombs);
 }
 
 // Old records gain new fields as the extension grows; fill the gaps on read so
@@ -80,6 +110,7 @@ function normalise(t, learned = {}, clients = {}) {
     done: Boolean(t.done),
     doneAt: t.doneAt || null,
     created: t.created || Date.now(),
+    updated: t.updated || t.created || Date.now(),
     notified: Boolean(t.notified),
     source: t.source || 'type',
     lane,
@@ -139,9 +170,9 @@ export async function completeTask(id) {
     // Advance past the occurrence being ticked off, not merely past now —
     // otherwise finishing tomorrow's standup early leaves it on tomorrow.
     const next = nextOccurrence(t.due, t.repeat, Math.max(Date.now(), t.due));
-    tasks[i] = { ...t, due: next, notified: false, done: false };
+    tasks[i] = touch({ ...t, due: next, notified: false, done: false });
   } else {
-    tasks[i] = { ...t, done: true, doneAt: Date.now(), notified: true };
+    tasks[i] = touch({ ...t, done: true, doneAt: Date.now(), notified: true });
   }
   await saveTasks(tasks);
   return tasks[i];
@@ -245,7 +276,7 @@ export async function setLane(id, lane) {
   const tasks = await loadTasks();
   const i = tasks.findIndex((t) => t.id === id);
   if (i === -1) return null;
-  tasks[i] = { ...tasks[i], lane, laneLocked: true, laneBecause: 'you filed this' };
+  tasks[i] = touch({ ...tasks[i], lane, laneLocked: true, laneBecause: 'you filed this' });
   await saveTasks(tasks);
 
   const settings = await loadSettings();
@@ -258,7 +289,7 @@ export async function setClient(id, client) {
   const tasks = await loadTasks();
   const i = tasks.findIndex((t) => t.id === id);
   if (i === -1) return null;
-  tasks[i] = { ...tasks[i], client: client || null, clientLocked: true };
+  tasks[i] = touch({ ...tasks[i], client: client || null, clientLocked: true });
   await saveTasks(tasks);
   if (client) {
     const settings = await loadSettings();
@@ -277,7 +308,7 @@ export async function removeClient(name) {
   const tasks = await loadTasks();
   const key = String(name).toLowerCase();
   await saveTasks(tasks.map((t) =>
-    (t.client || '').toLowerCase() === key ? { ...t, client: null, clientLocked: true } : t));
+    (t.client || '').toLowerCase() === key ? touch({ ...t, client: null, clientLocked: true }) : t));
 }
 
-export { parse, nextOccurrence, classify, establishedClients };
+export { parse, nextOccurrence, classify, establishedClients, touch };

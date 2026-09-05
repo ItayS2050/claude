@@ -17,6 +17,7 @@ FILES=(
   classify.js
   clients.js
   ai.js
+  sync.js
   welcome.html
   welcome.js
   icon16.png
@@ -54,6 +55,7 @@ PY
 node test-nlp.js > /dev/null || { echo "test-nlp.js is failing" >&2; exit 1; }
 node test-classify.js > /dev/null || { echo "test-classify.js is failing" >&2; exit 1; }
 node test-clients.js > /dev/null || { echo "test-clients.js is failing" >&2; exit 1; }
+node test-sync.js > /dev/null || { echo "test-sync.js is failing" >&2; exit 1; }
 node test-store.js > /dev/null || { echo "test-store.js is failing" >&2; exit 1; }
 
 # The landing page runs the real parser by keeping a copy of these three

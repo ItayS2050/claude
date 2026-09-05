@@ -2,7 +2,7 @@
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
   setLane, setClient, removeClient, establishedClients, classify, parse,
-  nextOccurrence, BUCKETS, bucketOf,
+  nextOccurrence, deleteTasks, touch, BUCKETS, bucketOf,
 } from './store.js';
 import { detectClient, remember } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
@@ -33,7 +33,7 @@ if (new URLSearchParams(location.search).has('window')) document.body.classList.
 
 // --- boot ------------------------------------------------------------------
 (async function init() {
-  [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+  [tasks, settings, syncState] = await Promise.all([loadTasks(), loadSettings(), loadSyncState()]);
   if (!settings.voiceLang) settings.voiceLang = defaultVoiceLang();
   render();
   el.input.focus();
@@ -234,14 +234,15 @@ async function toggleDone(id) {
   snapshot();
 
   if (t.done) {
-    Object.assign(t, { done: false, doneAt: null, notified: t.due != null && t.due <= Date.now() });
+    Object.assign(t, { done: false, doneAt: null, updated: Date.now(),
+                       notified: t.due != null && t.due <= Date.now() });
   } else if (t.repeat && t.due) {
     // Past the occurrence just ticked off, even if it had not come round yet.
     const next = nextOccurrence(t.due, t.repeat, Math.max(Date.now(), t.due));
-    Object.assign(t, { due: next, notified: false });
+    Object.assign(t, { due: next, notified: false, updated: Date.now() });
     showToast(`Next: ${dueLabel(next, t.hasTime)}`);
   } else {
-    Object.assign(t, { done: true, doneAt: Date.now(), notified: true });
+    Object.assign(t, { done: true, doneAt: Date.now(), notified: true, updated: Date.now() });
     showToast('Completed');
   }
   await persist();
@@ -251,8 +252,11 @@ async function toggleDone(id) {
 async function removeTask(id) {
   const t = tasks.find((x) => x.id === id);
   snapshot();
-  tasks = tasks.filter((x) => x.id !== id);
-  await persist();
+  // deleteTasks writes the tombstone too — without it the other machine still
+  // has this task and hands it back on the next merge.
+  await deleteTasks([id]);
+  tasks = await loadTasks();
+  chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
   render();
   showToast(`Deleted “${truncate(t?.text || '', 28)}”`);
 }
@@ -260,7 +264,7 @@ async function removeTask(id) {
 async function patch(id, changes) {
   const t = tasks.find((x) => x.id === id);
   if (!t) return;
-  Object.assign(t, changes);
+  Object.assign(t, changes, { updated: Date.now() });
   await persist();
   render();
 }
@@ -294,11 +298,12 @@ el.undo.addEventListener('click', async () => {
 
 el.clearDone.addEventListener('click', async () => {
   snapshot();
-  const n = tasks.filter((t) => t.done).length;
-  tasks = tasks.filter((t) => !t.done);
-  await persist();
+  const doomed = tasks.filter((t) => t.done).map((t) => t.id);
+  await deleteTasks(doomed);
+  tasks = await loadTasks();
+  chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
   render();
-  showToast(`Cleared ${n} completed`);
+  showToast(`Cleared ${doomed.length} completed`);
 });
 
 // --- rendering -------------------------------------------------------------
@@ -621,9 +626,38 @@ function emptyState() {
 // list with no way out of it, and a learned client you cannot unlearn.
 
 let aiState = 'unavailable';
+let syncState = {};
+
+async function loadSyncState() {
+  const got = await chrome.storage.local.get('syncState');
+  return got.syncState || {};
+}
+
+// Chrome's own sync carries this, so it needs no account of ours — but it only
+// works if the browser itself is signed in, and saying so up front is cheaper
+// than a support email asking why nothing arrived.
+function syncBlurb() {
+  return settings.syncEnabled
+    ? 'Carried by Chrome to every computer you are signed into. Nothing passes through us.'
+    : 'Uses Chrome\'s own sync, so it needs no account of ours — but Chrome has to be signed in.';
+}
+
+function syncStatus() {
+  if (syncState.error) return `Last attempt failed: ${syncState.error}`;
+  if (syncState.dropped) {
+    return `${syncState.dropped} completed task${syncState.dropped === 1 ? '' : 's'} left behind — Chrome's sync is full`;
+  }
+  const when = Math.max(syncState.lastPush || 0, syncState.lastPull || 0);
+  if (!when) return 'Not synced yet';
+  const mins = Math.round((Date.now() - when) / 60000);
+  if (mins < 1) return 'Synced just now';
+  if (mins < 60) return `Synced ${mins} minute${mins === 1 ? '' : 's'} ago`;
+  return `Synced ${new Date(when).toLocaleString([], { hour: 'numeric', minute: '2-digit' })}`;
+}
 
 el.openSettings.addEventListener('click', async () => {
   aiState = await aiStatus();
+  syncState = await loadSyncState();
   renderSettings();
   el.sheet.classList.add('open');
 });
@@ -698,6 +732,19 @@ function renderSettings() {
         : '<div class="sub">None yet. Write “for acme” in a task and it appears here.</div>'}
     </div>
 
+    <h3>Across your computers</h3>
+    <div class="row">
+      <div><div class="label">Sync with your other Chrome</div>
+        <div class="sub">${escapeHtml(syncBlurb())}</div></div>
+      <button class="switch ${settings.syncEnabled ? 'on' : ''}" data-set="syncEnabled"><i></i></button>
+    </div>
+    ${settings.syncEnabled ? `
+    <div class="row">
+      <div><div class="label">Sync now</div>
+        <div class="sub">${escapeHtml(syncStatus())}</div></div>
+      <button class="btn" data-act-set="sync">Sync</button>
+    </div>` : ''}
+
     <h3>Your data</h3>
     <div class="row">
       <div><div class="label">Back up everything</div>
@@ -729,6 +776,16 @@ function renderSettings() {
       render();
     });
   });
+  const syncBtn = el.sheetBody.querySelector('[data-act-set="sync"]');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.textContent = 'Syncing…';
+      await chrome.runtime.sendMessage({ type: 'sync-now' }).catch(() => {});
+      [tasks, settings, syncState] = await Promise.all([loadTasks(), loadSettings(), loadSyncState()]);
+      renderSettings();
+      render();
+    });
+  }
   el.sheetBody.querySelector('[data-act-set="export"]').addEventListener('click', exportBackup);
   el.sheetBody.querySelector('[data-act-set="import"]').addEventListener('click', () => $('importFile').click());
   $('importFile').addEventListener('change', importBackup);

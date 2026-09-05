@@ -68,6 +68,10 @@ One notification at the start of the day with what is on it — overdue first, t
 
 Overdue in red, then Today, Tomorrow, This week, Later, and No date. The toolbar badge counts what's due. Click a title to rename, click the date to reschedule, and every deletion has an undo.
 
+**Your other computer, if you want it**
+
+Switch sync on and the list follows you to every Chrome you are signed into. It rides Chrome's own sync — there is no account to make and nothing passes through our servers, because we do not have any. Off unless you turn it on.
+
 **Everything stays on your computer**
 
 No account. No sign-up. No servers. No analytics. No ads. Your tasks live in local storage on your own machine and Tico has no backend to send them to. A squirrel does not tell anyone where it buried things. Export the lot to a file whenever you want — the import merges, so restoring an old backup never costs you what you've written since.

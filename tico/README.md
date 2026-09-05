@@ -99,6 +99,7 @@ is off unless you turn it on.
 node test-nlp.js      # the language parser, against a fixed clock
 node test-classify.js # the work/personal split, both languages
 node test-clients.js  # client detection, and the phrases that must NOT be one
+node test-sync.js     # the merge: edits, deletes, tombstones, quota, round trip
 node test-store.js    # the task model: completion, repeats, grouping, filing
 ./build.sh            # runs both, then writes dist/tico-<version>.zip
 python3 make-icons.py  # regenerates the PNGs

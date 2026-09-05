@@ -1,9 +1,12 @@
 // Fires the reminders, keeps the badge honest, and lets you send selected text
 // on any page straight into the list.
 import {
-  loadTasks, saveTasks, loadSettings, saveSettings, addTask, completeTask,
-  taskFromInput, dueCount, briefDue, briefContent, dateKey,
+  loadTasks, saveTasks, loadSettings, saveSettings, loadTombstones, saveTombstones,
+  addTask, completeTask, taskFromInput, dueCount, briefDue, briefContent, dateKey,
 } from './store.js';
+import {
+  mergeTasks, mergeTombstones, mergeSettings, planWrite, readRemote,
+} from './sync.js';
 
 const TICK = 'tico-tick';
 const NOTIF = 'tico:';
@@ -29,6 +32,8 @@ chrome.runtime.onStartup.addListener(async () => {
   ensureAlarm();
   buildMenu();
   await refreshBadge();
+  // The other machine may have moved on while this one was shut.
+  pull().catch(() => {});
 });
 
 function buildMenu() {
@@ -62,6 +67,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await fireDueReminders();
   await sendMorningBrief();
   await refreshBadge();
+  // A backstop: storage.onChanged covers the normal case, but events can be
+  // missed and a minute of staleness is not worth a bug report.
+  pull().catch(() => {});
 });
 
 // One notification at the start of the day listing what is on it. This is the
@@ -95,8 +103,102 @@ async function sendMorningBrief() {
 // Storage is the single source of truth, so the badge follows it — whether the
 // change came from the popup, the context menu, or a notification button.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.tasks) refreshBadge();
+  if (area !== 'local') return;
+  if (changes.tasks) refreshBadge();
+  if (changes.tasks || changes.settings || changes.tombstones) pushSoon();
 });
+
+// --- sync ------------------------------------------------------------------
+//
+// Two machines, one list. The merge itself lives in sync.js where it is
+// testable; what is here is the plumbing, and the plumbing's whole job is to
+// not loop. A pull writes to local storage, which fires the listener above,
+// which would push, which fires the sync listener, which would pull. The
+// `applying` flag is what breaks that circle.
+
+const PUSH_DEBOUNCE_MS = 4000;
+let applying = false;
+let pushTimer = null;
+let chunkCount = 0;
+
+async function syncOn() {
+  return (await loadSettings()).syncEnabled === true;
+}
+
+function pushSoon() {
+  if (applying) return;
+  clearTimeout(pushTimer);
+  // Coalesce a burst of edits into one write. chrome.storage.sync allows 120
+  // writes a minute and typing produces far more events than that.
+  pushTimer = setTimeout(() => { push().catch(() => {}); }, PUSH_DEBOUNCE_MS);
+}
+
+async function push() {
+  if (!(await syncOn()) || applying) return;
+  const [tasks, settings, tombs] = await Promise.all([
+    loadTasks(), loadSettings(), loadTombstones(),
+  ]);
+  const { payload, stale, dropped, chunkCount: written } = planWrite(tasks, settings, tombs, chunkCount);
+
+  applying = true;
+  try {
+    if (stale.length) await chrome.storage.sync.remove(stale);
+    await chrome.storage.sync.set(payload);
+    chunkCount = written;
+    await saveSyncState({ lastPush: Date.now(), dropped: dropped.length, error: null });
+  } catch (err) {
+    // Quota exceeded, or offline. Neither is fatal and neither should be
+    // silent — the settings panel reads this back.
+    await saveSyncState({ error: String(err && err.message || err) });
+  } finally {
+    applying = false;
+  }
+}
+
+async function pull() {
+  if (!(await syncOn()) || applying) return;
+  let raw;
+  try { raw = await chrome.storage.sync.get(null); } catch { return; }
+  const remote = readRemote(raw);
+  if (!remote) return;
+
+  const [localTasks, localSettings, localTombs] = await Promise.all([
+    loadTasks(), loadSettings(), loadTombstones(),
+  ]);
+
+  const tombs = mergeTombstones(localTombs, remote.tombstones);
+  const tasks = mergeTasks(localTasks, remote.tasks, tombs);
+  const settings = { ...localSettings, ...mergeSettings(localSettings, remote.settings) };
+
+  applying = true;
+  try {
+    await saveTombstones(tombs);
+    await saveTasks(tasks);
+    await chrome.storage.local.set({ settings });
+    chunkCount = raw['v1.meta']?.chunks || 0;
+    await saveSyncState({ lastPull: Date.now(), error: null });
+  } finally {
+    applying = false;
+  }
+  await refreshBadge();
+
+  // If the merge produced anything the other machine has not got — a local
+  // task it never saw, or a delete it does not know about — hand it back.
+  const changed = tasks.length !== remote.tasks.length ||
+                  Object.keys(tombs).length !== Object.keys(remote.tombstones || {}).length;
+  if (changed) pushSoon();
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && !applying) pull().catch(() => {});
+});
+
+// Sync state is kept apart from settings so writing it never looks like a
+// settings edit worth syncing.
+async function saveSyncState(patch) {
+  const got = await chrome.storage.local.get('syncState');
+  await chrome.storage.local.set({ syncState: { ...(got.syncState || {}), ...patch } });
+}
 
 async function fireDueReminders() {
   const now = Date.now();
@@ -217,6 +319,10 @@ async function refreshBadge() {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === 'refresh') {
     refreshBadge().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg?.type === 'sync-now') {
+    (async () => { await push(); await pull(); sendResponse({ ok: true }); })();
     return true;
   }
   return false;
