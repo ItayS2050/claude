@@ -1,7 +1,8 @@
 // Fires the reminders, keeps the badge honest, and lets you send selected text
 // on any page straight into the list.
 import {
-  loadTasks, saveTasks, loadSettings, addTask, completeTask, taskFromInput, dueCount,
+  loadTasks, saveTasks, loadSettings, saveSettings, addTask, completeTask,
+  taskFromInput, dueCount, briefDue, briefContent, dateKey,
 } from './store.js';
 
 const TICK = 'tico-tick';
@@ -59,8 +60,37 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== TICK) return;
   await fireDueReminders();
+  await sendMorningBrief();
   await refreshBadge();
 });
+
+// One notification at the start of the day listing what is on it. This is the
+// only thing Tico says unprompted, so it is deliberately quiet: it goes once a
+// day, only inside a window after the chosen hour, and only when there is
+// actually something to report.
+async function sendMorningBrief() {
+  const settings = await loadSettings();
+  const now = Date.now();
+  if (!briefDue(settings, now, settings.lastBrief)) return;
+
+  const tasks = await loadTasks();
+  const brief = briefContent(tasks, now);
+  // Mark the day done either way — a morning with nothing due should not leave
+  // the brief primed to fire the moment something is added at four in the
+  // afternoon.
+  await saveSettings({ ...settings, lastBrief: dateKey(now) });
+  if (!brief) return;
+
+  chrome.notifications.create(`${NOTIF}brief`, {
+    type: 'list',
+    iconUrl: chrome.runtime.getURL('icon128.png'),
+    title: `Today: ${brief.title}`,
+    message: `${brief.count} to get through`,
+    items: brief.rows,
+    priority: 1,
+    silent: !settings.sound,
+  });
+}
 
 // Storage is the single source of truth, so the badge follows it — whether the
 // change came from the popup, the context menu, or a notification button.

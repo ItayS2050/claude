@@ -142,6 +142,51 @@ check('removing a client clears it off its tasks',
   (await store.loadTasks()).filter((t) => t.client === 'stream').length, 0);
 check('and out of the registry', 'stream' in (await store.loadSettings()).clients, false);
 
+// --- the morning brief ---
+// Fixed clock: Thursday 3 September 2026. The window logic is the kind that is
+// quietly wrong at 11pm on a Sunday and goes unnoticed for a week.
+const at = (day, h, m = 0) => +new Date(2026, 8, day, h, m);
+const on = { briefHour: 8, briefDays: 'all' };
+
+check('fires at the hour',            store.briefDue(on, at(3, 8, 0), null), true);
+check('fires later that morning',     store.briefDue(on, at(3, 11, 30), null), true);
+check('not before the hour',          store.briefDue(on, at(3, 7, 59), null), false);
+check('catches up six hours late',    store.briefDue(on, at(3, 14, 0), null), true);
+check('but not at nine at night',     store.briefDue(on, at(3, 21, 0), null), false);
+check('only once a day',              store.briefDue(on, at(3, 9, 0), '2026-09-03'), false);
+check('and again the next day',       store.briefDue(on, at(4, 9, 0), '2026-09-03'), true);
+check('off means off',                store.briefDue({ ...on, briefHour: 0 }, at(3, 9), null), false);
+
+// Sept 4 2026 is a Friday, Sept 5 a Saturday, Sept 6 a Sunday.
+const sunThu = { ...on, briefDays: 'sun-thu' };
+check('sun-thu: quiet on Friday',     store.briefDue(sunThu, at(4, 9), null), false);
+check('sun-thu: quiet on Saturday',   store.briefDue(sunThu, at(5, 9), null), false);
+check('sun-thu: speaks on Sunday',    store.briefDue(sunThu, at(6, 9), null), true);
+const monFri = { ...on, briefDays: 'mon-fri' };
+check('mon-fri: speaks on Friday',    store.briefDue(monFri, at(4, 9), null), true);
+check('mon-fri: quiet on Sunday',     store.briefDue(monFri, at(6, 9), null), false);
+
+// The local date key must not roll over on UTC's schedule.
+check('date key is local',            store.dateKey(new Date(2026, 8, 3, 23, 30)), '2026-09-03');
+
+// --- what the brief says ---
+const noonToday = +new Date(2026, 8, 3, 12, 0);
+const mk2 = (text, due) => ({ text, due, done: false, tags: [], hasTime: true });
+const content = store.briefContent([
+  mk2('Send the invoice', noonToday - 3 * 3600000),   // overdue
+  mk2('Call mom', noonToday + 5 * 3600000),           // later today
+  mk2('Book flights', noonToday + 5 * 86400000),      // next week, not today's problem
+  { ...mk2('Old thing', noonToday - 86400000), done: true },
+], noonToday);
+check('counts today and overdue only', content.title, '1 today · 1 overdue');
+check('overdue is listed first',       content.rows[0].title, 'Send the invoice');
+check('and labelled as overdue',       content.rows[0].message, 'overdue');
+check('next week is left out',         content.rows.length, 2);
+
+check('nothing due says nothing',
+  store.briefContent([mk2('Next week', noonToday + 5 * 86400000)], noonToday), null);
+check('an empty list says nothing', store.briefContent([], noonToday), null);
+
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
 // --- a bare date keeps its words rather than saving an empty row ---

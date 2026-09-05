@@ -60,6 +60,10 @@ A notification at the due time with Done and Snooze on it. Repeating tasks roll 
 
 And because Chrome can't fire anything while it's closed, reopening after a weekend can mean several reminders are due at once. Tico shows one summary — "5 reminders while you were away", naming them — instead of firing five notifications at you, or worse, silently marking them as seen. Nothing is ever swallowed.
 
+**A brief every morning**
+
+One notification at the start of the day with what is on it — overdue first, then today. Once a day, never when there is nothing to say, and off in one click. Choose the hour, and whether your week runs Sunday to Thursday or Monday to Friday.
+
 **Organised without you filing anything**
 
 Overdue in red, then Today, Tomorrow, This week, Later, and No date. The toolbar badge counts what's due. Click a title to rename, click the date to reschedule, and every deletion has an undo.
@@ -166,6 +170,13 @@ through its own storage — not mockups. Regenerate them after any UI change:
     node make-store-assets.mjs
 
 ---
+
+## Updating a live listing
+
+The description above now covers the morning brief, which shipped after the
+first submission. Uploading a new package while one is still pending review
+generally replaces that submission and restarts the clock — so let the current
+version clear review before pushing an update.
 
 ## Before you submit
 

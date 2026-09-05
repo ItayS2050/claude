@@ -659,6 +659,26 @@ function renderSettings() {
       </select>
     </div>
 
+    <div class="row">
+      <div><div class="label">Morning brief</div>
+        <div class="sub">One notification a day with what is on it. Silent when there is nothing.</div></div>
+      <select data-set="briefHour">
+        <option value="0" ${!settings.briefHour ? 'selected' : ''}>Off</option>
+        ${[6, 7, 8, 9, 10, 11].map((h) => `
+          <option value="${h}" ${settings.briefHour === h ? 'selected' : ''}>${h}:00</option>`).join('')}
+      </select>
+    </div>
+    ${settings.briefHour ? `
+    <div class="row">
+      <div><div class="label">…on which days</div>
+        <div class="sub">Whichever week you actually work</div></div>
+      <select data-set="briefDays">
+        <option value="all" ${settings.briefDays === 'all' ? 'selected' : ''}>Every day</option>
+        <option value="sun-thu" ${settings.briefDays === 'sun-thu' ? 'selected' : ''}>Sun – Thu</option>
+        <option value="mon-fri" ${settings.briefDays === 'mon-fri' ? 'selected' : ''}>Mon – Fri</option>
+      </select>
+    </div>` : ''}
+
     <h3>Filing</h3>
     <div class="row">
       <div><div class="label">On-device AI assist</div>
@@ -694,7 +714,9 @@ function renderSettings() {
   el.sheetBody.querySelectorAll('[data-set]').forEach((node) => {
     const key = node.dataset.set;
     if (node.tagName === 'SELECT') {
-      node.addEventListener('change', () => applySetting(key, Number(node.value)));
+      const numeric = key !== 'briefDays';
+      node.addEventListener('change', () =>
+        applySetting(key, numeric ? Number(node.value) : node.value));
     } else if (!node.disabled) {
       node.addEventListener('click', () => applySetting(key, !settings[key]));
     }

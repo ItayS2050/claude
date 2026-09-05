@@ -13,6 +13,9 @@ export const DEFAULT_SETTINGS = {
   learned: {},          // words the user has re-filed, and where they put them
   clients: {},          // names seen in tasks, and how often
   aiAssist: false,      // use Chrome's on-device model, where there is one
+  briefHour: 8,         // the morning brief, 0 = off
+  briefDays: 'all',     // all | sun-thu | mon-fri
+  lastBrief: null,      // the day the last one went out, so it goes once
 };
 
 export function uid() {
@@ -142,6 +145,70 @@ export async function completeTask(id) {
   }
   await saveTasks(tasks);
   return tasks[i];
+}
+
+// --- the morning brief -----------------------------------------------------
+
+/** Local YYYY-MM-DD. Not toISOString, which is UTC and rolls over at the wrong
+ *  time for anyone east or west of Greenwich. */
+export function dateKey(d) {
+  const x = new Date(d);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
+}
+
+/**
+ * Should the brief go out right now? Pure, so the window logic can be tested
+ * against a fixed clock instead of by waiting until morning.
+ */
+export function briefDue(settings, now, lastBrief) {
+  const hour = settings.briefHour;
+  if (!hour) return false;                        // 0 or null means switched off
+
+  const d = new Date(now);
+  const day = d.getDay();                         // 0 Sun … 6 Sat
+  const days = settings.briefDays || 'all';
+  if (days === 'sun-thu' && (day === 5 || day === 6)) return false;
+  if (days === 'mon-fri' && (day === 0 || day === 6)) return false;
+
+  if (lastBrief === dateKey(d)) return false;     // one a day, no more
+
+  const start = new Date(d);
+  start.setHours(hour, 0, 0, 0);
+  if (+d < +start) return false;
+  // A "morning" brief at nine at night is not one. If the browser was shut all
+  // morning, catch it up to six hours late and then let it go.
+  return +d <= +start + 6 * 60 * 60 * 1000;
+}
+
+/** What the brief has to say, or null when it has nothing worth saying. */
+export function briefContent(tasks, now = Date.now()) {
+  const endOfToday = new Date(now); endOfToday.setHours(23, 59, 59, 999);
+  const open = tasks.filter((t) => !t.done && t.due != null);
+  const overdue = open.filter((t) => t.due < now);
+  const today = open.filter((t) => t.due >= now && t.due <= +endOfToday);
+
+  // Nothing due is not news. An extension that pings you to say it has nothing
+  // to say is one you turn off.
+  if (!overdue.length && !today.length) return null;
+
+  const parts = [];
+  if (today.length) parts.push(`${today.length} today`);
+  if (overdue.length) parts.push(`${overdue.length} overdue`);
+
+  const rows = [...overdue, ...today]
+    .sort((a, b) => a.due - b.due)
+    .slice(0, 5)
+    .map((t) => ({
+      title: t.text.slice(0, 42),
+      message: t.due < now
+        ? 'overdue'
+        : (t.hasTime
+            ? new Date(t.due).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+            : 'today'),
+    }));
+
+  return { title: parts.join(' · '), count: overdue.length + today.length, rows };
 }
 
 // --- grouping --------------------------------------------------------------
