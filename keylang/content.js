@@ -3451,6 +3451,26 @@ document.addEventListener('keydown', e => {
   // 2. Scan the FULL text of the currently focused field
   if (editorEl) {
     if (editorEl._kldVer !== KIKO_VERSION) attachTo(editorEl);
+    // Someone whose trial has run out and who reaches for the shortcut is
+    // asking the one question this extension exists to answer. analyzeText
+    // returns null for them before it looks at anything, and the branch below
+    // reads that null as "nothing wrong" and says so — "✓ No layout issues
+    // found" on a field full of wrong-layout text. That is not a paywall, it
+    // is a lie, and it is told at the exact moment the person is trying to use
+    // the thing they might pay for.
+    //
+    // Unlike the automatic notice, this one repeats: they asked.
+    if (!entitled) {
+      showTrialToast({
+        title:  t('trialEndedTitle', null, 'Your free trial has ended'),
+        body:   t('trialEndedBody', null,
+                  'Kiko has stopped correcting layout mistakes. Your learned words are '
+                  + 'safe — subscribing switches detection straight back on.'),
+        cta:    t('trialEndedCta', null, 'Keep Kiko'),
+        accent: '#f87171',
+      });
+      return;
+    }
     const det = analyzeFullField(editorEl);
     if (det) {
       lastDetection = det;

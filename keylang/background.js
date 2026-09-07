@@ -233,7 +233,12 @@ function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStar
   }
   const start    = trialStartedAt(firstInstall, paywallStart, now);
   const total    = trialLengthFor(firstInstall);
-  const daysLeft = total - Math.floor((now - start) / DAY_MS);
+  // Clamped to the trial length. A machine whose clock is behind the install
+  // date — a fresh laptop, a dual-boot, a manual change — produced a start in
+  // the future and a countdown longer than the trial: "87 days left of your
+  // free trial" on a 30-day trial. Whatever the clock says, nobody was ever
+  // promised more than `total`.
+  const daysLeft = Math.min(total, total - Math.floor((now - start) / DAY_MS));
   return {
     entitled: daysLeft > 0,
     state: daysLeft > 0 ? 'trial' : 'expired',

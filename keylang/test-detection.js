@@ -1718,5 +1718,29 @@ console.log('Kiko keeps working in the seconds after a fix');
   else { fail++; console.log('  FAIL  a short token beside a real word is not a run'); }
 }
 
+
+// ── The trial countdown is a promise, not a subtraction
+//
+// A machine whose clock sits behind the install date — a fresh laptop, a
+// dual-boot, someone changing the time — produced a start in the future and a
+// countdown longer than the trial itself: "87 days left of your free trial" on
+// a trial that is 30 days long. Nobody was ever promised more than the trial.
+{
+  console.log('The trial countdown never exceeds the trial');
+
+  const DAY = 86400000;
+  const now = Date.parse('2026-09-12T10:00:00Z');
+  const install = { at: now - 3 * DAY, version: '4.9.13' };
+  for (const skew of [0, 10, 60, 400]) {
+    const e = computeEntitlement(install, null, now - skew * DAY, { at: now - 3 * DAY });
+    if (e.daysLeft <= 30) { pass++; }
+    else { fail++; console.log(`  FAIL  clock ${skew} days back gives ${e.daysLeft} days left`); }
+  }
+  // And the ordinary case still counts down.
+  const normal = computeEntitlement(install, null, now, { at: now - 3 * DAY });
+  if (normal.daysLeft === 27) { pass++; }
+  else { fail++; console.log(`  FAIL  three days in should leave 27, got ${normal.daysLeft}`); }
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
