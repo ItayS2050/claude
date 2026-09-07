@@ -699,10 +699,28 @@ function isEnglishName(word) {
   return word.length >= 4 && EN_NAMES.has(word);
 }
 
-// A word worth firing on: something everybody writes, or something everybody
-// looks up.
+// A word worth firing on *by itself*: something everybody writes, or something
+// everybody looks up. Deliberately tiny, because a single Hebrew word is
+// genuinely ambiguous — בוא converts to "cut", which is ordinary English, and
+// on that evidence alone Kiko would offer to destroy the word.
 function englishEnough(word) {
   return COMMON_EN_WORDS.has(word) || isEnglishName(word);
+}
+
+// A word worth counting toward a run. A run has already cleared a score of
+// three, so one accidental hit cannot carry it, and the whole dictionary is
+// safe here where it is not above.
+//
+// Reported: "add a function" typed on a Hebrew keyboard — שגג ש כומבאןמם —
+// stayed silent, three times in a morning. So did "write a summary" and
+// "create a new project". None of add, write, summary, create, project is in
+// the 150-word common list, and the list was the only thing that could set
+// hasCommonWord. Case 2 was given a real dictionary in 4.9.16 and this side
+// was left asking the short list.
+function realEnglishWord(word) {
+  return englishEnough(word) ||
+         (word.length >= 4 && EN_LEXICON.has(word)) ||
+         (word.length >= 5 && word.endsWith('s') && EN_LEXICON.has(word.slice(0, -1)));
 }
 
 // An English dictionary, because guessing was not working.
@@ -1845,7 +1863,7 @@ function analyzeText(rawText, scanAll = false) {
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
             engScore = convWords.reduce((acc, w) => {
-              if (englishEnough(w)) { hasCommonWord = true; return acc + 2; }
+              if (realEnglishWord(w)) { hasCommonWord = true; return acc + 2; }
               if (w.length < 3 || !/[aeiou]/.test(w)) return acc;
               if (/[^aeiou]{4,}/.test(w)) return acc;
               const r = (w.match(/[aeiou]/g) || []).length / w.length;
@@ -1920,7 +1938,7 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsG1 = convertedG1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonG1 = convWordsG1.some(w => englishEnough(w));
+            const hasCommonG1 = convWordsG1.some(w => realEnglishWord(w));
             const avgScoreG1 = convWordsG1.length
               ? convWordsG1.reduce((a, w) => a + englishScore(w), 0) / convWordsG1.length
               : 0;
@@ -1976,7 +1994,7 @@ function analyzeText(rawText, scanAll = false) {
           const convWordsK1 = convertedK1.split(/\s+/)
             .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
             .filter(w => w.length >= 2);
-          const hasCommonK1 = convWordsK1.some(w => englishEnough(w));
+          const hasCommonK1 = convWordsK1.some(w => realEnglishWord(w));
           const avgScoreK1 = convWordsK1.length
             ? convWordsK1.reduce((a, w) => a + englishScore(w), 0) / convWordsK1.length
             : 0;
@@ -2035,7 +2053,7 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsU1 = convertedU1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonU1 = convWordsU1.some(w => englishEnough(w));
+            const hasCommonU1 = convWordsU1.some(w => realEnglishWord(w));
             const avgScoreU1 = convWordsU1.length
               ? convWordsU1.reduce((a, w) => a + englishScore(w), 0) / convWordsU1.length
               : 0;
@@ -2092,7 +2110,7 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsR1 = convertedR1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonR1 = convWordsR1.some(w => englishEnough(w));
+            const hasCommonR1 = convWordsR1.some(w => realEnglishWord(w));
             const avgScoreR1 = convWordsR1.length
               ? convWordsR1.reduce((a, w) => a + englishScore(w), 0) / convWordsR1.length
               : 0;
@@ -2148,7 +2166,7 @@ function analyzeText(rawText, scanAll = false) {
             const convWordsA1 = convertedA1.split(/\s+/)
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
-            const hasCommonA1 = convWordsA1.some(w => englishEnough(w));
+            const hasCommonA1 = convWordsA1.some(w => realEnglishWord(w));
             const avgScoreA1 = convWordsA1.length
               ? convWordsA1.reduce((a, w) => a + englishScore(w), 0) / convWordsA1.length
               : 0;

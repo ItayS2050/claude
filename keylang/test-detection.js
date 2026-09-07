@@ -81,6 +81,7 @@ function loadContentScript() {
     '         setLangs: o => { enabledLangs = o; },' +
     '         isCommonHebrewWord, isEnglishName, EN_NAMES, englishScore,' +
     '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew, isRealRun,' +
+    '         englishEnough, realEnglishWord, EN_LEXICON, COMMON_EN_WORDS, looksLikeRealHebrew,' +
     '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -1740,6 +1741,79 @@ console.log('Kiko keeps working in the seconds after a fix');
   const normal = computeEntitlement(install, null, now, { at: now - 3 * DAY });
   if (normal.daysLeft === 27) { pass++; }
   else { fail++; console.log(`  FAIL  three days in should leave 27, got ${normal.daysLeft}`); }
+}
+
+
+function okk(cond, label) {
+  if (cond) { pass++; return; }
+  fail++;
+  console.log(`  FAIL  ${label}`);
+}
+
+// ── Short phrases, which is what people actually type
+//
+// Reported three times in one morning: "add a function" typed on a Hebrew
+// keyboard — שגג ש כומבאןמם — and Kiko said nothing. So did "write a summary"
+// and "create a new project".
+//
+// Case 2 was given a real English dictionary in 4.9.16. This side, Hebrew
+// characters that mean English, was left asking a 150-word common list, and
+// none of add, write, summary, create or project is on it. A long sentence
+// nearly always contains one of the 150; a four-word instruction typed into a
+// composer often does not, and a composer is where this happens.
+//
+// The single-word trigger keeps the short list on purpose — בוא converts to
+// "cut", and one word is not evidence. The dictionary only counts toward a run
+// that has already cleared a score of three.
+{
+  console.log('Short English phrases are caught, not just sentences');
+
+  kiko.forgetLearned();
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  const PHRASES = [
+    'add a function', 'write a summary', 'create a new project', 'order a taxi',
+    'find a restaurant', 'start a timer', 'write a test', 'add a column',
+    'open the file', 'draft an email', 'explain the error', 'run the linter',
+    'summarise the article', 'export as pdf', 'plan a trip', 'split the bill',
+  ];
+  let caught = 0;
+  const missed = [];
+  for (const phrase of PHRASES) {
+    kiko.setLangs({ ...ALL });
+    if (kiko.analyzeText(kiko.toHebrewKeys(phrase))) caught++;
+    else missed.push(phrase);
+  }
+  if (caught === PHRASES.length) { pass++; }
+  else { fail++; console.log(`  FAIL  ${caught}/${PHRASES.length} short phrases caught; missed ${missed.join(', ')}`); }
+
+  // The reported one, with its span.
+  check('the phrase from the report',
+        kiko.toHebrewKeys('add a function'), 'hebrew_as_english',
+        { converted: 'add a function' });
+
+  // The dictionary counts toward a run and never carries a lone word.
+  okk(!kiko.englishEnough('summary'), 'a dictionary word does not fire on its own');
+  okk(kiko.realEnglishWord('summary'), 'but it counts toward a run');
+  // Plurals the list does not hold but whose stem it does. Without the stemming
+  // step these are invisible, and "set two reminders" is an ordinary thing to type.
+  for (const plural of ['reminders', 'invoices', 'timers', 'migrations']) {
+    okk(kiko.realEnglishWord(plural), `the plural "${plural}" counts toward a run`);
+  }
+  okk(!kiko.realEnglishWord('add'), 'three letters is still too short for the dictionary');
+  okk(kiko.englishEnough('the'), 'the common list still works for short words');
+
+  // And real Hebrew is still left alone — this widened what counts as English
+  // inside a run, which is exactly the direction that costs false positives.
+  const CORPUS = require('./corpus.js');
+  let spoke = 0;
+  for (const sentence of CORPUS.silent.he) {
+    kiko.setLangs({ ...ALL });
+    if (kiko.analyzeText(sentence)) spoke++;
+  }
+  if (spoke === 0) { pass++; }
+  else { fail++; console.log(`  FAIL  ${spoke} real Hebrew sentences were claimed as English`); }
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
