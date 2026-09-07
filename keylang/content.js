@@ -525,6 +525,78 @@ async function saveFeedback(words, isWrongLayout, lang = 'he') {
 
 loadLearned();
 
+// ── One-click activation, on our own site only ────────────────
+//
+// The path a customer had to walk was: pay, wait for the email, find the
+// email, copy the key, open Chrome, click the icon, find the box, paste,
+// activate. Nine steps with a mail round trip in the middle of a five-dollar
+// purchase, and the worst outcome in software sits inside it — somebody who
+// pays and never finishes is charged, still broken, and rightly furious.
+//
+// Lemon Squeezy will put the key straight into the redirect URL, so the page
+// they land on after paying already knows it. This reads it there and
+// activates. The customer does nothing.
+//
+// Three limits, and none of them are optional. Only our own hosts, so no other
+// page can spend a key's activation slot on someone's browser. Only https, so
+// the key is not read off the wire. And the page drops it from the address bar
+// the moment it has it, because a licence key in a URL is a licence key in
+// browser history — and in anything that reads a URL later.
+const ACTIVATION_HOSTS = new Set(['get-kiko.com', 'www.get-kiko.com']);
+
+// Deliberately narrow. Whatever this matches is sent to the licence provider,
+// so it accepts the shape of a key and nothing else.
+const LICENCE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9-]{7,99}$/;
+
+function autoActivateFromPage() {
+  try {
+    if (window.top !== window) return;
+    if (location.protocol !== 'https:') return;
+    if (!ACTIVATION_HOSTS.has(location.hostname)) return;
+
+    const tell = payload => {
+      try { window.postMessage({ source: 'kiko-extension', ...payload }, location.origin); }
+      catch {}
+    };
+
+    // The page hands the key over rather than this reading it out of the URL,
+    // and that is not a style choice. The page takes the key out of the address
+    // bar the instant it has it — a licence key left in a URL is one in browser
+    // history — and a content script runs at document_idle, which is after that
+    // has already happened. Reading location.search here found nothing at all.
+    //
+    // So the key travels one hop, in memory, between two things on the same
+    // origin, and the address bar is clean the whole time.
+    window.addEventListener('message', e => {
+      if (e.source !== window || e.origin !== location.origin) return;
+      const d = e.data;
+      if (!d || d.source !== 'kiko-page') return;
+
+      // Whoever loaded second asks; whoever loaded first answers. There is no
+      // ordering guarantee between a content script and a page's own scripts,
+      // and getting this wrong leaves a paying customer watching a spinner.
+      if (d.type === 'hello') { tell({ type: 'here' }); return; }
+      if (d.type !== 'activate') return;
+
+      const key = String(d.key || '');
+      if (!LICENCE_KEY_RE.test(key)) {
+        tell({ type: 'activated', ok: false,
+               error: 'That does not look like a licence key.' });
+        return;
+      }
+      chrome.runtime.sendMessage({ type: 'kiko-activate-licence', key }, res => {
+        // Read lastError so Chrome does not log an unchecked one; the page is
+        // told either way and falls back to the manual route.
+        void chrome.runtime.lastError;
+        tell({ type: 'activated', ok: !!(res && res.ok), error: (res && res.error) || null });
+      });
+    });
+
+    tell({ type: 'here' });
+  } catch {}
+}
+autoActivateFromPage();
+
 // One trial check per page, once the page has settled. Top frame only, and
 // only if this tab is actually in front — otherwise a dozen background tabs
 // each raise the same notice the moment the trial ticks over.

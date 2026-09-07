@@ -50,6 +50,30 @@
       text-decoration:none;box-shadow:0 8px 22px rgba(255,79,90,.32)}
     .btn:hover{background:var(--brand-dark)}
     footer{margin-top:44px;font-size:15px;color:var(--ink-3)}
+    /* States. Exactly one is visible at a time; the page starts on the one
+       that needs no extension and no network, so a broken script degrades to
+       the instructions rather than to a blank page. */
+    [hidden]{display:none!important}
+    .status{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);
+      border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:28px}
+    .status b{display:block;font-size:18px;letter-spacing:-.01em}
+    .status p{color:var(--ink-2);font-size:15.5px;margin-top:2px}
+    .status.ok{border-color:#a7e8d1;background:#f2fcf8}
+    .status.ok .dot{background:var(--ok)}
+    .status.warn{border-color:#ffd8b0;background:#fff9f2}
+    .status.warn .dot{background:#f59f00}
+    .dot{flex:0 0 12px;width:12px;height:12px;border-radius:50%;background:var(--ink-3);margin-top:7px}
+    .spin{flex:0 0 20px;width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);
+      border-top-color:var(--brand);animation:sp .7s linear infinite}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
+    .keybox{display:flex;gap:10px;align-items:stretch;margin:0 0 26px}
+    .keybox input{flex:1;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:15px;
+      padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft);
+      color:var(--ink);min-width:0}
+    .keybox button{font:inherit;font-weight:700;font-size:15px;padding:13px 20px;border:0;
+      border-radius:12px;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}
+    .keybox button:hover{background:#2a2838}
     footer a{color:var(--brand);font-weight:600;text-decoration:none}
   </style>
 </head>
@@ -57,40 +81,71 @@
 <div class="wrap">
   <div class="logo"><img src="icon128.png" alt="" width="30" height="30"> Kiko</div>
 
-  <h1>Thanks — let's switch it on.</h1>
-  <p class="lede">Takes about twenty seconds. Your licence key is in the confirmation
+  <!-- Activating: only ever shown when the extension has answered, so a
+       browser without Kiko never sees a spinner that cannot finish. -->
+  <div class="status" id="s-working" hidden>
+    <div class="spin"></div>
+    <div><b>Switching Kiko back on…</b><p>One moment.</p></div>
+  </div>
+
+  <div class="status ok" id="s-ok" hidden>
+    <div class="dot"></div>
+    <div><b>Done — Kiko is on.</b>
+      <p>Nothing to restart, and your learned words are exactly where you left them.
+        Go back to whatever you were writing.</p></div>
+  </div>
+
+  <div class="status warn" id="s-failed" hidden>
+    <div class="dot"></div>
+    <div><b>That didn't go through.</b><p id="s-failed-why">Try the key by hand below.</p></div>
+  </div>
+
+  <h1 id="head">Thanks — let's switch it on.</h1>
+  <p class="lede" id="lede">Takes about twenty seconds. Your licence key is in the confirmation
     you just saw, and in your email.</p>
 
-  <ol>
-    <li>
-      <b>Install Kiko, if you haven't yet</b>
-      <p>Skip this if it's already in your toolbar.
-        <a href="#" data-webstore style="color:var(--brand);font-weight:600">Get it from the Chrome Web Store →</a></p>
-    </li>
-    <li>
-      <b>Open the Kiko popup</b>
-      <p>Click the Kiko icon in your Chrome toolbar. Don't see it? Click the puzzle-piece
-        icon and pin Kiko.</p>
-    </li>
-    <li>
-      <b>Paste your key</b>
-      <p>Drop it into the box marked <code>Already paid? Paste licence key</code> and
-        press <b>Activate</b>.</p>
-    </li>
-  </ol>
-
-  <div class="note">
-    <b>That's it.</b> The banner turns green and every language stays unlocked. Nothing to
-    restart, no account to create, and your learned words are exactly where you left them.
+  <!-- The key, when we have it. Shown whenever the automatic route did not
+       finish, so nobody is ever sent back to their inbox to find it. -->
+  <div id="keywrap" hidden>
+    <p class="lede" style="font-size:16px;margin-bottom:12px">Your licence key:</p>
+    <div class="keybox">
+      <input id="keyfield" readonly aria-label="Your licence key">
+      <button id="copy" type="button">Copy</button>
+    </div>
   </div>
 
-  <div class="note">
-    <b>Using more than one computer?</b> One licence covers three browsers — paste the same
-    key on each. Reinstalling doesn't cost you a slot. If you genuinely need more than three,
-    email us and we'll sort it.
+  <div id="manual">
+    <ol>
+      <li>
+        <b>Install Kiko, if you haven't yet</b>
+        <p>Skip this if it's already in your toolbar.
+          <a href="#" data-webstore style="color:var(--brand);font-weight:600">Get it from the Chrome Web Store →</a></p>
+      </li>
+      <li>
+        <b>Open the Kiko popup</b>
+        <p>Click the Kiko icon in your Chrome toolbar. Don't see it? Click the puzzle-piece
+          icon and pin Kiko.</p>
+      </li>
+      <li>
+        <b>Paste your key</b>
+        <p>Drop it into the box marked <code>Already paid? Paste licence key</code> and
+          press <b>Activate</b>.</p>
+      </li>
+    </ol>
+
+    <div class="note">
+      <b>That's it.</b> The banner turns green and every language stays unlocked. Nothing to
+      restart, no account to create, and your learned words are exactly where you left them.
+    </div>
+
+    <a class="btn" href="#" data-webstore>Open the Chrome Web Store</a>
   </div>
 
-  <a class="btn" href="#" data-webstore>Open the Chrome Web Store</a>
+  <div class="note" style="margin-top:22px">
+    <b>Using more than one computer?</b> One licence covers three browsers — open this page
+    in each, or paste the same key. Reinstalling doesn't cost you a slot. If you genuinely
+    need more than three, email us and we'll sort it.
+  </div>
 
   <footer>
     Something not working? <a href="mailto:hello@get-kiko.com">hello@get-kiko.com</a> —
@@ -100,9 +155,89 @@
 </div>
 
 <script>
-  // Same constant as the landing page — fill in once the store ID is to hand.
   const WEBSTORE_URL = 'https://chromewebstore.google.com/detail/alibejcaklfjcbjmncgbhpdichpblnkl';
   document.querySelectorAll('[data-webstore]').forEach(a => { a.href = WEBSTORE_URL; });
+
+  // The key arrives in the URL from the payment provider's redirect. Read it
+  // once and take it straight out of the address bar: a licence key left in a
+  // URL ends up in browser history, in a screenshot someone shares, and in
+  // whatever reads a referrer next. Nothing else on this page runs first.
+  const key = new URLSearchParams(location.search).get('key');
+  if (key) history.replaceState(null, '', location.pathname);
+
+  const el   = id => document.getElementById(id);
+  const show = id => { for (const s of ['s-working','s-ok','s-failed']) el(s).hidden = s !== id; };
+
+  // Someone who arrives without a key — from the footer, from an old email —
+  // gets the instructions immediately and never sees a spinner. Someone who
+  // arrives with one has almost certainly just paid and has Kiko installed,
+  // so the spinner is the honest first frame for them.
+  let settled = false;
+  if (key) {
+    el('keyfield').value = key;
+    el('manual').hidden = true;
+    show('s-working');
+  }
+
+  function manualRoute(why) {
+    if (settled) return;
+    settled = true;
+    if (key) {
+      el('keywrap').hidden = false;
+      el('head').textContent = 'Almost there — one paste.';
+      el('lede').textContent = 'Copy the key below and drop it into Kiko. '
+        + 'It is also in the email we just sent you.';
+    }
+    if (why) { el('s-failed-why').textContent = why; show('s-failed'); }
+    else     { show(null); }
+    el('manual').hidden = false;
+  }
+
+  // Listen before announcing, so a reply cannot arrive before we are ready.
+  let present = false, handed = false;
+  window.addEventListener('message', e => {
+    if (e.source !== window || e.origin !== location.origin) return;
+    const d = e.data;
+    if (!d || d.source !== 'kiko-extension') return;
+    if (d.type === 'here') {
+      present = true;
+      // Kiko is in this browser. Hand the key over — once — and let it work.
+      if (key && !handed) {
+        handed = true;
+        window.postMessage({ source: 'kiko-page', type: 'activate', key }, location.origin);
+      }
+      return;
+    }
+    if (d.type !== 'activated' || settled) return;
+    settled = true;
+    if (d.ok) {
+      show('s-ok');
+      el('head').hidden = true;
+      el('lede').hidden = true;
+      el('keywrap').hidden = true;
+      el('manual').hidden = true;
+    } else {
+      settled = false;
+      manualRoute(d.error || 'We could not activate that key automatically.');
+    }
+  });
+  window.postMessage({ source: 'kiko-page', type: 'hello' }, location.origin);
+
+  if (key) {
+    // Nothing announced itself: Kiko is not in this browser, or it is a build
+    // from before this page existed. No reason to keep spinning at them.
+    setTimeout(() => { if (!present) manualRoute(''); }, 1200);
+    // It answered but the provider did not. Same destination, more patience.
+    setTimeout(() => manualRoute(''), 8000);
+  }
+
+  el('copy').addEventListener('click', async () => {
+    const b = el('copy');
+    try { await navigator.clipboard.writeText(el('keyfield').value); }
+    catch { el('keyfield').select(); document.execCommand('copy'); }
+    b.textContent = 'Copied';
+    setTimeout(() => { b.textContent = 'Copy'; }, 1600);
+  });
 </script>
 </body>
 </html>
