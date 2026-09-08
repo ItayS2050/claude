@@ -1,5 +1,13 @@
 # Chrome Web Store Listing — Tico
 
+**Item ID:** `klehpnnnioiifmfhffnagjdkmcmjdiii`
+**Public URL once approved:** https://chromewebstore.google.com/detail/klehpnnnioiifmfhffnagjdkmcmjdiii
+
+While an item is **Pending review** the console will not accept a new package.
+It refuses with "There was a problem uploading your file", which names neither
+the cause nor the fix. Wait for the status to change; there is nothing wrong
+with the zip.
+
 Everything the submission form asks for, in the order it asks. Paste each block
 into the matching field. Assets are in `store/`, regenerated with
 `node make-store-assets.mjs`.

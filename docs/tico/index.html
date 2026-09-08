@@ -522,11 +522,14 @@
   });
   render();
 
-  // Until the listing is live there is no store URL to send anyone to, and a
-  // button that 404s is worse than one that says "not yet". Replace the id
-  // below after publishing and every button on the page starts working.
-  const EXTENSION_ID = 'REPLACE_WITH_EXTENSION_ID';
-  const live = !EXTENSION_ID.startsWith('REPLACE');
+  // The listing exists and this is its real id, but the public URL 404s until
+  // review clears. So the id is wired and the switch below is the whole
+  // remaining step: flip LIVE to true the moment the dashboard says Published,
+  // and all three buttons start working. A button that 404s is worse than one
+  // that admits it is not ready.
+  const EXTENSION_ID = 'klehpnnnioiifmfhffnagjdkmcmjdiii';
+  const LIVE = false;
+  const live = LIVE;
   const url = `https://chromewebstore.google.com/detail/${EXTENSION_ID}`;
   for (const id of ['ctaTop', 'ctaHero', 'ctaFoot']) {
     const el = document.getElementById(id);
