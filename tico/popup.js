@@ -2,7 +2,7 @@
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
   setLane, setClient, removeClient, establishedClients, classify, parse,
-  nextOccurrence, deleteTasks, touch, BUCKETS, bucketOf,
+  nextOccurrence, deleteTasks, setTags, touch, BUCKETS, bucketOf,
 } from './store.js';
 import { detectClient, remember } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
@@ -25,6 +25,7 @@ let filter = 'all';       // all | today | done | tag:<name>
 let query = '';
 let editingId = null;     // task whose title is being edited
 let schedId = null;       // task whose scheduling row is open
+let fileId = null;        // task whose filing row is open
 let flashId = null;       // freshly added task, for the highlight
 let undoSnapshot = null;
 let undoTimer = null;
@@ -42,6 +43,13 @@ if (new URLSearchParams(location.search).has('window')) document.body.classList.
 function defaultVoiceLang() {
   const ui = (chrome.i18n?.getUILanguage?.() || navigator.language || 'en-US');
   return ui.startsWith('he') ? 'he-IL' : (ui.startsWith('ru') ? 'ru-RU' : 'en-US');
+}
+
+// Filing changes both the task and the learned client list, so both come back.
+async function reloadAll() {
+  [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+  chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
+  render();
 }
 
 async function persist() {
@@ -421,6 +429,15 @@ function renderList() {
   }
   el.list.innerHTML = html;
   wireList();
+  revealOpenRow();
+}
+
+// Opening a row on the last task in the list puts its contents below the fold,
+// where they look like nothing happened.
+function revealOpenRow() {
+  if (!fileId && !schedId) return;
+  const row = el.list.querySelector('.filing, .sched');
+  row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function compareTasks(a, b) {
@@ -464,6 +481,9 @@ function taskHtml(t) {
         <div class="meta">${meta.join('')}</div>
       </div>
       <div class="actions">
+        <button class="act" data-act="file" data-id="${t.id}" title="File it — client and tags">
+          <svg viewBox="0 0 24 24"><path d="M10.6 3a2 2 0 0 1 1.4.6l8.4 8.4a2 2 0 0 1 0 2.8l-5.6 5.6a2 2 0 0 1-2.8 0L3.6 12A2 2 0 0 1 3 10.6V5a2 2 0 0 1 2-2h5.6ZM7.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>
+        </button>
         <button class="act flag ${t.priority ? 'on' : ''}" data-act="prio" data-id="${t.id}" title="Important">
           <svg viewBox="0 0 24 24"><path d="M6 3a1 1 0 0 1 1-1h11a1 1 0 0 1 .8 1.6L15.25 8l3.55 4.4A1 1 0 0 1 18 14H8v7a1 1 0 1 1-2 0V3Z"/></svg>
         </button>
@@ -472,7 +492,40 @@ function taskHtml(t) {
         </button>
       </div>
     </div>
-    ${schedId === t.id ? schedHtml(t) : ''}`;
+    ${schedId === t.id ? schedHtml(t) : ''}
+    ${fileId === t.id ? fileHtml(t) : ''}`;
+}
+
+/**
+ * Filing a task by hand. The parser is a guess and typing fast makes it a worse
+ * one, so every field it fills in has to be reachable afterwards in a click:
+ * this is the client and the tags, the lane is the dot, the date is the chip.
+ */
+function fileHtml(t) {
+  const known = establishedClients(settings.clients || {}).map((c) => c.name);
+  // Whatever this task already has belongs in the list even if it is a one-off
+  // that has not been seen twice yet.
+  if (t.client && !known.some((n) => n.toLowerCase() === t.client.toLowerCase())) known.unshift(t.client);
+  const allTags = [...new Set(tasks.flatMap((x) => x.tags))].filter((tag) => !t.tags.includes(tag));
+
+  return `<div class="filing" data-id="${t.id}">
+    <div class="lbl">File under</div>
+    <div class="opts">
+      <button class="opt ${!t.client ? 'on' : ''}" data-act="pick-client" data-id="${t.id}" data-client="">Nothing</button>
+      ${known.slice(0, 8).map((name) => `
+        <button class="opt ${(t.client || '').toLowerCase() === name.toLowerCase() ? 'on' : ''}"
+                data-act="pick-client" data-id="${t.id}" data-client="${escapeHtml(name)}">◆ ${escapeHtml(name)}</button>`).join('')}
+      <input data-act="new-client" data-id="${t.id}" placeholder="+ new" maxlength="24">
+    </div>
+    <div class="lbl">Tags</div>
+    <div class="opts">
+      ${t.tags.map((tag) => `
+        <button class="opt on" data-act="drop-tag" data-id="${t.id}" data-tag="${escapeHtml(tag)}" title="Remove">#${escapeHtml(tag)} ×</button>`).join('')}
+      ${allTags.slice(0, 6).map((tag) => `
+        <button class="opt" data-act="add-tag" data-id="${t.id}" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join('')}
+      <input data-act="new-tag" data-id="${t.id}" placeholder="+ tag" maxlength="24">
+    </div>
+  </div>`;
 }
 
 // The dot has to explain itself: a guess you cannot see the reason for is a
@@ -512,8 +565,7 @@ function wireList() {
     });
     if (act === 'client-clear') node.addEventListener('click', async () => {
       await setClient(id, null);
-      [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
-      render();
+      await reloadAll();
     });
     if (act === 'tag') node.addEventListener('click', () => {
       filter = `tag:${node.dataset.tag}`;
@@ -524,13 +576,53 @@ function wireList() {
       const order = ['work', 'personal', null];
       const next = order[(order.indexOf(t.lane) + 1) % order.length];
       await setLane(id, next);
-      [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
-      render();
+      await reloadAll();
     });
     if (act === 'sched') node.addEventListener('click', () => {
       schedId = schedId === id ? null : id;
+      fileId = null;
       renderList();
     });
+    if (act === 'file') node.addEventListener('click', () => {
+      fileId = fileId === id ? null : id;
+      schedId = null;
+      renderList();
+    });
+
+    if (act === 'pick-client') node.addEventListener('click', async () => {
+      await setClient(id, node.dataset.client || null);
+      await reloadAll();
+    });
+    if (act === 'new-client') {
+      node.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        const name = node.value.trim();
+        if (!name) return;
+        await setClient(id, name);
+        await reloadAll();
+      });
+    }
+
+    if (act === 'add-tag') node.addEventListener('click', async () => {
+      const t = tasks.find((x) => x.id === id);
+      await setTags(id, [...t.tags, node.dataset.tag]);
+      await reloadAll();
+    });
+    if (act === 'drop-tag') node.addEventListener('click', async () => {
+      const t = tasks.find((x) => x.id === id);
+      await setTags(id, t.tags.filter((x) => x !== node.dataset.tag));
+      await reloadAll();
+    });
+    if (act === 'new-tag') {
+      node.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        const value = node.value.trim();
+        if (!value) return;
+        const t = tasks.find((x) => x.id === id);
+        await setTags(id, [...t.tags, value]);
+        await reloadAll();
+      });
+    }
     if (act === 'edit') node.addEventListener('click', () => { editingId = id; renderList(); });
 
     if (act === 'edit-input') {

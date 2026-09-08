@@ -187,6 +187,24 @@ check('nothing due says nothing',
   store.briefContent([mk2('Next week', noonToday + 5 * 86400000)], noonToday), null);
 check('an empty list says nothing', store.briefContent([], noonToday), null);
 
+// --- tags set by hand ---
+memory.tasks = []; delete memory.settings;
+const tagged = store.taskFromInput('sort out the whatsit');
+await store.addTask(tagged);
+await store.setTags(tagged.id, ['Work', '#q4', 'work', '  ', 'a'.repeat(40)]);
+const back = (await store.loadTasks())[0];
+check('tags are lowercased, de-duped, stripped of # and blanks',
+  back.tags, ['work', 'q4']);
+check('setting tags stamps the change', back.updated >= back.created, true);
+await store.setTags(tagged.id, []);
+check('and they can all be removed', (await store.loadTasks())[0].tags, []);
+
+// A client set by hand sticks and pulls the task into work.
+await store.setClient(tagged.id, 'House move');
+const byHand = (await store.loadTasks())[0];
+check('a hand-picked client is kept', [byHand.client, byHand.clientLocked], ['House move', true]);
+check('and it counts as work', byHand.lane, 'work');
+
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
 // --- a bare date keeps its words rather than saving an empty row ---

@@ -405,6 +405,25 @@
     color: var(--faint); margin: 16px 0 4px;
   }
 
+  /* ---------- filing a task by hand ---------- */
+  .filing { padding: 2px 12px 10px 40px; }
+  .filing .lbl {
+    font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--faint); margin: 6px 0 5px;
+  }
+  .filing .opts { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .filing .opt {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 7px; padding: 3px 8px; font-size: 11px; cursor: pointer;
+  }
+  .filing .opt:hover { color: var(--text); border-color: var(--accent); }
+  .filing .opt.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filing input {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 7px; padding: 3px 8px; font-size: 11px; outline: none; width: 108px;
+  }
+  .filing input:focus { border-color: var(--accent); }
+
   /* ---------- empty + footer ---------- */
   .empty { padding: 34px 26px; text-align: center; color: var(--faint); }
   .empty .big { font-size: 28px; margin-bottom: 8px; }

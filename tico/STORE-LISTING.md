@@ -54,6 +54,10 @@ Every task is filed automatically into work or personal by what it says. "Send t
 
 Write "finish campaigns for stream" and the task is filed under Stream. No project picker, no setup, no configuring anything first. Mention a name twice and Tico recognises it everywhere after that — "stream banner sizes" lands in the same place, without the "for". Every client gets its own filter, and a wrong one is removed in a click.
 
+**Wrong? One click.**
+
+Typing fast makes any guess worse, so nothing Tico decides is stuck. Click the dot to move a task between work and personal, the date to reschedule it, and the tag button to file it under a client or project and add tags by hand. Everything you correct, Tico remembers for next time.
+
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.

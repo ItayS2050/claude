@@ -301,6 +301,18 @@ export async function setClient(id, client) {
   return tasks[i];
 }
 
+/** Replace a task's tags by hand. */
+export async function setTags(id, tags) {
+  const clean = [...new Set(tags.map((t) => String(t).trim().toLowerCase().replace(/^#/, ''))
+    .filter((t) => t && t.length <= 24))].slice(0, 8);
+  const tasks = await loadTasks();
+  const i = tasks.findIndex((t) => t.id === id);
+  if (i === -1) return null;
+  tasks[i] = touch({ ...tasks[i], tags: clean });
+  await saveTasks(tasks);
+  return tasks[i];
+}
+
 /** Drop a client from the registry and off every task carrying it. */
 export async function removeClient(name) {
   const settings = await loadSettings();
