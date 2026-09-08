@@ -2,7 +2,8 @@
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
   setLane, setClient, removeClient, establishedClients, classify, parse,
-  nextOccurrence, deleteTasks, setTags, touch, BUCKETS, bucketOf,
+  nextOccurrence, deleteTasks, setTags, loadTombstones, saveTombstones,
+  touch, BUCKETS, bucketOf,
 } from './store.js';
 import { detectClient, remember } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
@@ -13,7 +14,9 @@ const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
   summary: $('summary'), clearDone: $('clearDone'), voiceLang: $('voiceLang'),
   toast: $('toast'), toastMsg: $('toastMsg'), undo: $('undo'),
   sheet: $('sheet'), sheetBody: $('sheetBody'),
-  openSettings: $('openSettings'), closeSettings: $('closeSettings') };
+  openSettings: $('openSettings'), closeSettings: $('closeSettings'),
+  bulk: $('bulk'), bulkCount: $('bulkCount'), bulkActs: $('bulkActs'),
+  bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel'), selectBtn: $('selectBtn') };
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -26,6 +29,9 @@ let query = '';
 let editingId = null;     // task whose title is being edited
 let schedId = null;       // task whose scheduling row is open
 let fileId = null;        // task whose filing row is open
+let picking = false;      // selecting several at once
+let picked = new Set();   // ...and which
+let bulkPanel = null;     // null | 'when' | 'file' — the expanded action row
 let flashId = null;       // freshly added task, for the highlight
 let undoSnapshot = null;
 let undoTimer = null;
@@ -239,7 +245,7 @@ el.voiceLang.addEventListener('click', async () => {
 async function toggleDone(id) {
   const t = tasks.find((x) => x.id === id);
   if (!t) return;
-  snapshot();
+  await snapshot();
 
   if (t.done) {
     Object.assign(t, { done: false, doneAt: null, updated: Date.now(),
@@ -259,7 +265,7 @@ async function toggleDone(id) {
 
 async function removeTask(id) {
   const t = tasks.find((x) => x.id === id);
-  snapshot();
+  await snapshot();
   // deleteTasks writes the tombstone too — without it the other machine still
   // has this task and hands it back on the next merge.
   await deleteTasks([id]);
@@ -283,8 +289,15 @@ async function setDue(id, due, hasTime) {
 
 // Undo is a snapshot of the whole list — small enough to copy, and it makes
 // every destructive action reversible without per-action bookkeeping.
-function snapshot() {
-  undoSnapshot = JSON.parse(JSON.stringify(tasks));
+async function snapshot() {
+  // Tombstones have to come along. Restoring a deleted task without also
+  // dropping its tombstone looks like it worked, and then the next sync merge
+  // sees a delete newer than the task and removes it again — silently, and only
+  // on the machines that sync.
+  undoSnapshot = {
+    tasks: JSON.parse(JSON.stringify(tasks)),
+    tombstones: JSON.parse(JSON.stringify(await loadTombstones())),
+  };
 }
 
 function showToast(msg) {
@@ -297,7 +310,8 @@ function showToast(msg) {
 
 el.undo.addEventListener('click', async () => {
   if (!undoSnapshot) return;
-  tasks = undoSnapshot;
+  tasks = undoSnapshot.tasks;
+  await saveTombstones(undoSnapshot.tombstones);
   undoSnapshot = null;
   el.toast.classList.remove('show');
   await persist();
@@ -305,7 +319,7 @@ el.undo.addEventListener('click', async () => {
 });
 
 el.clearDone.addEventListener('click', async () => {
-  snapshot();
+  await snapshot();
   const doomed = tasks.filter((t) => t.done).map((t) => t.id);
   await deleteTasks(doomed);
   tasks = await loadTasks();
@@ -319,6 +333,7 @@ function render() {
   renderLanes();
   renderFilters();
   renderList();
+  renderBulk();
   renderFoot();
   updatePreview();
 }
@@ -469,7 +484,7 @@ function taskHtml(t) {
     : `<div class="title" data-act="edit" data-id="${t.id}">${escapeHtml(t.text)}</div>`;
 
   return `
-    <div class="task ${t.done ? 'done' : ''} p${t.priority} ${flashId === t.id ? 'flash' : ''}" data-id="${t.id}">
+    <div class="task ${t.done ? 'done' : ''} p${t.priority} ${flashId === t.id ? 'flash' : ''} ${picked.has(t.id) ? 'picked' : ''}" data-id="${t.id}">
       <button class="check" data-act="toggle" data-id="${t.id}" aria-label="Complete">
         <svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg>
       </button>
@@ -553,7 +568,17 @@ function wireList() {
     const act = node.dataset.act;
     const id = node.dataset.id;
 
-    if (act === 'toggle') node.addEventListener('click', () => toggleDone(id));
+    if (act === 'toggle') node.addEventListener('click', (e) => {
+      // The one-click tick is the whole point of this app, so it stays the
+      // default. Modifier-clicking starts a selection instead, which is what
+      // anyone who has used a file manager will try first.
+      if (picking || e.shiftKey || e.metaKey || e.ctrlKey) {
+        if (!picking) setPicking(true);
+        togglePick(id);
+        return;
+      }
+      toggleDone(id);
+    });
     if (act === 'del') node.addEventListener('click', () => removeTask(id));
     if (act === 'prio') node.addEventListener('click', () => {
       const t = tasks.find((x) => x.id === id);
@@ -656,22 +681,26 @@ function wireList() {
   });
 }
 
-function applyQuickDue(id, when) {
+/** One definition of "tonight", shared by the single-task row and the bulk bar. */
+function quickDue(when) {
   const now = new Date();
-  if (when === 'clear') return setDue(id, null, false);
-  if (when === '1h') return setDue(id, Date.now() + HOUR, true);
+  if (when === 'clear') return { due: null, hasTime: false };
+  if (when === '1h') return { due: Date.now() + HOUR, hasTime: true };
   if (when === 'evening') {
     const d = new Date(now); d.setHours(20, 0, 0, 0);
-    return setDue(id, +d > Date.now() ? +d : Date.now() + HOUR, true);
+    return { due: +d > Date.now() ? +d : Date.now() + HOUR, hasTime: true };
   }
   if (when === 'tomorrow') {
     const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
-    return setDue(id, +d, false);
+    return { due: +d, hasTime: false };
   }
-  if (when === 'week') {
-    const d = new Date(now); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0, 0);
-    return setDue(id, +d, false);
-  }
+  const d = new Date(now); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0, 0);
+  return { due: +d, hasTime: false };
+}
+
+function applyQuickDue(id, when) {
+  const { due, hasTime } = quickDue(when);
+  return setDue(id, due, hasTime);
 }
 
 function renderFoot() {
@@ -710,6 +739,113 @@ function emptyState() {
       <code>pay rent in 20 minutes !</code>
     </p>
   </div>`;
+}
+
+// --- doing several at once --------------------------------------------------
+
+function setPicking(on) {
+  picking = on;
+  if (!on) { picked.clear(); bulkPanel = null; }
+  el.selectBtn.textContent = on ? 'Done selecting' : 'Select';
+  render();
+}
+
+function togglePick(id) {
+  if (picked.has(id)) picked.delete(id); else picked.add(id);
+  if (!picked.size) bulkPanel = null;
+  render();
+}
+
+el.selectBtn.addEventListener('click', () => setPicking(!picking));
+el.bulkCancel.addEventListener('click', () => setPicking(false));
+el.bulkAll.addEventListener('click', () => {
+  const shown = visible().map((t) => t.id);
+  // Second press clears, which is what every list with a "select all" does.
+  if (shown.every((id) => picked.has(id))) picked.clear();
+  else for (const id of shown) picked.add(id);
+  render();
+});
+
+function renderBulk() {
+  el.bulk.hidden = !picking;
+  el.selectBtn.hidden = false;
+  if (!picking) return;
+
+  el.bulkCount.textContent = String(picked.size);
+  const none = picked.size === 0;
+
+  if (bulkPanel === 'when') {
+    el.bulkActs.innerHTML = `
+      <button data-bulk="back">←</button>
+      <button data-bulk="due" data-when="1h">In 1 hour</button>
+      <button data-bulk="due" data-when="evening">Tonight</button>
+      <button data-bulk="due" data-when="tomorrow">Tomorrow</button>
+      <button data-bulk="due" data-when="week">Next week</button>
+      <button data-bulk="due" data-when="clear">No date</button>`;
+  } else if (bulkPanel === 'file') {
+    // Every name Tico knows, not just the established ones. The two-sightings
+    // rule exists to keep automatic filing and the filter chips honest; when
+    // someone is deliberately picking from a list, a name they used once is
+    // exactly as valid as one they used twice.
+    const known = Object.values(settings.clients || {})
+      .sort((a, b) => (b.count || 0) - (a.count || 0))
+      .map((c) => c.name)
+      .slice(0, 6);
+    el.bulkActs.innerHTML = `
+      <button data-bulk="back">←</button>
+      <button data-bulk="client" data-client="">Nothing</button>
+      ${known.map((n) => `<button data-bulk="client" data-client="${escapeHtml(n)}">◆ ${escapeHtml(n)}</button>`).join('')}
+      ${known.length ? '' : '<span style="font-size:11px;color:var(--faint);align-self:center">No clients yet</span>'}`;
+  } else {
+    el.bulkActs.innerHTML = `
+      <button data-bulk="done" ${none ? 'disabled' : ''}>Tick off</button>
+      <button data-bulk="panel" data-panel="when" ${none ? 'disabled' : ''}>When…</button>
+      <button data-bulk="panel" data-panel="file" ${none ? 'disabled' : ''}>File…</button>
+      <button data-bulk="lane" data-lane="work" ${none ? 'disabled' : ''}><span class="dot" style="background:var(--work)"></span>Work</button>
+      <button data-bulk="lane" data-lane="personal" ${none ? 'disabled' : ''}><span class="dot" style="background:var(--personal)"></span>Personal</button>
+      <button class="danger" data-bulk="delete" ${none ? 'disabled' : ''}>Delete</button>`;
+  }
+
+  el.bulkActs.querySelectorAll('[data-bulk]').forEach((node) => {
+    node.addEventListener('click', () => runBulk(node.dataset, node));
+  });
+}
+
+async function runBulk(data, node) {
+  if (data.bulk === 'back') { bulkPanel = null; renderBulk(); return; }
+  if (data.bulk === 'panel') { bulkPanel = data.panel; renderBulk(); return; }
+
+  const ids = [...picked];
+  if (!ids.length) return;
+  await snapshot();
+  node.disabled = true;
+
+  if (data.bulk === 'done') {
+    for (const id of ids) await completeTask(id);
+    showToast(`Ticked off ${ids.length}`);
+  } else if (data.bulk === 'delete') {
+    await deleteTasks(ids);
+    showToast(`Deleted ${ids.length}`);
+  } else if (data.bulk === 'lane') {
+    for (const id of ids) await setLane(id, data.lane);
+    showToast(`Filed ${ids.length} under ${data.lane}`);
+  } else if (data.bulk === 'client') {
+    for (const id of ids) await setClient(id, data.client || null);
+    showToast(data.client ? `Filed ${ids.length} under ${data.client}` : `Cleared the client on ${ids.length}`);
+  } else if (data.bulk === 'due') {
+    const due = quickDue(data.when);
+    const all = await loadTasks();
+    for (const t of all) {
+      if (picked.has(t.id)) Object.assign(t, { ...due, notified: due.due != null && due.due <= Date.now(), updated: Date.now() });
+    }
+    await saveTasks(all);
+    showToast(`Rescheduled ${ids.length}`);
+  }
+
+  setPicking(false);
+  [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
+  chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
+  render();
 }
 
 // --- settings --------------------------------------------------------------
@@ -755,7 +891,9 @@ el.openSettings.addEventListener('click', async () => {
 });
 el.closeSettings.addEventListener('click', () => el.sheet.classList.remove('open'));
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && el.sheet.classList.contains('open')) el.sheet.classList.remove('open');
+  if (e.key !== 'Escape') return;
+  if (el.sheet.classList.contains('open')) { el.sheet.classList.remove('open'); return; }
+  if (picking) setPicking(false);
 });
 
 function renderSettings() {
@@ -908,7 +1046,7 @@ async function importBackup(event) {
     const incoming = Array.isArray(data.tasks) ? data.tasks : null;
     if (!incoming) throw new Error('no tasks in that file');
 
-    snapshot();
+    await snapshot();
     // Merge rather than replace: restoring a backup should never cost you the
     // tasks you have written since you made it.
     const have = new Set(tasks.map((t) => t.id));

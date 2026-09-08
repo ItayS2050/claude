@@ -58,6 +58,10 @@ Write "finish campaigns for stream" and the task is filed under Stream. No proje
 
 Typing fast makes any guess worse, so nothing Tico decides is stuck. Click the dot to move a task between work and personal, the date to reschedule it, and the tag button to file it under a client or project and add tags by hand. Everything you correct, Tico remembers for next time.
 
+**Several at once**
+
+One click still ticks a task off. Ctrl-click, or press Select, and you can choose as many as you like — then tick them off, reschedule them, file them under a client or delete them in one go.
+
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.
