@@ -79,6 +79,19 @@ Everything else is where you would expect: click a title to rename it, click the
 date to reschedule, hover for the flag and the bin, and every destructive action
 gets an undo.
 
+## What it costs
+
+Free today. Later it will be **$2.99, paid once**, for people who install it
+after that — and anyone already using it keeps it free permanently. That promise
+needs a date to be keepable, so the first run records one in local storage and
+`arrivalFrom` decides it: a new install arrives now, and someone upgrading from a
+build that predates the stamp is backdated to their oldest task rather than being
+quietly demoted to a newcomer on the day the price lands. It is never
+transmitted.
+
+Everyone is told before they install rather than after — on the listing, on the
+site, on the welcome page, and once inside the extension, dismissed for good.
+
 ## Privacy
 
 Tasks live in `chrome.storage.local` on your own machine. There is no account,

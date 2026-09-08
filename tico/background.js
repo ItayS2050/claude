@@ -23,18 +23,33 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   ensureAlarm();
   buildMenu();
   await refreshBadge();
+  await stampArrival();
   if (details.reason === 'install') {
     chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
   }
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await stampArrival();
   ensureAlarm();
   buildMenu();
   await refreshBadge();
   // The other machine may have moved on while this one was shut.
   pull().catch(() => {});
 });
+
+/**
+ * Record when this person started using Tico, once, and never again.
+ *
+ * Someone updating from a build that predates this has no date, and guessing
+ * "now" would quietly demote the earliest users to newcomers. Their oldest
+ * task is the better evidence, so it is used when there is one.
+ */
+async function stampArrival() {
+  const settings = await loadSettings();
+  if (settings.installedAt) return;
+  await saveSettings({ ...settings, installedAt: arrivalFrom(await loadTasks()) });
+}
 
 function buildMenu() {
   chrome.contextMenus.removeAll(() => {

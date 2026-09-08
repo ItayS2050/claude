@@ -15,6 +15,7 @@ const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
   toast: $('toast'), toastMsg: $('toastMsg'), undo: $('undo'),
   sheet: $('sheet'), sheetBody: $('sheetBody'),
   openSettings: $('openSettings'), closeSettings: $('closeSettings'),
+  pricing: $('pricing'), pricingOk: $('pricingOk'),
   bulk: $('bulk'), bulkCount: $('bulkCount'), bulkActs: $('bulkActs'),
   bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel'), selectBtn: $('selectBtn') };
 
@@ -334,6 +335,7 @@ function render() {
   renderFilters();
   renderList();
   renderBulk();
+  renderPricing();
   renderFoot();
   updatePreview();
 }
@@ -703,6 +705,10 @@ function applyQuickDue(id, when) {
   return setDue(id, due, hasTime);
 }
 
+function renderPricing() {
+  el.pricing.classList.toggle('show', !settings.pricingSeen);
+}
+
 function renderFoot() {
   const open = tasks.filter((t) => !t.done).length;
   const done = tasks.filter((t) => t.done).length;
@@ -755,6 +761,14 @@ function togglePick(id) {
   if (!picked.size) bulkPanel = null;
   render();
 }
+
+// Said once, then never again. A price that is still months away does not earn
+// a permanent strip across the top of a to-do list.
+el.pricingOk.addEventListener('click', async () => {
+  settings = { ...settings, pricingSeen: true };
+  await saveSettings(settings);
+  el.pricing.classList.remove('show');
+});
 
 el.selectBtn.addEventListener('click', () => setPicking(!picking));
 el.bulkCancel.addEventListener('click', () => setPicking(false));
@@ -864,6 +878,12 @@ async function loadSyncState() {
 // Chrome's own sync carries this, so it needs no account of ours — but it only
 // works if the browser itself is signed in, and saying so up front is cheaper
 // than a support email asking why nothing arrived.
+function arrivedOn() {
+  if (!settings.installedAt) return 'early';
+  return `on ${new Date(settings.installedAt).toLocaleDateString([], {
+    day: 'numeric', month: 'long', year: 'numeric' })}`;
+}
+
 function syncBlurb() {
   return settings.syncEnabled
     ? 'Carried by Chrome to every computer you are signed into. Nothing passes through us.'
@@ -974,6 +994,16 @@ function renderSettings() {
         <div class="sub">${escapeHtml(syncStatus())}</div></div>
       <button class="btn" data-act-set="sync">Sync</button>
     </div>` : ''}
+
+    <h3>What this costs</h3>
+    <div class="row" style="display:block">
+      <div class="label">Free — and free for you, permanently</div>
+      <div class="sub" style="margin-top:4px">
+        Tico will be <strong>$2.99 once</strong> for people who arrive after the
+        price goes on. You started using it ${escapeHtml(arrivedOn())}, before
+        that, so yours does not change. No subscription, and nothing to do.
+      </div>
+    </div>
 
     <h3>Your data</h3>
     <div class="row">

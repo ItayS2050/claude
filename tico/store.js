@@ -19,7 +19,29 @@ export const DEFAULT_SETTINGS = {
   briefDays: 'all',     // all | sun-thu | mon-fri
   lastBrief: null,      // the day the last one went out, so it goes once
   syncEnabled: false,   // carry the list between this Chrome's other machines
+  installedAt: null,    // when this person arrived — see PRICING below
+  pricingSeen: false,   // the one-time note about what Tico will cost
 };
+
+// Tico is free today and will be $2.99 for people who arrive after the price
+// goes on. Everyone already using it keeps it free, permanently — which is a
+// promise that needs a date to be keepable at all, so the first run records
+// one. It never leaves the device; it exists so that when the paywall lands,
+// the extension can tell on its own whether this person was here first.
+export const PRICE = '$2.99';
+
+/**
+ * When this person started using Tico.
+ *
+ * Someone updating from a build that predates the stamp has no date, and
+ * defaulting to "now" would quietly demote the very earliest users to
+ * newcomers on the day the price lands — the exact people the promise is for.
+ * Their oldest task is better evidence, so it wins when there is one.
+ */
+export function arrivalFrom(tasks = [], now = Date.now()) {
+  const earliest = tasks.reduce((min, t) => Math.min(min, t.created || Infinity), Infinity);
+  return Number.isFinite(earliest) ? Math.min(earliest, now) : now;
+}
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

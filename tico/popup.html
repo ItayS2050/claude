@@ -405,6 +405,27 @@
     color: var(--faint); margin: 16px 0 4px;
   }
 
+  /* ---------- the pricing note, shown once ---------- */
+  .pricing {
+    flex: none;
+    display: none;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border-bottom: 1px solid var(--line);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .pricing.show { display: flex; }
+  .pricing b { color: var(--text); font-weight: 600; }
+  .pricing button {
+    flex: none; color: var(--accent); font-weight: 700; font-size: 11.5px;
+    padding: 2px 6px; border-radius: 5px;
+  }
+  .pricing button:hover { background: var(--surface-2); }
+
   /* ---------- bulk selection ---------- */
   .task.picked { background: var(--accent-soft); }
   .task.picked .check { background: var(--accent); border-color: var(--accent); }
@@ -516,6 +537,12 @@
   </div>
   <div class="preview" id="preview"></div>
   <div class="hint" id="hint"></div>
+</div>
+
+<div class="pricing" id="pricing">
+  <span>Tico is free while it is new. Later it will be <b>$2.99, once</b> — but
+        you are already here, so <b>yours stays free</b>.</span>
+  <button id="pricingOk">Got it</button>
 </div>
 
 <div class="lanes" id="lanes"></div>

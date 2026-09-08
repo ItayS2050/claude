@@ -205,6 +205,20 @@ const byHand = (await store.loadTasks())[0];
 check('a hand-picked client is kept', [byHand.client, byHand.clientLocked], ['House move', true]);
 check('and it counts as work', byHand.lane, 'work');
 
+// --- who counts as an early user ---
+// This decides who keeps Tico free when the price lands, so it is worth more
+// than a glance.
+const DAY = 86400000;
+const NOW = 1_760_000_000_000;
+check('a brand new install arrives now', store.arrivalFrom([], NOW), NOW);
+check('someone upgrading is backdated to their oldest task',
+  store.arrivalFrom([{ created: NOW - 60 * DAY }, { created: NOW - 5 * DAY }], NOW), NOW - 60 * DAY);
+check('a task with no created date is ignored, not treated as the epoch',
+  store.arrivalFrom([{}, { created: NOW - 3 * DAY }], NOW), NOW - 3 * DAY);
+check('nothing usable falls back to now', store.arrivalFrom([{}, {}], NOW), NOW);
+check('a task dated in the future cannot backdate anyone past today',
+  store.arrivalFrom([{ created: NOW + 10 * DAY }], NOW), NOW);
+
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
 // --- a bare date keeps its words rather than saving an empty row ---

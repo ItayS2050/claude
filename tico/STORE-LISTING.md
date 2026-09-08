@@ -86,7 +86,11 @@ No account. No sign-up. No servers. No analytics. No ads. Your tasks live in loc
 
 Optional: on a computer that supports Chrome's built-in AI, you can switch on an on-device assist for spotting client names. It runs inside Chrome, nothing is uploaded, and it's off unless you turn it on.
 
-**Free.**
+**Free now — and free for you for good**
+
+Tico is free while it is new. Later it will be $2.99, paid once, for people who install it after that point. If you install it now, yours stays free permanently: not a trial, not an expiring discount. Tico notes the date you installed it, on your own computer, and that is the whole mechanism.
+
+You are being told this before you install rather than after, because finding out later that the thing holding your commitments has started asking for money is a horrible way to learn it.
 
 ---
 
