@@ -1177,8 +1177,14 @@ const COMMON_EL_WORDS = new Set([
 const stripTonos = w => [...w].map(c => EL_UNTONOS[c] || c).join('');
 const COMMON_EL_WORDS_PLAIN = new Set([...COMMON_EL_WORDS].map(stripTonos));
 
+// Scored without accents, because Greek accents almost every word and the
+// bigram list above has none. στείλω scored 0.20 and στειλω scores 0.40;
+// κάνεις 0.40 against κανεις 0.80. The gate is 0.5, so the accent was the
+// difference between recognising an ordinary Greek word and not — which is
+// why Greek converted 7 of its 22 corpus sentences whole and Hebrew converted
+// 31 of 32. It was never about Greek being harder.
 function greekScore(word) {
-  const s = word.toLowerCase();
+  const s = stripTonos(word).toLowerCase();
   if (s.length < 2) return 0;
   let hits = 0;
   for (let i = 0; i < s.length - 1; i++) {
@@ -1201,6 +1207,13 @@ function greekExactly(word) {
   if (![...lower].every(c => EN_TO_EL[c] !== undefined)) return false;
   const elWord = convertToGreek(lower);
   if (COMMON_EL_WORDS_PLAIN.has(stripTonos(elWord))) return true;
+  // A semicolon inside a word is the Greek equivalent of a final-form letter in
+  // the wrong place. On the Greek layout that key is the accent, and Greek
+  // accents almost everything, while English never puts a semicolon mid-word.
+  // στείλω is "ste;ilv" and scores 0.40 against a 0.5 gate; αρχείο, κλείσει,
+  // δρόμο and κέντρο all failed the same way. The bigram table will never cover
+  // every Greek word. The accent is not a guess.
+  if (/[a-z];[a-z]/i.test(lower)) return true;
   if (englishScore(lower) >= 0.35) return false;
   // 0.3 let "lazy"/"project"/"support" through — nearly every QWERTY key maps to
   // a Greek letter, so this pass needs the tighter bar Korean uses.
@@ -1424,7 +1437,12 @@ function escapeHtml(s) {
 // text. Only applied to short all-caps tokens — a genuinely shouted sentence
 // is several long words and does not match.
 function looksLikeAcronym(word) {
-  return word.length <= 5 && word === word.toUpperCase() && /[A-Z]/.test(word);
+  // Two letters minimum. One capital letter on its own is not an acronym — it
+  // is a word, and in Russian and Ukrainian it is the commonest word there is:
+  // "Z" is Я. Every Russian sentence that opens with Я was losing its first
+  // word to this, eleven of the thirteen that fixed only partway.
+  return word.length >= 2 && word.length <= 5 &&
+         word === word.toUpperCase() && /[A-Z]/.test(word);
 }
 
 function wordCouldBeHebrew(word) {
@@ -1616,7 +1634,16 @@ function growRun(words, entry, grows) {
 // passed the language's own test.
 function keysMapToScript(map, word, maxLen) {
   const lower = word.toLowerCase();
-  if (lower.length < 2 || (maxLen && lower.length > maxLen)) return false;
+  // One letter is a word in most of these languages, and in Russian it is the
+  // commonest one there is: Я, в, с, и, у, к. "Z" is Я, and Я starts a third of
+  // the Russian corpus — eleven of the thirteen Russian sentences that fixed
+  // only partway lost exactly that word, off the front of their own sentence.
+  //
+  // Safe because this is only ever asked about a word next to, or inside, a run
+  // that has already been earned, and because "a" and "i" — the two English
+  // words this could otherwise swallow — are in EN_WORDS and refused by the
+  // grower before it gets here.
+  if (lower.length < 1 || (maxLen && lower.length > maxLen)) return false;
   if (learnedEnglish.has(lower)) return false;
   return [...lower].every(c => map[c] !== undefined);
 }
@@ -1682,8 +1709,18 @@ function bridgesRejectedWord(word) {
 
 function extractWords(text) {
   return text.trim().split(/\s+/)
-    .map(w => w.replace(/^[?!()\[\]{}]+|[?!()\[\]{}]+$/g, ''))
-    .filter(w => /^[a-z,;.']+$/i.test(w) && w.length >= 2);
+    .map(w => w.replace(/^[?!(){}]+|[?!(){}]+$/g, ''))
+    // One character is kept. It cannot start a run — every language's own test
+    // demands two — but it can be bridged over or grown into, and in Russian
+    // and Ukrainian it is the commonest word there is: "Z" is Я. Dropping it
+    // here meant Я never reached the run assembly at all, so a third of the
+    // Russian corpus lost the first word of its own sentence.
+    // The character class is every key that carries a letter on one of the six
+    // layouts, not just the Latin ones. On the Arabic layout [ ] ` and / are
+    // letters — المساعدة is "hglshu]m" — and this filter was throwing those
+    // tokens away whole before any language saw them. Same for the leading and
+    // trailing brackets stripped above: on Arabic they are part of the word.
+    .filter(w => /^[a-z,;.'\[\]`\/]+$/i.test(w) && w.length >= 1);
 }
 
 // ── Cursor-aware text extraction ──────────────────────────────
@@ -1930,8 +1967,17 @@ function analyzeText(rawText, scanAll = false) {
         const greekWordsInRun = elInRun.filter(
           w => COMMON_EL_WORDS_PLAIN.has(stripTonos(w.toLowerCase().replace(/[^Ά-ώ]/g, '')))
         ).length;
-        const allMapG = elInRun.every(w => [...expandGreekTonos(w)].every(c => EL_TO_EN[c] !== undefined));
-        if (allMapG && greekWordsInRun < 2) {
+        // Punctuation is not Greek and does not need to be. Requiring every
+        // character to be a Greek letter meant one comma disqualified the whole
+        // run: "υεσ, ι ψαν δο τηατ, βθτ νοτ βεφορε φριδαυ" is "yes, i can do
+        // that, but not before friday" and was silent, as was every other
+        // sentence with a comma in it — fifteen of the eighteen that were left.
+        // The three others were "quick", "question" and "quick" again, where q
+        // is the accent key and produces a semicolon.
+        const passesThrough = c => !/[Ά-ώa-z]/i.test(c);
+        const allMapG = elInRun.every(w =>
+          [...expandGreekTonos(w)].every(c => EL_TO_EN[c] !== undefined || passesThrough(c)));
+        if (allMapG) {
           const originalG1  = elInRun.join(' ');
           const convertedG1 = convertFromGreek(originalG1);
           if (convertedG1.trim().length >= 2 && !GREEK_RE.test(convertedG1)) {
@@ -1939,6 +1985,20 @@ function analyzeText(rawText, scanAll = false) {
               .map(w => w.replace(/[^a-z]/gi, '').toLowerCase())
               .filter(w => w.length >= 2);
             const hasCommonG1 = convWordsG1.some(w => realEnglishWord(w));
+
+            // Counting Greek words alone was half an argument. "πλεασε σενδ με
+            // τηε φιλε τομορρος μορνινγ" converts back to "please send me the
+            // file tomorrow morning" — seven English words — and was silenced
+            // because two of the Greek tokens, με and το, happen to be real
+            // Greek words. Real Greek does not convert into a sentence.
+            //
+            // So both sides are counted and the larger one wins. The Greek
+            // count still decides on its own when English has nothing to say,
+            // which is what the guard was protecting.
+            const englishWordsInRun = convWordsG1.filter(w => realEnglishWord(w)).length;
+            if (greekWordsInRun >= 2 && englishWordsInRun <= greekWordsInRun) {
+              // Greek explains it at least as well. Leave it alone.
+            } else {
             const avgScoreG1 = convWordsG1.length
               ? convWordsG1.reduce((a, w) => a + englishScore(w), 0) / convWordsG1.length
               : 0;
@@ -1953,6 +2013,7 @@ function analyzeText(rawText, scanAll = false) {
                 btnLabel: 'Fix → English', rejectLabel: 'Not English',
                 words: elInRun
               };
+            }
             }
           }
         }

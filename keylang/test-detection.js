@@ -82,6 +82,7 @@ function loadContentScript() {
     '         isCommonHebrewWord, isEnglishName, EN_NAMES, englishScore,' +
     '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew, isRealRun,' +
     '         englishEnough, realEnglishWord, EN_LEXICON, COMMON_EN_WORDS, looksLikeRealHebrew,' +
+    '         greekScore, stripTonos, looksLikeAcronym, extractWords, wordCouldBeGreek,' +
     '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -1814,6 +1815,87 @@ function okk(cond, label) {
   }
   if (spoke === 0) { pass++; }
   else { fail++; console.log(`  FAIL  ${spoke} real Hebrew sentences were claimed as English`); }
+}
+
+
+// ── Every language reaches the end of the sentence
+//
+// The scorecard that started this: Hebrew converted 31 of 32 corpus sentences
+// whole, Korean 34 of 34, and the rest were nowhere — Russian 15 of 27, Arabic
+// 13 of 22, Greek 7 of 22. Four separate causes, none of them about the
+// languages being harder.
+//
+//   Я was never a word.  extractWords dropped anything under two characters, so
+//   the commonest word in Russian never reached the run assembly at all, and a
+//   third of the Russian corpus lost the first word of its own sentence.
+//   looksLikeAcronym called a lone capital an acronym on top of that.
+//
+//   [ ] ` / are letters.  On the Arabic layout المساعدة is "hglshu]m", and the
+//   token filter allowed only [a-z,;.'] — so those words were thrown away whole
+//   before any language saw them.
+//
+//   Greek accents everything.  The bigram table has no accents in it, so στείλω
+//   scored 0.20 against a 0.5 gate and στειλω scores 0.40. Scoring the stripped
+//   form, and treating a mid-word semicolon as the accent it is, is the fix.
+//
+//   One comma disqualified a Greek run.  allMapG demanded every character be a
+//   Greek letter, so fifteen of the eighteen English sentences Greek still
+//   missed were missing only because they contained a comma.
+{
+  console.log('Every language reaches the end of the sentence');
+
+  kiko.forgetLearned();
+  kiko.setEntitled(true);
+  kiko.longAfterAFix();
+
+  const CORPUS = require('./corpus.js');
+  // Floors, not targets. Each was measured after the fix and each may only go up.
+  const WHOLE = { he: 31, ru: 25, uk: 19, ko: 34, el: 21, ar: 22 };
+  for (const [code, floor] of Object.entries(WHOLE)) {
+    let whole = 0;
+    for (const sentence of CORPUS.silent[code]) {
+      const typed = kiko.down[code](sentence);
+      kiko.setLangs({ ...ALL });
+      const d = kiko.analyzeText(typed);
+      if (d && d.original.trim() === typed.trim()) whole++;
+    }
+    if (whole >= floor) { pass++; }
+    else { fail++; console.log(`  FAIL  ${code} converts ${whole} whole, floor is ${floor}`); }
+  }
+
+  // English typed on a Greek keyboard. Was 35 of 55; the comma was most of it.
+  {
+    let caught = 0, n = 0;
+    for (const sentence of CORPUS.silent.en) {
+      const typed = kiko.up.el(sentence.toLowerCase());
+      if (typed === sentence.toLowerCase()) continue;
+      n++;
+      kiko.setLangs({ ...ALL });
+      if (kiko.analyzeText(typed)) caught++;
+    }
+    if (caught === n) { pass++; }
+    else { fail++; console.log(`  FAIL  Greek catches ${caught}/${n} English sentences`); }
+  }
+
+  // The four causes, pinned one at a time so a regression names itself.
+  okk(kiko.extractWords('Z jnghfdk').includes('Z'),
+      'a one-letter word survives tokenising — Z is Я');
+  okk(!kiko.looksLikeAcronym('Z'), 'a lone capital is a word, not an acronym');
+  okk(kiko.looksLikeAcronym('EOD'), 'but three capitals still are');
+  okk(kiko.extractWords('hglshu]m').includes('hglshu]m'),
+      'a bracket is a letter on the Arabic layout');
+  okk(kiko.greekScore('στείλω') === kiko.greekScore('στειλω'),
+      'Greek is scored without its accents');
+  okk(kiko.wordCouldBeGreek('ste;ilv'), 'a mid-word semicolon is the Greek accent');
+
+  check('a comma does not disqualify a Greek sentence',
+        kiko.up.el('yes, i can do that, but not before friday'), 'greek_as_english');
+  check('the Russian sentence keeps its first word',
+        'Z jnghfdk. nt,t afqk gjp;t dtxthjv', 'english_as_russian',
+        { converted: 'я отправлю тебе файл позже вечером' });
+  check('the Arabic sentence keeps its last word',
+        'a;vh [.dgh ugn hglshu]m', 'english_as_arabic',
+        { converted: 'شكرا جزيلا على المساعدة' });
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
