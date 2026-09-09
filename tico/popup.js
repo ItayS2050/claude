@@ -17,7 +17,7 @@ const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
   openSettings: $('openSettings'), closeSettings: $('closeSettings'),
   pricing: $('pricing'), pricingOk: $('pricingOk'),
   bulk: $('bulk'), bulkCount: $('bulkCount'), bulkActs: $('bulkActs'),
-  bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel'), selectBtn: $('selectBtn') };
+  bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel') };
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -30,8 +30,7 @@ let query = '';
 let editingId = null;     // task whose title is being edited
 let schedId = null;       // task whose scheduling row is open
 let fileId = null;        // task whose filing row is open
-let picking = false;      // selecting several at once
-let picked = new Set();   // ...and which
+let picked = new Set();   // the tasks chosen, if any
 let bulkPanel = null;     // null | 'when' | 'file' — the expanded action row
 let flashId = null;       // freshly added task, for the highlight
 let undoSnapshot = null;
@@ -498,6 +497,9 @@ function taskHtml(t) {
         <div class="meta">${meta.join('')}</div>
       </div>
       <div class="actions">
+        <button class="act" data-act="rename" data-id="${t.id}" title="Rename">
+          <svg viewBox="0 0 24 24"><path d="M20.7 5.6 18.4 3.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7 1.8-1.8a1 1 0 0 0 0-1.4ZM13.8 6.5 3.6 16.7a1 1 0 0 0-.3.5l-1 4a1 1 0 0 0 1.2 1.2l4-1a1 1 0 0 0 .5-.3L18.2 10.9l-4.4-4.4Z"/></svg>
+        </button>
         <button class="act" data-act="file" data-id="${t.id}" title="File it — client and tags">
           <svg viewBox="0 0 24 24"><path d="M10.6 3a2 2 0 0 1 1.4.6l8.4 8.4a2 2 0 0 1 0 2.8l-5.6 5.6a2 2 0 0 1-2.8 0L3.6 12A2 2 0 0 1 3 10.6V5a2 2 0 0 1 2-2h5.6ZM7.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg>
         </button>
@@ -566,19 +568,27 @@ function schedHtml(t) {
 }
 
 function wireList() {
+  // Clicking a task picks it. Choosing what happens to it comes after, in the
+  // bar — the app does not get to decide that on the user's behalf.
+  el.list.querySelectorAll('.task').forEach((row) => {
+    row.addEventListener('click', (e) => {
+      // Everything with its own meaning keeps it: the tick box, the date chip,
+      // the client and tag chips, and the three row actions.
+      if (e.target.closest('button, input, .client, .filing, .sched')) return;
+      togglePick(row.dataset.id);
+    });
+  });
+
   el.list.querySelectorAll('[data-act]').forEach((node) => {
     const act = node.dataset.act;
     const id = node.dataset.id;
 
     if (act === 'toggle') node.addEventListener('click', (e) => {
-      // The one-click tick is the whole point of this app, so it stays the
-      // default. Modifier-clicking starts a selection instead, which is what
-      // anyone who has used a file manager will try first.
-      if (picking || e.shiftKey || e.metaKey || e.ctrlKey) {
-        if (!picking) setPicking(true);
-        togglePick(id);
-        return;
-      }
+      e.stopPropagation();
+      // A tick box means "done" everywhere else, so it still does that in one
+      // click — but once a selection exists, everything on screen is about the
+      // selection and the box joins in rather than fighting it.
+      if (picked.size) { togglePick(id); return; }
       toggleDone(id);
     });
     if (act === 'del') node.addEventListener('click', () => removeTask(id));
@@ -650,7 +660,17 @@ function wireList() {
         await reloadAll();
       });
     }
-    if (act === 'edit') node.addEventListener('click', () => { editingId = id; renderList(); });
+    // A single click on the title now means "select this one", so renaming
+    // needs its own way in. Double-click was the obvious candidate and it is
+    // not reliable here: selecting shows or hides the action bar, the list
+    // resizes between the two clicks, and the browser stops calling it a
+    // double-click. A button does not have that problem.
+    if (act === 'rename') node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      picked.delete(id);
+      editingId = id;
+      renderList();
+    });
 
     if (act === 'edit-input') {
       node.focus();
@@ -749,17 +769,24 @@ function emptyState() {
 
 // --- doing several at once --------------------------------------------------
 
-function setPicking(on) {
-  picking = on;
-  if (!on) { picked.clear(); bulkPanel = null; }
-  el.selectBtn.textContent = on ? 'Done selecting' : 'Select';
+function clearPicked() {
+  picked.clear();
+  bulkPanel = null;
   render();
 }
 
 function togglePick(id) {
   if (picked.has(id)) picked.delete(id); else picked.add(id);
   if (!picked.size) bulkPanel = null;
-  render();
+
+  // Update the one row in place rather than rebuilding the list. Rebuilding
+  // replaces the node the pointer is over, so the second half of a double-click
+  // lands on an element that no longer exists and renaming never fires. It is
+  // also just wrong to redraw everything because one checkbox changed.
+  const row = el.list.querySelector(`.task[data-id="${CSS.escape(id)}"]`);
+  row?.classList.toggle('picked', picked.has(id));
+  renderBulk();
+  renderFoot();
 }
 
 // Said once, then never again. A price that is still months away does not earn
@@ -770,23 +797,24 @@ el.pricingOk.addEventListener('click', async () => {
   el.pricing.classList.remove('show');
 });
 
-el.selectBtn.addEventListener('click', () => setPicking(!picking));
-el.bulkCancel.addEventListener('click', () => setPicking(false));
+el.bulkCancel.addEventListener('click', clearPicked);
 el.bulkAll.addEventListener('click', () => {
   const shown = visible().map((t) => t.id);
   // Second press clears, which is what every list with a "select all" does.
-  if (shown.every((id) => picked.has(id))) picked.clear();
+  if (shown.length && shown.every((id) => picked.has(id))) picked.clear();
   else for (const id of shown) picked.add(id);
+  if (!picked.size) bulkPanel = null;
   render();
 });
 
 function renderBulk() {
-  el.bulk.hidden = !picking;
-  el.selectBtn.hidden = false;
-  if (!picking) return;
+  // No separate "selection mode" to enter or leave: the bar exists exactly when
+  // something is selected.
+  el.bulk.hidden = picked.size === 0;
+  if (!picked.size) return;
 
   el.bulkCount.textContent = String(picked.size);
-  const none = picked.size === 0;
+  const none = false;
 
   if (bulkPanel === 'when') {
     el.bulkActs.innerHTML = `
@@ -856,7 +884,8 @@ async function runBulk(data, node) {
     showToast(`Rescheduled ${ids.length}`);
   }
 
-  setPicking(false);
+  picked.clear();
+  bulkPanel = null;
   [tasks, settings] = await Promise.all([loadTasks(), loadSettings()]);
   chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
   render();
@@ -913,7 +942,7 @@ el.closeSettings.addEventListener('click', () => el.sheet.classList.remove('open
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (el.sheet.classList.contains('open')) { el.sheet.classList.remove('open'); return; }
-  if (picking) setPicking(false);
+  if (picked.size) clearPicked();
 });
 
 function renderSettings() {
