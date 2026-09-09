@@ -70,6 +70,12 @@ Typing fast makes any guess worse, so nothing Tico decides is stuck. Click the d
 
 The box on each row selects it — nothing happens until you say so. Pick one or a dozen, then choose: tick off, reschedule, move between work and personal, file under a client, delete. Ticking a single task off is its own button, right there on the row.
 
+**Group as you go, and see what you got through**
+
+Pick a few tasks and name a group on the spot — no setting anything up first, and it does not have to be a client. "Q4 launch" works as well as "acme".
+
+The Done list is grouped by day, a week at a time, so "what did I actually finish" takes one glance. Anything can be put back with one click.
+
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tico – Ask for something</title>
+  <link rel="icon" href="icon128.png">
+  <meta name="description" content="Tell us what Tico should do next. Everything on the list below came from someone asking.">
+  <style>
+    :root { color-scheme: dark light; }
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 28px; color: #0f172a; }
+    h2 { font-size: 18px; margin-top: 36px; color: #0f172a; }
+    p, li { color: #334155; }
+    a { color: #4f46e5; }
+    .ways { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 8px; }
+    .ways a {
+      display: inline-block; background: #4f46e5; color: #fff; text-decoration: none;
+      border-radius: 10px; padding: 11px 20px; font-weight: 600; font-size: 15px;
+    }
+    .ways a.alt { background: #eef2ff; color: #4f46e5; }
+    ul.roadmap { list-style: none; padding: 0; }
+    ul.roadmap li { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid #e2e8f0; }
+    .badge {
+      flex: none; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; border-radius: 5px; padding: 2px 7px; height: fit-content; margin-top: 3px;
+    }
+    .done { background: #dcfce7; color: #15803d; }
+    .next { background: #eef2ff; color: #4338ca; }
+    .maybe { background: #f1f5f9; color: #64748b; }
+    .note { font-size: 14px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px;vertical-align:-5px"> Ask Tico for something</h1>
+
+  <p>Tico is small on purpose, and almost everything in it exists because somebody
+     asked for it. If it is missing the one thing that would make it yours, say so
+     — it is a short list and your message genuinely moves things on it.</p>
+
+  <div class="ways">
+    <a href="mailto:itay@selltech.io?subject=Tico%20—%20a%20suggestion&amp;body=What%20I%20wanted%20to%20do%3A%0A%0AWhat%20happened%20instead%3A%0A%0A">Email a suggestion</a>
+    <a class="alt" href="https://github.com/ItayS2050/claude/issues/new">Open an issue on GitHub</a>
+  </div>
+  <p class="note">Either is read by a person. If you are reporting something broken,
+     the exact words you typed are usually the whole answer — Tico reads sentences,
+     so the sentence matters.</p>
+
+  <h2>What has been asked for so far</h2>
+  <ul class="roadmap">
+    <li><span class="badge done">Done</span><span>Fix what the parser got wrong — client and tags, by hand</span></li>
+    <li><span class="badge done">Done</span><span>Choose several tasks and act on all of them at once</span></li>
+    <li><span class="badge done">Done</span><span>Make a new group while filing, instead of setting one up first</span></li>
+    <li><span class="badge done">Done</span><span>See what was finished, a week at a time</span></li>
+    <li><span class="badge done">Done</span><span>Sync between two computers</span></li>
+    <li><span class="badge done">Done</span><span>One notification in the morning with what is on today</span></li>
+    <li><span class="badge next">Next</span><span>Reminders that wait until you are out of a meeting</span></li>
+    <li><span class="badge next">Next</span><span>Subtasks, for the things that are really five things</span></li>
+    <li><span class="badge maybe">Maybe</span><span>A weekly note of what you got through</span></li>
+    <li><span class="badge maybe">Maybe</span><span>Repeats like “last Friday of the month”</span></li>
+  </ul>
+
+  <h2>Things Tico will not do</h2>
+  <p>Worth saying, so nobody waits for them: no accounts, no team sharing, no
+     sending your tasks to a server. Those are not missing features, they are the
+     shape of the thing.</p>
+
+  <hr style="border:none;border-top:1px solid #e2e8f0;margin:40px 0 20px">
+  <p style="font-size:14px"><a href="/tico/">← Back to Tico</a> · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a></p>
+</body>
+</html>

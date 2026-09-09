@@ -3,7 +3,7 @@ import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
   setLane, setClient, removeClient, establishedClients, classify, parse,
   nextOccurrence, deleteTasks, setTags, loadTombstones, saveTombstones,
-  touch, BUCKETS, bucketOf,
+  touch, BUCKETS, bucketOf, doneBucket, doneOrder,
 } from './store.js';
 import { detectClient, remember } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
@@ -17,7 +17,7 @@ const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
   openSettings: $('openSettings'), closeSettings: $('closeSettings'),
   pricing: $('pricing'), pricingOk: $('pricingOk'),
   bulk: $('bulk'), bulkCount: $('bulkCount'), bulkActs: $('bulkActs'),
-  bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel') };
+  bulkAll: $('bulkAll'), bulkCancel: $('bulkCancel'), suggest: $('suggest') };
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -423,9 +423,20 @@ function renderList() {
   }
 
   if (filter === 'done') {
-    const done = [...items].sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    el.list.innerHTML = `<div class="group-head">Completed <span class="count">${done.length}</span></div>` +
-      done.map(taskHtml).join('');
+    // Grouped by the day it was finished, because "what did I actually get
+    // through this week" is the only question anyone opens this view to ask.
+    const now = Date.now();
+    const byDay = new Map();
+    for (const t of [...items].sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0))) {
+      const label = doneBucket(t, now);
+      if (!byDay.has(label)) byDay.set(label, []);
+      byDay.get(label).push(t);
+    }
+    el.list.innerHTML = doneOrder([...byDay.keys()]).map((label) => {
+      const rows = byDay.get(label);
+      return `<div class="group-head">${escapeHtml(label)} <span class="count">${rows.length}</span></div>` +
+             rows.map(taskHtml).join('');
+    }).join('');
     wireList();
     return;
   }
@@ -468,6 +479,9 @@ function taskHtml(t) {
   const late = t.due != null && t.due < now && !t.done;
   const soon = t.due != null && !late && t.due < now + 6 * HOUR;
   const meta = [];
+  if (t.done && t.doneAt) {
+    meta.push(`<span class="rep">✓ ${escapeHtml(new Date(t.doneAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))}</span>`);
+  }
   if (t.due != null) {
     meta.push(`<span class="due ${late ? 'late' : (soon ? 'soon' : '')}" data-act="sched" data-id="${t.id}">${escapeHtml(dueLabel(t.due, t.hasTime))}</span>`);
   } else {
@@ -808,6 +822,12 @@ el.pricingOk.addEventListener('click', async () => {
   el.pricing.classList.remove('show');
 });
 
+// In the footer rather than buried in Settings: the moment someone notices
+// something is missing is the moment they are looking at the list, not at a
+// preferences panel.
+const SUGGEST_URL = 'https://get-kiko.com/tico/suggest.html';
+el.suggest.addEventListener('click', () => chrome.tabs.create({ url: SUGGEST_URL }));
+
 el.bulkCancel.addEventListener('click', clearPicked);
 el.bulkAll.addEventListener('click', () => {
   const shown = visible().map((t) => t.id);
@@ -848,7 +868,9 @@ function renderBulk() {
       <button data-bulk="back">←</button>
       <button data-bulk="client" data-client="">Nothing</button>
       ${known.map((n) => `<button data-bulk="client" data-client="${escapeHtml(n)}">◆ ${escapeHtml(n)}</button>`).join('')}
-      ${known.length ? '' : '<span style="font-size:11px;color:var(--faint);align-self:center">No clients yet</span>'}`;
+      <input id="bulkNewClient" placeholder="+ new group" maxlength="24"
+             style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+                    border-radius:8px;padding:5px 9px;font-size:11.5px;outline:none;width:104px">`;
   } else {
     el.bulkActs.innerHTML = `
       <button data-bulk="done" ${none ? 'disabled' : ''}>Tick off</button>
@@ -862,6 +884,17 @@ function renderBulk() {
   el.bulkActs.querySelectorAll('[data-bulk]').forEach((node) => {
     node.addEventListener('click', () => runBulk(node.dataset, node));
   });
+
+  // Naming a group here rather than making it elsewhere first: choosing the
+  // tasks is what tells you the group is needed.
+  const fresh = $('bulkNewClient');
+  if (fresh) {
+    fresh.focus();
+    fresh.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || !fresh.value.trim()) return;
+      runBulk({ bulk: 'client', client: fresh.value.trim() }, fresh);
+    });
+  }
 }
 
 async function runBulk(data, node) {
@@ -1035,6 +1068,13 @@ function renderSettings() {
       <button class="btn" data-act-set="sync">Sync</button>
     </div>` : ''}
 
+    <h3>Tell us what to build</h3>
+    <div class="row">
+      <div><div class="label">Ask for a feature</div>
+        <div class="sub">Almost everything in Tico is here because somebody asked.</div></div>
+      <button class="btn" data-act-set="suggest">Open</button>
+    </div>
+
     <h3>What this costs</h3>
     <div class="row" style="display:block">
       <div class="label">Free — and free for you, permanently</div>
@@ -1086,6 +1126,8 @@ function renderSettings() {
       render();
     });
   }
+  el.sheetBody.querySelector('[data-act-set="suggest"]')
+    .addEventListener('click', () => chrome.tabs.create({ url: SUGGEST_URL }));
   el.sheetBody.querySelector('[data-act-set="export"]').addEventListener('click', exportBackup);
   el.sheetBody.querySelector('[data-act-set="import"]').addEventListener('click', () => $('importFile').click());
   $('importFile').addEventListener('change', importBackup);

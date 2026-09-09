@@ -219,6 +219,22 @@ check('nothing usable falls back to now', store.arrivalFrom([{}, {}], NOW), NOW)
 check('a task dated in the future cannot backdate anyone past today',
   store.arrivalFrom([{ created: NOW + 10 * DAY }], NOW), NOW);
 
+// --- the Done view, grouped by the day it was finished ---
+const D = 86400000;
+const T2 = +new Date(2026, 8, 9, 15, 0);          // Wednesday afternoon
+const done = (ago) => ({ doneAt: T2 - ago });
+check('finished today',      store.doneBucket(done(2 * 3600000), T2), 'Today');
+check('finished yesterday',  store.doneBucket(done(1 * D), T2), 'Yesterday');
+check('earlier this week gets its weekday', store.doneBucket(done(3 * D), T2), 'Sunday');
+check('six days back is still named',  store.doneBucket(done(6 * D), T2), 'Thursday');
+check('beyond the week',     store.doneBucket(done(9 * D), T2), 'Last week');
+check('and well beyond it',  store.doneBucket(done(30 * D), T2), 'Earlier');
+check('a task with no completion time is not lost',
+  store.doneBucket({}, T2), 'Earlier');
+check('the buckets come out newest first',
+  store.doneOrder(['Earlier', 'Sunday', 'Today', 'Last week', 'Yesterday']),
+  ['Today', 'Yesterday', 'Sunday', 'Last week', 'Earlier']);
+
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
 // --- a bare date keeps its words rather than saving an empty row ---

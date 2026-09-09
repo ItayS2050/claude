@@ -275,6 +275,33 @@ export const BUCKETS = [
   { id: 'someday',  label: 'No date' },
 ];
 
+/**
+ * Which day a finished task was finished on, for the Done view.
+ *
+ * A week is the span that matters: long enough to answer "what did I actually
+ * get through", short enough that the answer is still about this week. Beyond
+ * that it is history and gets one bucket.
+ */
+export function doneBucket(task, now = Date.now()) {
+  const when = task.doneAt || task.updated || task.created;
+  if (!when) return 'Earlier';
+  const start = new Date(now); start.setHours(0, 0, 0, 0);
+  const days = Math.floor((+start - +new Date(when).setHours(0, 0, 0, 0)) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return new Date(when).toLocaleDateString([], { weekday: 'long' });
+  if (days < 14) return 'Last week';
+  return 'Earlier';
+}
+
+/** The order those buckets appear in, newest first. */
+export function doneOrder(labels) {
+  const fixed = ['Today', 'Yesterday'];
+  const tail = ['Last week', 'Earlier'];
+  const middle = labels.filter((l) => !fixed.includes(l) && !tail.includes(l));
+  return [...fixed, ...middle, ...tail].filter((l) => labels.includes(l));
+}
+
 export function bucketOf(task, now = Date.now()) {
   if (task.due == null) return 'someday';
   const today = new Date(now); today.setHours(0, 0, 0, 0);
