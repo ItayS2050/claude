@@ -486,7 +486,8 @@ function taskHtml(t) {
 
   return `
     <div class="task ${t.done ? 'done' : ''} p${t.priority} ${flashId === t.id ? 'flash' : ''} ${picked.has(t.id) ? 'picked' : ''}" data-id="${t.id}">
-      <button class="check" data-act="toggle" data-id="${t.id}" aria-label="Complete">
+      <button class="check" data-act="toggle" data-id="${t.id}"
+              aria-label="Select" title="Select">
         <svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg>
       </button>
       <button class="lane-dot" data-act="lane" data-id="${t.id}" title="${escapeHtml(laneTitle(t))}">
@@ -497,6 +498,12 @@ function taskHtml(t) {
         <div class="meta">${meta.join('')}</div>
       </div>
       <div class="actions">
+        <button class="act done-act" data-act="complete" data-id="${t.id}"
+                title="${t.done ? 'Put it back' : 'Tick it off'}">
+          ${t.done
+            ? '<svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8Z"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M9.5 17.6 4.2 12.3l1.6-1.6 3.7 3.7 8.7-8.7 1.6 1.6z"/></svg>'}
+        </button>
         <button class="act" data-act="rename" data-id="${t.id}" title="Rename">
           <svg viewBox="0 0 24 24"><path d="M20.7 5.6 18.4 3.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7 1.8-1.8a1 1 0 0 0 0-1.4ZM13.8 6.5 3.6 16.7a1 1 0 0 0-.3.5l-1 4a1 1 0 0 0 1.2 1.2l4-1a1 1 0 0 0 .5-.3L18.2 10.9l-4.4-4.4Z"/></svg>
         </button>
@@ -585,11 +592,11 @@ function wireList() {
 
     if (act === 'toggle') node.addEventListener('click', (e) => {
       e.stopPropagation();
-      // A tick box means "done" everywhere else, so it still does that in one
-      // click — but once a selection exists, everything on screen is about the
-      // selection and the box joins in rather than fighting it.
-      if (picked.size) { togglePick(id); return; }
-      toggleDone(id);
+      // The box selects, and only selects. It is the first thing on the row and
+      // the thing everyone reaches for, so it cannot be the one control that
+      // acts on its own — choosing a task and deciding what happens to it are
+      // two separate steps, and the second one is the user's.
+      togglePick(id);
     });
     if (act === 'del') node.addEventListener('click', () => removeTask(id));
     if (act === 'prio') node.addEventListener('click', () => {
@@ -665,6 +672,10 @@ function wireList() {
     // not reliable here: selecting shows or hides the action bar, the list
     // resizes between the two clicks, and the browser stops calling it a
     // double-click. A button does not have that problem.
+    if (act === 'complete') node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleDone(id);
+    });
     if (act === 'rename') node.addEventListener('click', (e) => {
       e.stopPropagation();
       picked.delete(id);

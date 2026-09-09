@@ -258,8 +258,13 @@
   }
   .check:hover { border-color: var(--accent); }
   .check svg { width: 11px; height: 11px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
-  .task.done .check { background: var(--ok); border-color: var(--ok); }
-  .task.done .check svg { opacity: 1; }
+  /* Done is shown by the row, not by the box — the box now means "selected",
+     and one control cannot say two things at once. */
+  .task.done .title { color: var(--faint); }
+  .task.done .check { border-style: dashed; }
+  .done-act { color: var(--ok) !important; }
+  .done-act:hover { background: var(--surface-2); }
+  .task.done .done-act { color: var(--muted) !important; }
   .task.p1 .check { border-color: var(--warn); }
   .task.p2 .check { border-color: var(--danger); }
 
@@ -291,8 +296,13 @@
   .tag:hover { color: var(--accent); }
   .rep { color: var(--faint); }
 
-  .actions { display: flex; gap: 1px; opacity: 0; flex: none; transition: opacity .12s; }
+  .actions { display: flex; gap: 0; opacity: 0; flex: none; transition: opacity .12s; }
   .task:hover .actions, .task:focus-within .actions { opacity: 1; }
+  /* The tick is the one action worth reaching for without hovering first. */
+  .task .actions .done-act { opacity: .55; }
+  .task:hover .actions .done-act { opacity: 1; }
+  .task:not(:hover) .actions { opacity: 1; }
+  .task:not(:hover) .actions .act:not(.done-act) { opacity: 0; pointer-events: none; }
   .act {
     width: 22px; height: 22px;
     border-radius: 6px;

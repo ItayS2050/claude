@@ -68,7 +68,7 @@ Typing fast makes any guess worse, so nothing Tico decides is stuck. Click the d
 
 **Several at once**
 
-Click a task to choose it, then say what happens: tick off, reschedule, move between work and personal, file under a client, delete. As many as you like at once. The tick box still completes in one click when nothing is selected.
+The box on each row selects it — nothing happens until you say so. Pick one or a dozen, then choose: tick off, reschedule, move between work and personal, file under a client, delete. Ticking a single task off is its own button, right there on the row.
 
 **Reminders that don't quietly vanish**
 
