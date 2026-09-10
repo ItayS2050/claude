@@ -314,7 +314,12 @@ await framer.setViewportSize({ width: 1280, height: 800 });
 for (const [name, html] of FRAMES) {
   await framer.setContent(html);
   await framer.waitForTimeout(180);
-  await framer.screenshot({ path: join(OUT, `${name}.png`),
+  // scale: 'css' — one image pixel per CSS pixel. The context runs at
+  // deviceScaleFactor 2 so the product captures embedded inside these frames
+  // are sharp, but that same factor would write the frame itself out at
+  // 2560x1600, and the store wants exactly 1280x800 or 640x400. Nothing warns
+  // you: the upload is simply rejected for the wrong dimensions.
+  await framer.screenshot({ path: join(OUT, `${name}.png`), scale: 'css',
     clip: { x: 0, y: 0, width: 1280, height: 800 } });
   console.log(`store/${name}.png`);
 }
@@ -367,7 +372,8 @@ for (const [name, w, h, html] of PROMOS) {
   await framer.setViewportSize({ width: w, height: h });
   await framer.setContent(html);
   await framer.waitForTimeout(150);
-  await framer.screenshot({ path: join(OUT, `${name}.png`), clip: { x: 0, y: 0, width: w, height: h } });
+  await framer.screenshot({ path: join(OUT, `${name}.png`), scale: 'css',
+    clip: { x: 0, y: 0, width: w, height: h } });
   console.log(`store/${name}.png`);
 }
 
@@ -378,4 +384,33 @@ for (const shot of [shotPalette, shotTokens, shotSuggest, shotPopup, shotPrice])
 }
 
 await ctx.close();
-console.log('done');
+
+// The store rejects anything that is not exactly 1280x800 (or 640x400) for a
+// screenshot, 440x280 for the small tile and 1400x560 for the marquee. Reading
+// the size back out of the PNG header costs nothing and is the difference
+// between finding out here and finding out at the upload form.
+const EXPECTED = {
+  'shot1-palette.png': [1280, 800],
+  'shot2-tokens.png': [1280, 800],
+  'shot3-suggest.png': [1280, 800],
+  'shot4-popup.png': [1280, 800],
+  'shot5-price.png': [1280, 800],
+  'promo-small-440x280.png': [440, 280],
+  'promo-marquee-1400x560.png': [1400, 560],
+};
+
+let wrong = 0;
+for (const [name, [w, h]] of Object.entries(EXPECTED)) {
+  const head = readFileSync(join(OUT, name)).subarray(16, 24);
+  const got = [head.readUInt32BE(0), head.readUInt32BE(4)];
+  if (got[0] !== w || got[1] !== h) {
+    console.error(`  ${name}: ${got[0]}x${got[1]}, the store wants ${w}x${h}`);
+    wrong++;
+  }
+}
+if (wrong) {
+  console.error(`${wrong} asset(s) are the wrong size for the store`);
+  process.exit(1);
+}
+
+console.log(`done — ${Object.keys(EXPECTED).length} assets, all at the size the store wants`);
