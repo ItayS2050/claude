@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Rico – Gmail Canned Responses & Templates",
+  "version": "1.0.0",
+  "description": "A command palette for your Gmail templates. Press a key, search, hit Enter. Your snippet lands at the cursor in two seconds.",
+  "author": "Kiko",
+  "homepage_url": "https://get-kiko.com",
+  "permissions": ["storage"],
+  "host_permissions": ["https://extensionpay.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Rico – snippets for Gmail",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "commands": {
+    "open-palette": {
+      "suggested_key": { "default": "Alt+Shift+K" },
+      "description": "Open the Rico palette in Gmail (backup for the in-page shortcut)"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": [
+        "selectors.js",
+        "fuzzy.js",
+        "shortcut.js",
+        "tokens.js",
+        "storage.js",
+        "insert.js",
+        "palette.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://extensionpay.com/*"],
+      "js": ["ExtPay.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
