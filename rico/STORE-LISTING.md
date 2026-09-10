@@ -22,11 +22,14 @@ A command palette for your Gmail templates. Press a key, search, hit Enter. Your
 ## Full description
 
 ```
+Rico was a border collie who knew two hundred words. Tell him the name of a
+thing and he came back with the right one.
+
+This does that with your email templates.
+
 Gmail's Templates feature is three clicks deep in a menu and shows you a flat
 list. Past ten templates you stop being able to find the one you want. Past
-twenty, you stop using the feature.
-
-Rico is a search box for them.
+twenty, you stop using the feature. Rico is a search box for them.
 
 Press Cmd+Shift+K (Ctrl+Shift+K on Windows) inside any Gmail compose window.
 Type a few letters. Press Enter. The snippet lands where your cursor was.
@@ -93,6 +96,14 @@ shortcut is yours to choose either way.
 ## Category
 
 Productivity
+
+## The mascot, for whoever writes the next listing
+
+Rico 🐕 is a border collie carrying an envelope, and he is one of three: Kiko 🦜
+the parrot says back what you meant in the right tongue, Tico 🐿️ the squirrel
+stashes a thought and returns it later, Rico fetches. Same tile, same white
+silhouette, same single amber accent for the thing being carried — Tico's acorn
+is Rico's envelope. Keep that if the listing art is ever redone.
 
 ## Permission justifications (the review form asks for each one)
 

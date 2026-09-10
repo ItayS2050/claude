@@ -1,6 +1,15 @@
-# Rico — Gmail canned responses, on a keyboard shortcut
+# Rico 🐕 — Gmail canned responses, on a keyboard shortcut
 
-*A search box for the snippets you already have.*
+*You name it, he brings back the right one.*
+
+Rico was a real border collie. A 2004 study found he knew around two hundred
+object labels and would fetch the correct one out of a pile when told its name,
+which is the same sentence as this extension: type a few letters, get the right
+snippet back.
+
+He is the third of the three. Kiko 🦜 is a parrot — it says back what you meant,
+in the right tongue. Tico 🐿️ is a squirrel — it stashes a thought and returns it
+later. Rico fetches.
 
 Gmail's Templates feature is three clicks deep in a menu and shows you a flat
 list. Past about ten templates you stop being able to find anything, and past
@@ -123,6 +132,7 @@ Locking people out of their own writing is not a sales tactic.
 | `pay.js` | Paid state. Lives in the service worker; everyone else asks by message |
 | `background.js` | Service worker: first run, the commands backstop, message routing |
 | `popup.*` | The snippet manager |
+| `brand/` | The mascot, and the renderer that draws the icons from it |
 
 ### The three decisions worth knowing about
 
@@ -159,6 +169,24 @@ consistent across contenteditable configurations.
 Cloud sync, accounts, team sharing, AI generation, analytics, other mail
 clients, LinkedIn. One thing, small and fast.
 
+## Size
+
+The packaged extension is **154KB**, against a 150KB target that was set before
+the payment library and the mascot went in. The breakdown:
+
+| | |
+| --- | --- |
+| `ExtPay.js` | 51KB — vendored, not ours to trim |
+| Rico's own JS | 78KB |
+| Icons | 7KB (the flat mark it replaced was 1KB) |
+| HTML | 18KB |
+
+Nothing enforces 150KB — Chrome has no such limit and the store's is 100x
+larger. If it matters, the honest levers are: minify Rico's own JS at package
+time (~25KB, and it costs the readable stack traces that make a Gmail DOM break
+diagnosable), or drop the 48px icon and let Chrome downsample (~2KB). Neither is
+worth doing until something actually pushes against it.
+
 ## Known limits
 
 - **Gmail templates cannot be read programmatically.** They live in the user's
@@ -169,3 +197,24 @@ clients, LinkedIn. One thing, small and fast.
   palette, it renders in the top document instead. A cross-origin frame too
   small for the palette would be clipped — not seen in practice, listed here
   because it is the shape of the bug if one appears.
+
+---
+
+## The icons
+
+`brand/` holds the mascot drawing and a tiny vector renderer borrowed from
+Tico, so the family is drawn by the same code on the same tile. Regenerate the
+extension icons with:
+
+```bash
+cd brand && python3 icons.py     # writes icon16/48/128.png
+python3 mascots.py               # the candidate sheet, if you want to revisit
+python3 zoom.py                  # the 16px cuts blown up 8x, to judge them
+```
+
+**16 is drawn separately, not shrunk.** Ears set against the side of a large
+head merge straight into it once each shape is two pixels across, and the first
+attempt at a downsampled 16px icon was a featureless blob. The small cut drops
+the head, moves the ears out and down until they read as two lobes, cuts the
+nose, and loses the envelope's flap — a dark line across an eight-pixel bar of
+amber only removes the amber.

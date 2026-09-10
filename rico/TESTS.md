@@ -192,8 +192,9 @@ Privacy:
 
 ## 8 — Polish
 
-- [ ] Total unpacked size is under 150KB (`du -ch` on the packaged files: ~148KB —
-      this is close to the ceiling now, check it after any addition)
+- [ ] Total unpacked size — currently **154KB, over the 150KB target**. ExtPay
+      is 51KB of that and cannot be trimmed; the mascot icons are 7KB against
+      the old flat mark's 1KB. Either accept the number or trim (see README)
 - [ ] `./build.sh` produces a zip and all four test files pass
 - [ ] No errors in the Gmail console during a full open → search → insert cycle
 - [ ] No errors in the service worker console
