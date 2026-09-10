@@ -17,6 +17,8 @@ FILES=(
   tokens.js
   storage.js
   insert.js
+  repeats.js
+  suggest.js
   palette.js
   content.js
   popup.html
@@ -60,7 +62,8 @@ for path in declared:
 order = m['content_scripts'][0]['js']
 if order.index('content.js') != len(order) - 1:
     bad.append('content.js must load last')
-for dep in ['selectors.js', 'palette.js', 'insert.js', 'storage.js', 'shortcut.js']:
+for dep in ['selectors.js', 'palette.js', 'insert.js', 'storage.js', 'shortcut.js',
+            'repeats.js', 'suggest.js']:
     if order.index(dep) > order.index('content.js'):
         bad.append(f'{dep} loads after content.js')
 
@@ -77,7 +80,7 @@ PY
 # The gate on the free tier and the guess behind {FirstName} are both places
 # where a regression is invisible until it costs a sale or greets someone by
 # the wrong name.
-for t in test-fuzzy.js test-shortcut.js test-tokens.js test-storage.js; do
+for t in test-fuzzy.js test-shortcut.js test-tokens.js test-storage.js test-repeats.js; do
   node "$t" > /dev/null || { echo "$t is failing" >&2; exit 1; }
 done
 

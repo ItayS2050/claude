@@ -17,6 +17,7 @@ Rico.storage = (() => {
     onboarded: false,      // the one-time hint inside Gmail has been shown
     seeded: false,         // the example snippets have been written once
     sortBy: 'recent',      // recent | title | used
+    suggest: true,         // offer to save a paragraph written twice
   };
 
   // One snippet per storage key rather than one array under a single key.

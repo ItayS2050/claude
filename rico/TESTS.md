@@ -15,7 +15,8 @@ happily contradict the code you just wrote.
 Automated tests run first — they cover the parts a click-through cannot reach:
 
 ```bash
-node test-fuzzy.js && node test-shortcut.js && node test-tokens.js && node test-storage.js
+node test-fuzzy.js && node test-shortcut.js && node test-tokens.js \
+  && node test-storage.js && node test-repeats.js
 ```
 
 ---
@@ -150,9 +151,49 @@ Set your ExtensionPay id in `pay.js` first, or these do nothing.
 - [ ] Switch back to <kbd>⌘⇧K</kbd> → Insert Link works again
 - [ ] `chrome://extensions/shortcuts` shows `Alt+Shift+K`, and it opens the palette
 
+## 9 — Save-what-you-repeat
+
+The risk here is a feature that fires too often. Most of these checks are for
+times it should stay **quiet**.
+
+- [ ] Send a mail containing a real paragraph (2+ sentences, 12+ words).
+      Nothing happens — the first time is not a repeat
+- [ ] Send the **same paragraph** again in a new mail. A card appears bottom
+      right: *"You have written this before."*
+- [ ] The card appears **after** the mail has gone, never before it
+- [ ] The title field is pre-filled from the opening words, and is editable
+- [ ] The tag field is pre-filled when the text is obviously about pricing,
+      scheduling or a follow-up, and left empty when it is ambiguous
+- [ ] **Save snippet** saves it; it then appears in the popup and in the palette
+- [ ] The tag is stored — the saved snippet's folder matches what was in the field
+- [ ] **Not now** dismisses it and it comes back next time
+- [ ] **Never** dismisses it and it does **not** come back, ever, for that paragraph
+- [ ] The card disappears on its own after ~20 seconds
+- [ ] It does **not** disappear while you are typing in the title field
+- [ ] Settings → the suggestions checkbox turns the whole thing off
+
+Quiet cases — none of these should produce a card, however many times you send them:
+
+- [ ] "Thanks!" / "Sounds good" / anything under ~70 characters
+- [ ] A greeting line — *"Hi John, hope you had a good week"*
+- [ ] A sign-off — *"Thanks again for all your help with this"*
+- [ ] Your **email signature**, on every single mail
+- [ ] The **quoted thread** you are replying to, on every single reply
+- [ ] A paragraph you have **already saved** as a snippet
+- [ ] A paragraph that opens with "Thanks for…" but carries real content
+      **should** still be offered — that one is a repeat like any other
+
+Privacy:
+
+- [ ] `chrome://extensions` → service worker console →
+      `chrome.storage.local.get('repeats', console.log)` — the stored object
+      contains only short hashes and numbers. **No message text.** If you can
+      read any of your own writing in there, that is a bug and a serious one
+
 ## 8 — Polish
 
-- [ ] Total unpacked size is under 150KB (`du -ch` on the packaged files: ~132KB)
+- [ ] Total unpacked size is under 150KB (`du -ch` on the packaged files: ~148KB —
+      this is close to the ceiling now, check it after any addition)
 - [ ] `./build.sh` produces a zip and all four test files pass
 - [ ] No errors in the Gmail console during a full open → search → insert cycle
 - [ ] No errors in the service worker console

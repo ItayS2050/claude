@@ -122,6 +122,64 @@
     tryOpen();
   }, true);
 
+  // --------------------------------------------------------- repeat catching
+
+  /**
+   * Watch for the send, and check what went out against what has gone out
+   * before.
+   *
+   * The text has to be read on the way *into* the send — mousedown, before
+   * Gmail handles the click — because by the time the send completes the
+   * compose window is gone and the text with it.
+   */
+  function armSendWatch() {
+    const capture = (editable) => {
+      if (!settings.suggest || !editable) return;
+      const text = S.bodyText(editable);
+      // Run after the send has actually gone, so nothing here can delay or
+      // interfere with it. If the send failed, the worst case is a suggestion
+      // about a mail still sitting in the compose window.
+      setTimeout(() => considerSaving(text), 900);
+    };
+
+    document.addEventListener('mousedown', (event) => {
+      const button = event.target.closest && event.target.closest(S.SEND);
+      if (!button) return;
+      capture(currentEditable());
+    }, true);
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
+      const editable = currentEditable();
+      if (editable) capture(editable);
+    }, true);
+  }
+
+  async function considerSaving(text) {
+    const repeat = await Rico.repeats.record(text, snippets.map((s) => s.body));
+    if (!repeat) return;
+
+    Rico.suggest.show({
+      text: repeat.text,
+      title: Rico.repeats.suggestTitle(repeat.text),
+      tag: Rico.repeats.suggestTag(repeat.text),
+      paid,
+      atLimit: snippets.length >= Rico.storage.FREE_LIMIT,
+      onMute: () => Rico.repeats.mute(repeat.key),
+      onSave: async (title, tag) => {
+        try {
+          const saved = await Rico.storage.put(
+            { title, body: repeat.text, folder: tag }, { paid },
+          );
+          snippets = await Rico.storage.all();
+          return saved;
+        } catch {
+          return null;
+        }
+      },
+    });
+  }
+
   // ------------------------------------------------------------- onboarding
 
   /**
@@ -171,6 +229,7 @@
   load().then(() => {
     loadPaid();
     observer.observe(document.body, { childList: true, subtree: true });
+    armSendWatch();
     for (const editable of S.editables()) announce(editable);
     console.debug('[Rico] watching', location.host,
       window === window.top ? '(top frame)' : '(frame)');

@@ -37,6 +37,20 @@ Rico.selectors = (() => {
 
   const SUBJECT = 'input[name="subjectbox"]';
 
+  // The Send button. Gmail's tooltip carries the keyboard shortcut after the
+  // word — "Send ‪(⌘Enter)‬" — so these match on the start of the string.
+  const SEND = [
+    'div[role="button"][data-tooltip^="Send"]',
+    'div[role="button"][aria-label^="Send"]',
+    'div.T-I.J-J5-Ji.aoO',
+  ].join(',');
+
+  // Parts of a compose body that are not what the user just wrote: the thread
+  // they are replying to, and their own signature. Both repeat on every single
+  // message, so leaving them in would make every mail look like a repeat of
+  // the last one.
+  const NOT_WRITTEN_NOW = '.gmail_quote, blockquote, .gmail_signature, [data-smartmail="gmail_signature"]';
+
   // Containers we accept as "the compose window". A popped-out compose is a
   // dialog; an inline reply is not, which is why the class fallbacks matter.
   const COMPOSE_ROOT = [
@@ -125,6 +139,32 @@ Rico.selectors = (() => {
     return out;
   }
 
+  /**
+   * What the user actually typed in this message, as plain text.
+   *
+   * Works on a detached clone so that stripping the quoted thread and the
+   * signature to read the message cannot possibly alter the message.
+   */
+  function bodyText(editable) {
+    if (!editable) return '';
+    const copy = editable.cloneNode(true);
+    for (const el of copy.querySelectorAll(NOT_WRITTEN_NOW)) el.remove();
+    // innerText rather than textContent: it respects <br> and block boundaries,
+    // and paragraph breaks are what the repeat detector splits on.
+    const doc = editable.ownerDocument;
+    const holder = doc.createElement('div');
+    holder.style.cssText = 'position:absolute;left:-99999px;top:0;white-space:pre-wrap';
+    holder.appendChild(copy);
+    doc.body.appendChild(holder);
+    const text = holder.innerText || copy.textContent || '';
+    holder.remove();
+    return text;
+  }
+
+  function sendButton(composeRoot) {
+    return composeRoot ? composeRoot.querySelector(SEND) : null;
+  }
+
   function subject(composeRoot) {
     const el = composeRoot && composeRoot.querySelector(SUBJECT);
     return el ? el.value : '';
@@ -132,7 +172,9 @@ Rico.selectors = (() => {
 
   return {
     EDITABLE, RECIPIENT_CHIP, TO_INPUT, TO_REGION, SUBJECT, COMPOSE_ROOT,
+    SEND, NOT_WRITTEN_NOW,
     composeRootFrom, editables, isEditable, recipients, subject,
+    bodyText, sendButton,
   };
 })();
 

@@ -220,6 +220,18 @@
             <option value="used"${settings.sortBy === 'used' ? ' selected' : ''}>Most used</option>
           </select>
         </div>
+        <div class="field">
+          <label>Suggestions</label>
+          <label style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--text);
+                        display:flex;gap:8px;align-items:flex-start;cursor:pointer">
+            <input type="checkbox" id="sugg" style="width:auto;margin-top:2px"
+                   ${settings.suggest ? 'checked' : ''}>
+            <span>Offer to save a paragraph when I write it twice
+              <span class="hint" style="display:block;margin-top:2px">
+                Rico stores a one-way hash of each paragraph you send, never the text.
+                It cannot read back what you wrote.</span></span>
+          </label>
+        </div>
         <div class="row" style="justify-content:flex-start">
           <button data-act="import">Import…</button>
           <button data-act="export">Export JSON</button>
@@ -236,6 +248,10 @@
     dlg.querySelector('#sort').addEventListener('change', async (e) => {
       settings = await Rico.storage.saveSettings({ sortBy: e.target.value });
       renderList();
+    });
+    dlg.querySelector('#sugg').addEventListener('change', async (e) => {
+      settings = await Rico.storage.saveSettings({ suggest: e.target.checked });
+      toast(e.target.checked ? 'Suggestions on' : 'Suggestions off');
     });
     dlg.querySelector('[data-act="done"]').addEventListener('click', () => dlg.close());
     dlg.querySelector('[data-act="import"]').addEventListener('click', () => { dlg.close(); showImport(); });

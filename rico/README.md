@@ -39,9 +39,10 @@ node test-fuzzy.js       # ranking
 node test-shortcut.js    # the collision rules
 node test-tokens.js      # {FirstName} guessing
 node test-storage.js     # the free-tier gate and the sync-quota fallback
+node test-repeats.js     # what counts as a repeat worth mentioning
 ```
 
-They are plain Node scripts with no dependencies. `./build.sh` runs all four
+They are plain Node scripts with no dependencies. `./build.sh` runs all five
 and refuses to package if any of them fail.
 
 ### Packaging
@@ -115,6 +116,8 @@ Locking people out of their own writing is not a sales tactic.
 | `palette.js` | The overlay, in a shadow root, including the token prompt |
 | `insert.js` | Getting text into the compose box so Gmail's autosave notices |
 | `fuzzy.js` | Search and ranking |
+| `repeats.js` | Spotting a paragraph written twice. Hashes only, never text |
+| `suggest.js` | The card that offers to save it |
 | `tokens.js` | `{Token}` parsing and the `{FirstName}` guess |
 | `storage.js` | Snippets, settings, the free-tier gate, the sync-quota fallback |
 | `pay.js` | Paid state. Lives in the service worker; everyone else asks by message |
@@ -132,6 +135,14 @@ before anyone notices.
 held in memory in the content script and refreshed in the background. Two
 seconds is the entire product claim, and a storage round-trip on the keypress
 would spend a visible slice of it.
+
+**Repeat detection stores hashes, never text.** Rico's claim is that it does
+not keep your mail, and noticing "you have written this before" must not quietly
+undo that. What is recorded per sent paragraph is a 32-bit FNV-1a hash and a
+count — enough to recognise a repeat, useless for reconstructing anything. The
+old copy of the text is never needed, because when a repeat fires the text is
+already in the compose window. Signatures and quoted threads are stripped before
+anything is hashed, or every reply would look like a repeat of the last one.
 
 **Insertion goes through `execCommand`.** It is deprecated and it is still the
 only call that mutates a contenteditable through the browser's own editing
