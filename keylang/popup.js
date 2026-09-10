@@ -455,11 +455,53 @@ document.getElementById('help-report').addEventListener('click', (e) => {
         navigator.userAgent,
       ].join('\n');
 
-      chrome.tabs.create({
+      // The clipboard first, the mail client second.
+      //
+      // chrome.tabs.create on a mailto: does nothing at all for anyone whose
+      // mail lives in a browser tab with no protocol handler registered, which
+      // is most people. Chrome opens a blank tab, the report is gone, and the
+      // person concludes they were ignored — the worst possible outcome for the
+      // one button in this extension whose whole job is to reach us.
+      //
+      // So the report is put somewhere they can always get at it, they are told
+      // where, and only then is the mail client tried. If it opens, the mailto
+      // body means they never notice any of this.
+      const msg = document.getElementById('report-msg');
+      // Built as nodes rather than assigned as innerHTML. These strings are
+      // ours and a locale file is not user input, but a translated string
+      // reaching innerHTML is a habit worth not having in an extension that
+      // runs on every page.
+      const show = (text) => {
+        msg.textContent = '';
+        for (const [i, part] of text.split(/<\/?b>/).entries()) {
+          if (!part) continue;
+          msg.appendChild(i % 2 ? Object.assign(document.createElement('b'),
+                                                { textContent: part })
+                                : document.createTextNode(part));
+        }
+        msg.hidden = false;
+      };
+
+      const openMail = () => chrome.tabs.create({
         url: 'mailto:hello@get-kiko.com'
            + '?subject=' + encodeURIComponent('Kiko problem report')
            + '&body='    + encodeURIComponent(body),
       });
+
+      navigator.clipboard.writeText(body).then(
+        () => {
+          show(t('reportCopied', null,
+                 'Report copied to your clipboard. If your email app did not open, '
+                 + 'write to <b>hello@get-kiko.com</b> and paste it.'));
+          openMail();
+        },
+        () => {
+          // No clipboard permission — the address still has to be reachable.
+          show(t('reportManual', null,
+                 'Email <b>hello@get-kiko.com</b> and tell us what happened.'));
+          openMail();
+        }
+      );
     }
   );
 });

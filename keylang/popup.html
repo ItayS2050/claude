@@ -204,6 +204,10 @@
     .key-msg { margin-top: 7px; font-size: 11px; }
     .key-msg.err { color: #fca5a5; }
     .key-msg.ok  { color: #86efac; }
+    .report-msg { margin: 6px 0 2px; font-size: 11px; line-height: 1.5;
+                  color: #cbd5e1; background: #1e293b; border: 1px solid #334155;
+                  border-radius: 6px; padding: 7px 9px; }
+    .report-msg b { color: #e2e8f0; user-select: all; }
   </style>
 </head>
 <body>
@@ -428,6 +432,12 @@
   <h2 data-i18n="sectionHelp">Help</h2>
   <div class="help-links">
     <a href="#" id="help-report">🐞 <span data-i18n="helpReport">Report a problem</span></a>
+    <!-- Shown only after the report button is used. A mailto: can silently do
+         nothing for anyone reading mail in a browser tab, and a support route
+         that fails quietly is worse than none — they conclude they were
+         ignored. The report is on their clipboard either way, and the address
+         is here to paste it into. -->
+    <div class="report-msg" id="report-msg" hidden></div>
     <a href="https://get-kiko.com/support.html" target="_blank" rel="noopener">💬 <span data-i18n="helpSupport">Help and support</span></a>
     <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener"
        id="help-billing">🧾 <span data-i18n="helpBilling">Manage or cancel subscription</span></a>

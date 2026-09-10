@@ -361,6 +361,20 @@ M = {
 
 # ── Help links ────────────────────────────────────────────────────────────
 "helpReport":  ("Report a problem", "דיווח על תקלה", "Сообщить о проблеме", "문제 신고"),
+# Shown after the report button is pressed. A mailto: silently does nothing for
+# anyone whose mail is a browser tab, so the address has to be readable here.
+"reportCopied": ("Report copied to your clipboard. If your email app did not open, "
+                 "write to <b>hello@get-kiko.com</b> and paste it.",
+                 "הדיווח הועתק. אם תוכנת הדואר לא נפתחה, כתבו אל "
+                 "<b>hello@get-kiko.com</b> והדביקו אותו.",
+                 "Отчёт скопирован в буфер обмена. Если почтовая программа не "
+                 "открылась, напишите на <b>hello@get-kiko.com</b> и вставьте его.",
+                 "보고서가 클립보드에 복사되었습니다. 메일 앱이 열리지 않았다면 "
+                 "<b>hello@get-kiko.com</b> 으로 붙여넣어 보내주세요."),
+"reportManual": ("Email <b>hello@get-kiko.com</b> and tell us what happened.",
+                 "כתבו אל <b>hello@get-kiko.com</b> וספרו לנו מה קרה.",
+                 "Напишите на <b>hello@get-kiko.com</b> и расскажите, что произошло.",
+                 "<b>hello@get-kiko.com</b> 으로 무슨 일이 있었는지 알려주세요."),
 "helpSupport": ("Help and support", "עזרה ותמיכה", "Помощь и поддержка", "도움말 및 지원"),
 "helpBilling": ("Manage or cancel subscription", "ניהול או ביטול מנוי",
                 "Управление подпиской или отмена", "구독 관리 또는 해지"),

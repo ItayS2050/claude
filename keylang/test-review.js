@@ -371,6 +371,89 @@ const DAY = 24 * 60 * 60 * 1000;
        /reviewNudgeReset: true/.test(block) && /if \(!reviewNudgeReset\)/.test(block));
   }
 
-  console.log(`\n${pass} passed, ${fail} failed\n`);
-  process.exit(fail ? 1 : 0);
+  
+// ── The one button whose whole job is to reach us ───────────────────────
+//
+// "Report a problem" called chrome.tabs.create on a mailto:. For anyone whose
+// mail is a browser tab with no protocol handler registered — most people —
+// Chrome opens a blank tab and the report is gone. They do not send it twice;
+// they conclude they were ignored, and that is the outcome this button exists
+// to prevent.
+//
+// So the report goes to the clipboard first and the address is put on screen,
+// and only then is the mail client tried. This runs the real handler.
+console.log('A problem report survives having no mail client');
+{
+  const js   = fs.readFileSync(path.join(__dirname, 'popup.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, 'popup.html'), 'utf8');
+
+  ok('the popup has somewhere to say it', html.includes('id="report-msg"'));
+
+  const start = js.indexOf("document.getElementById('help-report')");
+  const end   = js.indexOf('\n});', start) + 4;
+  const src   = js.slice(start, end);
+  ok('the handler was found in popup.js', start > 0 && end > start);
+
+  const run = (clipboardWorks) => {
+    const state = { tabs: [], msg: { textContent: '', hidden: true, nodes: [] }, listener: null };
+    state.msg.appendChild = n => { state.msg.nodes.push(n); };
+    const el = id => id === 'report-msg' ? state.msg
+                                         : { addEventListener: (_t, fn) => { state.listener = fn; } };
+    const ctx = {
+      document: {
+        getElementById: el,
+        createElement: t => ({ tag: t, textContent: '' }),
+        createTextNode: t => ({ text: t }),
+      },
+      navigator: {
+        userAgent: 'probe',
+        clipboard: {
+          writeText: (text) => {
+            state.copied = text;
+            return clipboardWorks ? Promise.resolve() : Promise.reject(new Error('denied'));
+          },
+        },
+      },
+      chrome: {
+        runtime: { getManifest: () => ({ version: 'test' }) },
+        storage: { local: { get: (_k, cb) => cb({ stats: { detected: 3 } }) } },
+        tabs: { create: o => state.tabs.push(o.url) },
+      },
+      ALL_LEARNED_KEYS: ['learnedHebrew'],
+      t: (_k, _s, fallback) => fallback,
+      console,
+    };
+    ctx.globalThis = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(src, ctx);
+    state.listener({ preventDefault() {} });
+    return state;
+  };
+
+  // clipboard.writeText settles on a microtask, so each case is awaited. This
+  // block sits inside the file's own async wrapper — a second one would not
+  // finish before that wrapper exits the process.
+  for (const [label, works] of [['clipboard works', true], ['clipboard denied', false]]) {
+    const s2 = run(works);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    const text = s2.msg.nodes.map(n => n.text || n.textContent).join('');
+    ok(`${label}: the address is shown on screen`, text.includes('hello@get-kiko.com'), text);
+    ok(`${label}: the message is made visible`, s2.msg.hidden === false);
+    ok(`${label}: the mail client is still tried`,
+       s2.tabs.length === 1 && s2.tabs[0].startsWith('mailto:hello@get-kiko.com'), s2.tabs[0]);
+    ok(`${label}: the address is selectable, not buried in a sentence`,
+       s2.msg.nodes.some(n => n.tag === 'b' && n.textContent === 'hello@get-kiko.com'));
+    // The whole point: whatever happens next, the report is somewhere the
+    // person can get at it.
+    ok(`${label}: the report reaches the clipboard`,
+       typeof s2.copied === 'string' && s2.copied.includes('Kiko test'), String(s2.copied).slice(0, 40));
+    ok(`${label}: with the diagnostics, and no learned words`,
+       /Detected 3/.test(s2.copied || '') && !/learnedHebrew/.test(s2.copied || ''));
+  }
+  ok('the report still carries no learned words, only counts',
+     !/\[\.\.\.learned/.test(src) && /learnedCount/.test(src));
+}
+
+console.log(`\n${pass} passed, ${fail} failed\n`);
+process.exit(fail ? 1 : 0);
 })();

@@ -366,6 +366,12 @@
   "helpReport": {
     "message": "Report a problem"
   },
+  "reportCopied": {
+    "message": "Report copied to your clipboard. If your email app did not open, write to <b>hello@get-kiko.com</b> and paste it."
+  },
+  "reportManual": {
+    "message": "Email <b>hello@get-kiko.com</b> and tell us what happened."
+  },
   "helpSupport": {
     "message": "Help and support"
   },
