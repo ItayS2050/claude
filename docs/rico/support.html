@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rico – Support</title>
+<link rel="icon" href="icon128.png">
+<link rel="canonical" href="https://get-kiko.com/rico/support.html">
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #1e293b; line-height: 1.7; }
+  h1 { font-size: 28px; color: #0f172a; }
+  h2 { font-size: 18px; margin-top: 34px; color: #0f172a; }
+  p, li { color: #334155; }
+  code, kbd { background: #f1f5f9; border-radius: 4px; padding: 1px 6px; font-size: 14px; }
+  a { color: #4f46e5; }
+  .box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-top: 20px; }
+</style>
+</head>
+<body>
+  <h1><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px;vertical-align:-5px"> Rico Support</h1>
+  <p><a href="/rico/">← Back to Rico</a></p>
+
+  <div class="box">
+    <p style="margin:0">Something broken, or an idea? Email
+       <a href="mailto:itay@selltech.io">itay@selltech.io</a>. One person reads it, usually
+       within a day.</p>
+  </div>
+
+  <h2>The palette does not open</h2>
+  <p>Rico only works inside a Gmail compose or reply window — not the inbox. Start a reply
+     first, then press <kbd>Ctrl+Shift+K</kbd> (<kbd>⌘⇧K</kbd> on a Mac).</p>
+  <p>If you have just installed or updated it, <strong>reload the Gmail tab</strong>. Rico is
+     injected when the page loads, so an already-open tab is still running the old copy or
+     none at all.</p>
+
+  <h2>The shortcut clashes with something</h2>
+  <p>Open the Rico icon in your toolbar → <strong>Settings</strong> → pick another one.
+     <kbd>Ctrl+K</kbd> is offered but is Gmail's own Insert Link shortcut, so taking it costs
+     you that. There is also <kbd>Alt+Shift+K</kbd> as a backup, changeable at
+     <code>chrome://extensions/shortcuts</code>.</p>
+
+  <h2>My snippet went in but the draft saved without it</h2>
+  <p>This should not happen — Rico inserts through the browser's own editing pipeline so that
+     Gmail's autosave sees it. If you hit it, please email me the snippet and whether it had
+     line breaks in it. That is a real bug and I want it.</p>
+
+  <h2>{FirstName} is asking me instead of filling itself</h2>
+  <p>Automatic fill is a Pro feature; on the free tier Rico prompts you. It also declines to
+     guess when the recipient is a shared mailbox like <code>support@</code>, or an address
+     too short to read a name from — greeting someone by the wrong name is worse than not
+     greeting them.</p>
+
+  <h2>Rico keeps offering to save things I do not want</h2>
+  <p>Click <strong>Never</strong> on the card and that paragraph will not come back. To turn
+     the whole feature off: Rico icon → <strong>Settings</strong> → untick the suggestions box.</p>
+
+  <h2>I have snippets on another machine</h2>
+  <p>Rico uses Chrome's own sync. Sign into the same Chrome profile with sync on and they
+     arrive. If sync is off or full, snippets stay on the machine they were made on — nothing
+     is lost, it just does not travel. <strong>Settings → Export JSON</strong> moves them by
+     hand.</p>
+
+  <h2>I paid and Rico still says Free</h2>
+  <p>Open the Rico icon and close it again — it re-checks on open. If it still says Free after
+     a minute, email me the address you paid with and I will sort it out directly.</p>
+
+  <h2>Refunds</h2>
+  <p>Ask within 30 days and you get your money back, no questions. Email
+     <a href="mailto:itay@selltech.io">itay@selltech.io</a>.</p>
+
+  <h2>Removing Rico</h2>
+  <p>Right-click the icon → Remove from Chrome. Your snippets go with it. Export them first
+     from <strong>Settings</strong> if you want to keep them.</p>
+
+  <p style="margin-top:40px"><a href="privacy.html">Privacy policy</a></p>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rico – Privacy Policy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 24px; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 28px; color: #0f172a; }
+    h2 { font-size: 18px; margin-top: 36px; color: #0f172a; }
+    p, li { color: #334155; }
+    .updated { color: #64748b; font-size: 14px; }
+    code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1><img src="icon128.png" alt="" width="30" height="30" style="border-radius:8px;vertical-align:-5px"> Rico Privacy Policy</h1>
+  <p class="updated">Last updated: September 2026</p>
+
+  <h2>What Rico does</h2>
+  <p>Rico is a Chrome extension that puts your saved email templates behind a keyboard shortcut inside Gmail. You press a key in a compose window, search your snippets, and press Enter to insert one at the cursor.</p>
+
+  <h2>What Rico collects</h2>
+  <p><strong>Nothing. Rico has no servers, no account, no analytics and no database. Nothing you write in it, or in your email, is transmitted anywhere.</strong></p>
+  <p>Specifically:</p>
+  <ul>
+    <li>Your snippets and settings are stored on your own computer using <code>chrome.storage</code>. If you have Chrome Sync switched on, Chrome carries them between your own machines under <a href="https://policies.google.com/privacy">Google's privacy policy</a> — Rico has no server of its own for them to reach.</li>
+    <li>Rico reads the compose window you are typing in, because inserting text at your cursor is not possible otherwise. It reads the To: field to fill <code>{FirstName}</code>. <strong>Neither is stored, logged, or sent anywhere.</strong></li>
+    <li>Rico does not read your inbox, your received mail, your sent mail, or any thread you are not actively composing in.</li>
+    <li>Rico runs only on <code>mail.google.com</code>. It does not read the other pages you visit or your browsing history.</li>
+    <li>Rico has no cookies, no tracking, no telemetry, no crash reporting and no advertising.</li>
+    <li>Rico never sells or shares data, because it never has any to sell or share.</li>
+  </ul>
+
+  <h2>The “you have written this before” suggestion</h2>
+  <p>Rico can notice when you send the same paragraph twice and offer to keep it as a snippet. Doing that means recognising a message you have sent before, so it is worth being exact about how:</p>
+  <ul>
+    <li>When you send a message, Rico computes a short <strong>one-way hash</strong> of each substantial paragraph and stores that hash, with a count, on your own computer.</li>
+    <li><strong>The text itself is never stored.</strong> A hash cannot be turned back into what you wrote. When a repeat is recognised, the paragraph Rico offers to save is the one already on your screen — it never needed a copy of the old one.</li>
+    <li>Your signature and the quoted thread you are replying to are removed before anything is hashed.</li>
+    <li>Nothing about this leaves your computer, and the feature can be switched off entirely in Settings.</li>
+  </ul>
+
+  <h2>Payments</h2>
+  <p>Rico Pro is a one-time purchase handled by <a href="https://extensionpay.com">ExtensionPay</a>, which uses Stripe. <strong>No card details ever reach the extension</strong> — payment happens on their page, not in Rico. The extension asks ExtensionPay a single question, "has this installation paid?", and stores the yes or no locally. Once the answer is yes it stops asking, because a one-time purchase cannot expire. Your snippets are never sent as part of this.</p>
+
+  <h2>Permissions, and why each one exists</h2>
+  <ul>
+    <li><code>storage</code> — to keep your snippets and settings on your computer. This is the only permission Rico requests.</li>
+    <li>Access to <code>mail.google.com</code> — to show the palette inside a Gmail compose window and insert your text at the cursor. This is the entire function of the extension.</li>
+    <li>Access to <code>extensionpay.com</code> — to check whether Pro has been purchased, as above.</li>
+  </ul>
+
+  <h2>Google Limited Use disclosure</h2>
+  <p>Rico's use of information received from Google APIs and Google user interfaces adheres to the <a href="https://developer.chrome.com/docs/webstore/program-policies/limited-use/">Chrome Web Store User Data Policy</a>, including the Limited Use requirements. Rico accesses the content of a Gmail compose window solely to insert the user's own saved text at the cursor and to read the recipient's name for variable substitution. It does not collect, transmit, store, or transfer message content to any server, and it does not use it for advertising, profiling, or for training any model. All processing happens locally in the browser.</p>
+
+  <h2>This website</h2>
+  <p>Everything above describes the extension. This site is a separate thing, so to be exact about it: it runs <strong>no analytics, sets no cookies, and makes no third-party requests</strong>. No tracking pixels, no advertising, no fonts or scripts pulled from anyone else's server.</p>
+
+  <h2>Changes</h2>
+  <p>If Rico ever starts collecting anything, this page will say so before that version ships, and the change will be described here rather than quietly amended.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about any of this: <a href="mailto:itay@selltech.io">itay@selltech.io</a></p>
+</body>
+</html>

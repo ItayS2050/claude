@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rico is installed</title>
+<style>
+  :root {
+    color-scheme: dark light;
+    --bg: #0f1117; --surface: #171a23; --line: #272c3a;
+    --text: #e7e9ef; --muted: #8b93a7; --accent: #7c83ff; --accent-soft: #2a2d52;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f7f8fb; --surface: #fff; --line: #e3e6ee;
+            --text: #1b1e28; --muted: #6b7280; --accent: #5b63f0; --accent-soft: #eef0fb; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 48px 20px; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 30px; }
+  ol { padding-left: 0; list-style: none; counter-reset: step; margin: 0 0 30px; }
+  li {
+    counter-increment: step; position: relative; padding: 14px 16px 14px 52px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; margin-bottom: 10px;
+  }
+  li::before {
+    content: counter(step); position: absolute; left: 16px; top: 15px;
+    width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft);
+    color: var(--accent); font-size: 12px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  li b { display: block; font-size: 14px; }
+  li span { color: var(--muted); font-size: 13px; }
+  kbd {
+    background: var(--accent-soft); color: var(--accent); border-radius: 5px;
+    padding: 2px 7px; font: inherit; font-size: 13px; font-weight: 600;
+  }
+  .note {
+    border-left: 3px solid var(--accent); padding: 2px 0 2px 14px;
+    color: var(--muted); font-size: 13px; margin: 0 0 30px;
+  }
+  a.cta {
+    display: inline-block; background: var(--accent); color: #fff; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 14px;
+  }
+  footer { margin-top: 34px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rico is in. 🐕</h1>
+  <p class="sub">Name it and he brings back the right one. Three snippets are already
+     waiting so there is something to try.</p>
+
+  <ol>
+    <li><b>Open Gmail and start a reply</b>
+        <span>Rico only wakes up inside a compose window.</span></li>
+    <li><b>Press <kbd id="sc">⌘⇧K</kbd></b>
+        <span>The palette opens over the compose box.</span></li>
+    <li><b>Type a few letters, press Enter</b>
+        <span>The snippet lands where your cursor was.</span></li>
+  </ol>
+
+  <p class="note">
+    Not <kbd>⌘K</kbd> — Gmail already uses that for Insert Link inside a compose
+    window, and Chrome reserves it for the address bar. You can switch Rico to
+    <kbd>⌘K</kbd> anyway from Settings if you never insert links.
+  </p>
+
+  <a class="cta" href="https://mail.google.com/">Open Gmail</a>
+
+  <footer>
+    Everything stays in your browser. No account, no server, nothing sent anywhere.
+  </footer>
+</main>
+<script src="shortcut.js"></script>
+<script>
+  // The page is written for a Mac; on Windows it should say Ctrl.
+  document.getElementById('sc').textContent = Rico.shortcut.format(Rico.shortcut.DEFAULT);
+  for (const kbd of document.querySelectorAll('.note kbd')) {
+    if (kbd.textContent === '⌘K') kbd.textContent = Rico.shortcut.format('Mod+K');
+  }
+</script>
+</body>
+</html>

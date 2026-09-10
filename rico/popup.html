@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rico</title>
+<style>
+  :root {
+    color-scheme: dark light;
+    --bg: #0f1117;
+    --surface: #171a23;
+    --surface-2: #1e222e;
+    --line: #272c3a;
+    --text: #e7e9ef;
+    --muted: #8b93a7;
+    --faint: #5b6377;
+    --accent: #7c83ff;
+    --accent-soft: #2a2d52;
+    --danger: #f87171;
+    --ok: #4ade80;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f8fb;
+      --surface: #ffffff;
+      --surface-2: #f0f2f7;
+      --line: #e3e6ee;
+      --text: #1b1e28;
+      --muted: #6b7280;
+      --faint: #9aa1b1;
+      --accent: #5b63f0;
+      --accent-soft: #eef0fb;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; width: 740px; height: 552px; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .brand { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
+  .kbd {
+    font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 5px; padding: 2px 7px;
+  }
+  .spacer { flex: 1; }
+  .badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  }
+  main { flex: 1; display: flex; min-height: 0; }
+
+  .side { width: 268px; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .search { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .list { flex: 1; overflow-y: auto; padding: 6px; }
+  .item {
+    padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+  }
+  .item:hover { background: var(--surface-2); }
+  .item.on { background: var(--accent-soft); border-color: var(--accent); }
+  .item h3 { margin: 0; font-size: 13px; font-weight: 600; }
+  .item p {
+    margin: 1px 0 0; font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sidefoot {
+    padding: 8px 10px; border-top: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted);
+  }
+
+  .pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .pane .body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+          text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 5px; }
+  input[type=text], textarea, select {
+    width: 100%; padding: 8px 10px; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 7px; outline: none;
+  }
+  input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: none; min-height: 250px; line-height: 1.55; font-size: 13px; }
+  .field { margin-bottom: 13px; }
+  .hint { font-size: 11px; color: var(--faint); margin-top: 5px; }
+  .hint code { background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+
+  .actions {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-top: 1px solid var(--line); background: var(--surface);
+  }
+  button {
+    font: inherit; font-size: 12px; font-weight: 600; padding: 7px 13px;
+    border-radius: 7px; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--text); cursor: pointer;
+  }
+  button:hover { border-color: var(--faint); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  button.danger { background: transparent; border-color: transparent; color: var(--danger); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+  .empty h2 { font-size: 15px; margin: 0 0 6px; color: var(--text); }
+
+  dialog {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+    color: var(--text); padding: 0; width: 420px; max-width: 90vw;
+  }
+  dialog::backdrop { background: rgba(15, 17, 23, 0.55); }
+  .dlg { padding: 18px; }
+  .dlg h2 { margin: 0 0 6px; font-size: 15px; }
+  .dlg p { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+  .dlg textarea { min-height: 150px; font-size: 12px; }
+  .dlg .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .price { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .price small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  ul.sell { margin: 10px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+  ul.sell li { margin: 3px 0; }
+  .toast {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    padding: 8px 14px; border-radius: 8px; font-size: 12px; opacity: 0;
+    transition: opacity 140ms; pointer-events: none;
+  }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+  <header>
+    <span class="brand">Rico</span>
+    <span class="kbd" id="shortcutChip">⌘⇧K</span>
+    <span class="spacer"></span>
+    <span class="badge" id="tier">Free</span>
+    <button class="ghost" id="settingsBtn" title="Shortcut &amp; data">Settings</button>
+    <button class="primary" id="newBtn">New snippet</button>
+  </header>
+
+  <main>
+    <div class="side">
+      <div class="search">
+        <input type="text" id="search" placeholder="Search snippets…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="list" id="list"></div>
+      <div class="sidefoot">
+        <span id="count"></span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="ghost" id="upgradeBtn" hidden>Get Pro</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <div class="body" id="pane"></div>
+      <div class="actions" id="paneActions" hidden>
+        <button class="primary" id="saveBtn">Save</button>
+        <button class="ghost" id="cancelBtn">Cancel</button>
+        <span class="spacer" style="flex:1"></span>
+        <button class="danger" id="deleteBtn">Delete</button>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="settingsDlg"></dialog>
+  <dialog id="importDlg"></dialog>
+  <dialog id="upgradeDlg"></dialog>
+  <div class="toast" id="toast"></div>
+
+  <script src="fuzzy.js"></script>
+  <script src="shortcut.js"></script>
+  <script src="storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

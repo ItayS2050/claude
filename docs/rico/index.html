@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rico — Gmail canned responses on a keyboard shortcut</title>
+<meta name="description" content="A command palette for your Gmail templates. Press Ctrl+Shift+K, type a few letters, hit Enter. Free for 10 snippets, $24 once for unlimited.">
+<link rel="icon" href="icon128.png">
+<link rel="canonical" href="https://get-kiko.com/rico/">
+<meta property="og:title" content="Rico — your Gmail templates, one keystroke away">
+<meta property="og:description" content="Press a key, type a few letters, press Enter. The snippet lands where your cursor was.">
+<meta property="og:image" content="https://get-kiko.com/rico/og.png">
+<meta property="og:url" content="https://get-kiko.com/rico/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root {
+    --bg: #0b0d13; --surface: #14171f; --surface-2: #1b1f2a; --line: #262b39;
+    --text: #eceef4; --muted: #99a0b5; --faint: #626a80;
+    --brand: #7c83ff; --brand-2: #9ba2ff; --brand-soft: rgba(124,131,255,.14);
+    --amber: #fbbf24; --r: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(11,13,19,.82); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 17px; }
+  .logo img { width: 30px; height: 30px; border-radius: 9px; }
+  nav { display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  @media (max-width: 680px) { nav .hide-sm { display: none; } }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--brand); color: #fff; text-decoration: none;
+    border: none; border-radius: 11px; padding: 11px 20px;
+    font: 600 15px inherit; cursor: pointer; transition: filter .15s, transform .15s;
+  }
+  .btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn.small { padding: 8px 15px; font-size: 14px; border-radius: 9px; }
+  .btn.ghost { background: var(--surface-2); color: var(--text); }
+
+  kbd {
+    background: var(--brand-soft); color: var(--brand-2); border-radius: 7px;
+    padding: 3px 9px; font: 700 .92em inherit; white-space: nowrap;
+  }
+
+  .hero { padding: 84px 0 20px; text-align: center; position: relative; }
+  .hero::before {
+    content: ''; position: absolute; inset: -80px 0 auto; height: 520px; z-index: -1;
+    background: radial-gradient(760px 420px at 50% 0%, rgba(124,131,255,.20), transparent 68%);
+  }
+  .hero h1 { font-size: clamp(38px, 6vw, 62px); line-height: 1.05; letter-spacing: -.032em; font-weight: 800; }
+  .hero h1 em { font-style: normal; color: var(--brand-2); }
+  .hero p.sub { font-size: clamp(17px, 2.2vw, 21px); color: var(--muted); max-width: 620px; margin: 20px auto 0; }
+  .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .hero .fine { color: var(--faint); font-size: 13.5px; margin-top: 16px; }
+
+  .shot { margin: 46px auto 0; max-width: 1000px; }
+  .shot img {
+    width: 100%; border-radius: var(--r); display: block;
+    box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  section { padding: 76px 0; }
+  h2 { font-size: clamp(26px, 3.6vw, 36px); letter-spacing: -.024em; font-weight: 800; }
+  h2 + p.lede { color: var(--muted); font-size: 17px; max-width: 620px; margin-top: 12px; }
+
+  .grid { display: grid; gap: 18px; margin-top: 38px; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
+  .card h3 { font-size: 16.5px; font-weight: 650; margin-bottom: 7px; }
+  .card p { color: var(--muted); font-size: 14.5px; }
+  .card .ic {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--brand-soft);
+    display: grid; place-items: center; font-size: 17px; margin-bottom: 14px;
+  }
+
+  .steps { counter-reset: s; display: grid; gap: 14px; margin-top: 34px; max-width: 640px; }
+  .steps li { counter-increment: s; list-style: none; position: relative; padding-left: 46px; color: var(--muted); font-size: 16px; }
+  .steps li b { color: var(--text); font-weight: 600; }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 1px;
+    width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-2);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  }
+
+  .price { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 38px; max-width: 760px; }
+  .tier { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 28px; }
+  .tier.pro { border-color: var(--brand); background: linear-gradient(180deg, rgba(124,131,255,.09), var(--surface)); }
+  .tier h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .tier .amt { font-size: 40px; font-weight: 800; letter-spacing: -.03em; margin: 8px 0 2px; }
+  .tier .amt span { font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .tier ul { list-style: none; margin-top: 18px; display: grid; gap: 9px; }
+  .tier li { color: var(--muted); font-size: 14.5px; padding-left: 24px; position: relative; }
+  .tier li::before { content: '✓'; position: absolute; left: 0; color: var(--brand-2); font-weight: 700; }
+
+  .note { border-left: 3px solid var(--brand); padding: 4px 0 4px 16px; color: var(--muted); font-size: 15px; max-width: 640px; margin-top: 26px; }
+
+  .family { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 30px; }
+  .fam { display: flex; gap: 13px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 16px 18px; text-decoration: none; }
+  .fam .e { font-size: 26px; }
+  .fam b { display: block; font-size: 15px; }
+  .fam span { color: var(--muted); font-size: 13.5px; }
+
+  footer { border-top: 1px solid var(--line); padding: 34px 0; color: var(--faint); font-size: 13.5px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  footer a { color: var(--muted); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <a class="logo" href="/rico/"><img src="icon128.png" alt="">Rico</a>
+  <nav>
+    <a class="hide-sm" href="#how">How it works</a>
+    <a class="hide-sm" href="#price">Pricing</a>
+    <a href="support.html">Support</a>
+    <a class="btn small" href="#install">Add to Chrome</a>
+  </nav>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <h1>Your Gmail templates,<br><em>one keystroke away.</em></h1>
+  <p class="sub">Press <kbd>Ctrl+Shift+K</kbd> in any compose window, type a few letters,
+     press Enter. The snippet lands where your cursor was.</p>
+  <div class="cta" id="install">
+    <a class="btn" href="#">Add to Chrome — free</a>
+    <a class="btn ghost" href="#how">See how it works</a>
+  </div>
+  <p class="fine">10 snippets free, forever. $24 once for unlimited — not a subscription.</p>
+  <div class="shot"><img src="palette.png" alt="The Rico palette open over a Gmail reply, filtered to four snippets"></div>
+</div></div>
+
+<section id="how"><div class="wrap">
+  <h2>Gmail buries your templates. Rico is a search box for them.</h2>
+  <p class="lede">Gmail's Templates menu is three clicks deep and shows a flat list. Past ten
+     templates you cannot find the one you want. Past twenty, you stop using the feature.</p>
+
+  <ol class="steps">
+    <li><b>Start a reply</b> — Rico only wakes up inside a compose window.</li>
+    <li><b>Press <kbd>Ctrl+Shift+K</kbd></b> — the palette opens over the compose box.</li>
+    <li><b>Type a few letters</b> — "fo" finds "Follow up", and ranks it above everything else that happens to contain an f and an o.</li>
+    <li><b>Press Enter</b> — the text lands at your cursor, line breaks intact, and Gmail's autosave picks it up as though you typed it.</li>
+  </ol>
+
+  <div class="grid">
+    <div class="card">
+      <div class="ic">🔍</div>
+      <h3>Search that actually narrows</h3>
+      <p>Fuzzy matching on titles, literal matching inside the text. Forgotten the name?
+         Type "refund window" and it finds the one that says it.</p>
+    </div>
+    <div class="card">
+      <div class="ic">👤</div>
+      <h3>{FirstName}, filled in</h3>
+      <p>Taken from whoever is in the To: field. Any other token you invent — {Company},
+         {Invoice} — asks you before it inserts, so no half-finished greeting goes out.</p>
+    </div>
+    <div class="card">
+      <div class="ic">🐕</div>
+      <h3>It notices what you retype</h3>
+      <p>Write the same paragraph twice and Rico offers to keep it, with a title and tag
+         already filled in. It stores a one-way hash, never your text.</p>
+    </div>
+    <div class="card">
+      <div class="ic">⌨️</div>
+      <h3>Not ⌘K, on purpose</h3>
+      <p>Gmail already uses that for Insert Link and Chrome reserves it for the address
+         bar. Rico stays off it — and lets you take it anyway if you never insert links.</p>
+    </div>
+  </div>
+
+  <div class="shot" style="max-width:840px">
+    <img src="popup.png" alt="The Rico snippet manager, with eight snippets and one open for editing">
+  </div>
+</div></section>
+
+<section id="price" style="padding-top:0"><div class="wrap">
+  <h2>Pay once. Not every month.</h2>
+  <p class="lede">Rico has no servers to fund, so there is nothing for a subscription to pay for.</p>
+
+  <div class="price">
+    <div class="tier">
+      <h3>Free</h3>
+      <div class="amt">$0 <span>forever</span></div>
+      <ul>
+        <li>10 snippets</li>
+        <li>The full palette and search</li>
+        <li>Manual variable fill</li>
+        <li>Repeat detection</li>
+      </ul>
+    </div>
+    <div class="tier pro">
+      <h3>Pro</h3>
+      <div class="amt">$24 <span>once</span></div>
+      <ul>
+        <li>Unlimited snippets</li>
+        <li>{FirstName} fills itself</li>
+        <li>Snippet folders</li>
+        <li>JSON import and export</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="note">The free tier limits how many snippets you can <b>create</b>. It never
+     limits using the ones you have — if you are sitting on forty from before, all forty
+     keep working.</p>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <h2>Nothing leaves your browser.</h2>
+  <p class="lede">No account, no server, no analytics. Snippets live in your own browser and
+     are carried between your machines by Chrome's own sync. Rico reads the compose window
+     you are typing in — inserting at your cursor is not possible otherwise — and the To:
+     field for {FirstName}. Neither is stored or sent anywhere. It never touches your inbox
+     or your sent mail. The only permission it asks for is storage.</p>
+  <p style="margin-top:18px"><a href="privacy.html" style="color:var(--brand-2)">Read the privacy policy →</a></p>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <h2>One of three.</h2>
+  <p class="lede">Rico was a border collie who knew two hundred words. Tell him the name of a
+     thing and he came back with the right one.</p>
+  <div class="family">
+    <a class="fam" href="/"><span class="e">🦜</span><span><b>Kiko</b>
+      <span>Says back what you meant, in the right tongue</span></span></a>
+    <a class="fam" href="/tico/"><span class="e">🐿️</span><span><b>Tico</b>
+      <span>Stashes a thought, returns it on time</span></span></a>
+    <a class="fam" href="/rico/"><span class="e">🐕</span><span><b>Rico</b>
+      <span>You name it, he brings back the right one</span></span></a>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>© 2026 Rico — a Kiko project</span>
+  <span>
+    <a href="privacy.html">Privacy</a> ·
+    <a href="support.html">Support</a> ·
+    <a href="mailto:itay@selltech.io">itay@selltech.io</a>
+  </span>
+</div></footer>
+
+</body>
+</html>

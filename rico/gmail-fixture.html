@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inbox (3) - itay@selltech.io - Gmail</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden; background: #f6f8fc;
+    font: 14px/1.4 "Google Sans", Roboto, Arial, sans-serif; color: #202124;
+  }
+  .topbar {
+    height: 64px; display: flex; align-items: center; gap: 18px; padding: 0 16px;
+    background: #f6f8fc;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; font-size: 22px; color: #5f6368; }
+  .logo b { color: #d93025; font-weight: 400; font-size: 24px; letter-spacing: -.5px; }
+  .searchbar {
+    flex: 1; max-width: 700px; height: 46px; background: #eaf1fb; border-radius: 8px;
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; color: #5f6368;
+  }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #7c4dff;
+            color: #fff; display: grid; place-items: center; font-weight: 500; margin-left: auto; }
+  .body { display: flex; height: calc(100vh - 64px); }
+  .side { width: 232px; padding: 0 8px; flex: none; }
+  .compose-btn {
+    margin: 0 0 14px 8px; height: 48px; width: 138px; border-radius: 24px;
+    background: #c2e7ff; color: #001d35; display: flex; align-items: center;
+    justify-content: center; gap: 9px; font-size: 14px; font-weight: 500;
+  }
+  .navitem { height: 32px; border-radius: 0 16px 16px 0; display: flex; align-items: center;
+             padding: 0 12px 0 20px; gap: 16px; color: #202124; font-size: 14px; }
+  .navitem.on { background: #d3e3fd; font-weight: 700; }
+  .navitem .n { margin-left: auto; font-size: 12px; }
+  .main { flex: 1; background: #fff; border-radius: 16px 0 0 0; margin-right: 0;
+          overflow: hidden; position: relative; }
+  .thread { padding: 16px 24px; border-bottom: 1px solid #f1f3f4; }
+  .thread .from { font-size: 14px; font-weight: 700; }
+  .thread .subj { font-size: 20px; margin: 10px 0 14px; font-weight: 400; }
+  .thread .txt { color: #202124; font-size: 14px; line-height: 1.6; max-width: 720px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .dot { width: 36px; height: 36px; border-radius: 50%; background: #1a73e8; color: #fff;
+         display: grid; place-items: center; font-size: 15px; }
+  .muted { color: #5f6368; font-size: 12px; }
+
+  /* The compose window. Class names and attributes below are what Rico's
+     selectors look for — see selectors.js. */
+  .compose {
+    position: absolute; right: 24px; bottom: 0; width: 540px;
+    background: #fff; border-radius: 8px 8px 0 0;
+    box-shadow: 0 8px 28px rgba(0,0,0,.28); overflow: hidden;
+  }
+  .compose-head {
+    background: #f2f6fc; padding: 10px 16px; font-size: 14px; font-weight: 500;
+    display: flex; align-items: center;
+  }
+  .compose-head .x { margin-left: auto; color: #5f6368; }
+  .field { display: flex; align-items: center; padding: 8px 16px;
+           border-bottom: 1px solid #f1f3f4; font-size: 14px; }
+  .field .lbl { color: #5f6368; margin-right: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #e8eaed;
+    border-radius: 14px; padding: 2px 10px 2px 3px; font-size: 13px;
+  }
+  .chip i { width: 20px; height: 20px; border-radius: 50%; background: #f9ab00; color: #fff;
+            display: grid; place-items: center; font-style: normal; font-size: 11px; }
+  input[name="subjectbox"] { border: 0; outline: 0; font: inherit; width: 100%; }
+  .Am {
+    min-height: 218px; padding: 14px 16px; outline: 0; font-size: 14px; line-height: 1.55;
+  }
+  .compose-foot { display: flex; align-items: center; gap: 14px; padding: 10px 16px 14px;
+                  color: #5f6368; }
+  .send {
+    background: #0b57d0; color: #fff; border-radius: 18px; height: 36px;
+    display: flex; align-items: center; padding: 0 22px; font-size: 14px; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">☰ <b>M</b> Gmail</div>
+    <div class="searchbar">🔍 Search mail</div>
+    <div class="avatar">I</div>
+  </div>
+
+  <div class="body">
+    <div class="side">
+      <div class="compose-btn">✏️ Compose</div>
+      <div class="navitem on">📥 Inbox <span class="n">3</span></div>
+      <div class="navitem">★ Starred</div>
+      <div class="navitem">🕘 Snoozed</div>
+      <div class="navitem">➤ Sent</div>
+      <div class="navitem">📄 Drafts <span class="n">2</span></div>
+    </div>
+
+    <div class="main">
+      <div class="thread">
+        <div class="subj">Pricing for the Q3 rollout</div>
+        <div class="row">
+          <div class="dot">J</div>
+          <div>
+            <div class="from">John Doe <span class="muted">&lt;john@northwind.co&gt;</span></div>
+            <div class="muted">to me · 9:41 AM</div>
+          </div>
+        </div>
+        <div class="txt" style="margin-top:14px">
+          Hi — thanks for the walkthrough yesterday. Could you send over the pricing
+          and what onboarding looks like for a team our size? Finance wants it
+          before Thursday.
+        </div>
+      </div>
+
+      <!-- Compose. role="dialog" is the compose root; g_editable marks the body;
+           the To: chip carries the address Rico reads {FirstName} from. -->
+      <div role="dialog" class="compose iN">
+        <div class="compose-head">New Message <span class="x">— ⤢ ✕</span></div>
+
+        <div class="field">
+          <span class="lbl">To</span>
+          <div name="to" style="flex:1">
+            <span class="chip" email="john@northwind.co" name="John Doe"
+                  data-hovercard-id="john@northwind.co"><i>J</i>John Doe</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <input name="subjectbox" value="Re: Pricing for the Q3 rollout">
+        </div>
+
+        <div g_editable="true" role="textbox" aria-label="Message Body"
+             contenteditable="true" class="Am Al editable"></div>
+
+        <div class="compose-foot">
+          <div role="button" class="send" data-tooltip="Send ‪(Ctrl+Enter)‬"
+               aria-label="Send ‪(Ctrl+Enter)‬">Send</div>
+          <span>🅰 📎 🔗 🙂 🖼</span>
+          <span style="margin-left:auto">🗑</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
