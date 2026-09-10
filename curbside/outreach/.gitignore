@@ -1,1 +1,5 @@
+# Real contact lists and generated pages stay out of git — the CSV holds
+# named people's email addresses, including personal ones.
 out/
+prospects.csv
+*.xlsx

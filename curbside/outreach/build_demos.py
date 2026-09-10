@@ -23,6 +23,8 @@ import csv
 import io
 import os
 import re
+import hashlib
+import hmac
 import secrets
 import sys
 from collections import Counter
@@ -41,6 +43,15 @@ except ImportError:
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.join(HERE, os.pardir, "template", "index.html")
 UA = "Mozilla/5.0 (compatible; CurbsideQuote preview builder; +contact via email)"
+
+# Listings and social profiles: scraping these hands back the platform's own
+# logo, which on a page addressed to a landscaper looks worse than no logo.
+NOT_THEIR_SITE = (
+    "facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com",
+    "yelp.com", "nextdoor.com", "angi.com", "angieslist.com", "thumbtack.com",
+    "homeadvisor.com", "porch.com", "bbb.org", "yellowpages.com", "mapquest.com",
+    "google.com", "sites.google.com", "business.site", ".godaddysites.com",
+)
 TIMEOUT = 12
 MAX_LOGO_BYTES = 180_000
 LOGO_MAX_HEIGHT = 128  # 2x the 32px display height, ample for retina
@@ -64,6 +75,11 @@ def normalize_domain(domain):
         return ""
     if not domain.startswith(("http://", "https://")):
         domain = "https://" + domain
+    host = urlparse(domain).netloc.lower()
+    bare = host[4:] if host.startswith("www.") else host
+    if any(bare == b or bare.endswith(b) or b.startswith(".") and bare.endswith(b[1:])
+           for b in NOT_THEIR_SITE):
+        return ""
     return domain
 
 
@@ -231,6 +247,27 @@ def slugify(name):
     return s[:40] or "landscaper"
 
 
+def campaign_salt(out_dir):
+    """One secret per output folder, created once and reused.
+
+    The URL token is derived from it, so regenerating (to add logos, fix a
+    price, correct a name) leaves every link you have already emailed
+    pointing at the updated page instead of a 404.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, ".salt")
+    if os.path.exists(path):
+        return open(path).read().strip()
+    salt = secrets.token_hex(16)
+    with open(path, "w") as fh:
+        fh.write(salt)
+    return salt
+
+
+def url_token(salt, name):
+    return hmac.new(salt.encode(), name.encode("utf-8"), hashlib.sha256).hexdigest()[:8]
+
+
 def build_one(row, template, args):
     name = (row.get("name") or "").strip()
     if not name:
@@ -267,7 +304,7 @@ def build_one(row, template, args):
     html = set_field(html, "demoReply", args.reply or "")
     html = set_field(html, "demoPrice", args.price)
 
-    folder = "%s-%s" % (slugify(name), secrets.token_hex(3))
+    folder = "%s-%s" % (slugify(name), url_token(args.salt, name))
     dest = os.path.join(args.out, folder)
     os.makedirs(dest, exist_ok=True)
     with open(os.path.join(dest, "index.html"), "w", encoding="utf-8") as fh:
@@ -299,7 +336,7 @@ def main():
         print("warning: no --reply address, so the pages have no reply button\n", file=sys.stderr)
 
     template = open(TEMPLATE, encoding="utf-8").read()
-    os.makedirs(args.out, exist_ok=True)
+    args.salt = campaign_salt(args.out)
 
     with open(args.csv, newline="", encoding="utf-8-sig") as fh:
         rows = list(csv.DictReader(fh))
