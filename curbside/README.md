@@ -89,12 +89,20 @@ lawn is estimated from a size bracket rather than measured.
   secret. If that matters to a customer, delete the setup panel from their
   copy after configuring it.
 
+## Cold outreach
+
+`outreach/` generates a personalized preview page for every prospect on a
+list — their logo, their brand color, their name — each on its own
+unguessable URL, so you can email a landscaper a working version of their own
+quote page before they have paid anything. See `outreach/README.md`.
+
 ## Layout
 
 ```
 template/index.html      the master — edit this, not the customer copies
 customers/<slug>/        one configured copy per customer, ready to upload
 new-customer.py          makes a new customer folder from the template
+outreach/                bulk preview-page generator for cold email
 ```
 
 Fixing a bug means editing `template/index.html` and regenerating the customer

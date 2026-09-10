@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>Curbside Quote</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,15 +233,52 @@ code.snip{
 .panel-hd code{background:var(--surface); padding:1px 5px; border-radius:4px; font-size:12.5px}
 .err a{color:inherit}
 #cfgOut{max-height:280px; overflow:auto; user-select:all}
+.logo-img{height:32px; max-width:200px; width:auto; object-fit:contain; display:block; flex:none}
+.demo-strip{
+  background:var(--ink); color:var(--ground); font-size:13.5px; line-height:1.45;
+}
+.demo-strip .wrap{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-block:11px}
+.demo-strip b{color:inherit; font-weight:700}
+.demo-strip p{margin:0; flex:1; min-width:220px; opacity:.85}
+.demo-strip a.jump{
+  color:inherit; border:1px solid rgba(255,255,255,.35); border-radius:99px;
+  padding:6px 14px; text-decoration:none; white-space:nowrap; font-weight:500;
+}
+.demo-strip a.jump:hover{border-color:currentColor}
+.pitch{
+  background:var(--surface); border:1px solid var(--line-2); border-left:4px solid var(--moss);
+  border-radius:12px; padding:24px; margin-block:8px 28px; box-shadow:var(--shadow);
+}
+.pitch h2{font-size:24px; margin-bottom:10px}
+.pitch p{margin:0 0 10px; color:var(--ink-2); max-width:62ch}
+.pitch .price{font-family:Fraunces,Georgia,serif; font-weight:700; font-size:20px; color:var(--ink)}
+.pitch-btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+.pitch-btns a{
+  background:var(--moss); color:var(--on-moss); text-decoration:none; font-weight:600;
+  padding:12px 20px; border-radius:9px;
+}
+.pitch-btns a.ghost{background:none; color:var(--ink-2); border:1px solid var(--line-2)}
+.mock-mail{
+  margin-top:16px; border:1px solid var(--line); border-radius:10px; overflow:hidden;
+  background:var(--surface-2);
+}
+.mock-mail .mh{padding:10px 14px; border-bottom:1px solid var(--line); font-size:12.5px; color:var(--ink-3)}
+.mock-mail pre{
+  margin:0; padding:14px; font-size:12.5px; line-height:1.6; white-space:pre-wrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink-2); overflow-x:auto;
+}
 .foot{border-top:1px solid var(--line); padding-block:22px 30px; color:var(--ink-3); font-size:12.5px}
 </style>
 </head>
 <body>
 
+<div id="demoStrip"></div>
+
 <header class="top">
   <div class="wrap top-in">
     <div class="biz">
-      <svg class="sprig" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <img class="logo-img" id="bizLogo" alt="" hidden>
+      <svg class="sprig" id="bizMark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 22V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         <path d="M12 13c0-3.3-2.5-6-5.5-6C6.5 10.3 9 13 12 13Z" fill="currentColor"/>
         <path d="M12 9c0-3.3 2.5-6 5.5-6C17.5 6.3 15 9 12 9Z" fill="currentColor"/>
@@ -331,6 +369,8 @@ code.snip{
   <button class="bar-b" id="barBtn">Get quote</button>
 </div>
 
+<div class="wrap" id="demoPitch"></div>
+
 <footer class="foot">
   <div class="wrap"><span id="footName">Ridgeline Lawn &amp; Landscape</span> &middot; Licensed &amp; insured &middot; Estimates are good for 30 days</div>
 </footer>
@@ -376,6 +416,18 @@ var CONFIG = {
 
   // --- how wide a range the homeowner is shown (percent) ---
   bandPct:     12,
+
+  // --- branding (set by the demo generator, or by hand) ---
+  logo:       "",   // data: URI or URL. Empty falls back to a leaf mark.
+  brandColor: "",   // hex, e.g. "#1F6F3C". Empty keeps the default green.
+
+  // --- outreach preview mode ---
+  // Set demoFor to a business name to turn this copy into a pitch page:
+  // a banner at the top, placeholder pricing called out as guesses, and a
+  // submit button that shows the email they would have received.
+  demoFor:    "",
+  demoReply:  "",             // your email, for the reply link
+  demoPrice:  "$59/month",
 
   // Demo copies show the setup button to everyone. Keep this
   // false on a live customer page.
@@ -599,6 +651,113 @@ function renderQuote(){
   $("barAmt").textContent = headline;
 }
 
+/* ---------- branding ---------- */
+function hexRgb(h){
+  var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h||"").trim());
+  if(!m) return null;
+  var v = m[1];
+  if(v.length === 3) v = v[0]+v[0]+v[1]+v[1]+v[2]+v[2];
+  return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)];
+}
+function rgbHex(c){
+  return "#" + c.map(function(n){
+    var x = Math.max(0, Math.min(255, Math.round(n))).toString(16);
+    return x.length < 2 ? "0"+x : x;
+  }).join("");
+}
+/* WCAG relative luminance — decides whether text on this color is black or white. */
+function luminance(c){
+  var a = c.map(function(v){ v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
+  return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
+}
+function toward(c, target, t){
+  return [c[0]+(target-c[0])*t, c[1]+(target-c[1])*t, c[2]+(target-c[2])*t];
+}
+function applyBrand(){
+  var rgb = hexRgb(cfg.brandColor);
+  if(!rgb) return;
+  var L = luminance(rgb);
+  var base = rgbHex(rgb);
+  var on   = L > 0.42 ? "#14180F" : "#FFFFFF";
+  var hi   = rgbHex(L > 0.5 ? toward(rgb, 0, 0.12) : toward(rgb, 255, 0.16));
+
+  /* A brand color dark enough to read on white can vanish on the dark ground,
+     so lift it until it carries there; a very light one gets pulled down. */
+  var dRgb = L < 0.30 ? toward(rgb, 255, 0.55) : (L > 0.75 ? toward(rgb, 0, 0.18) : rgb);
+  var dBase = rgbHex(dRgb);
+  var dOn   = luminance(dRgb) > 0.42 ? "#10170F" : "#FFFFFF";
+  var dHi   = rgbHex(toward(dRgb, 255, 0.14));
+
+  var css = ":root{--moss:"+base+"; --moss-hi:"+hi+"; --on-moss:"+on+"; --good:"+base+"}" +
+    "@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){--moss:"+dBase+"; --moss-hi:"+dHi+"; --on-moss:"+dOn+"; --good:"+dBase+"}}" +
+    ":root[data-theme=\"dark\"]{--moss:"+dBase+"; --moss-hi:"+dHi+"; --on-moss:"+dOn+"; --good:"+dBase+"}";
+
+  var tag = document.getElementById("brandCss");
+  if(!tag){ tag = document.createElement("style"); tag.id = "brandCss"; document.head.appendChild(tag); }
+  tag.textContent = css;
+}
+
+/* Set via attribute, not the `hidden` property: that property is defined on
+   HTMLElement, so assigning it to an <svg> silently does nothing. */
+function setHidden(el, on){
+  if(on) el.setAttribute("hidden", ""); else el.removeAttribute("hidden");
+}
+
+function renderLogo(){
+  var img = $("bizLogo"), mark = $("bizMark");
+  if(cfg.logo){
+    img.src = cfg.logo;
+    img.alt = cfg.bizName;
+    setHidden(img, false);
+    setHidden(mark, true);
+    img.onerror = function(){ setHidden(img, true); setHidden(mark, false); };
+  } else {
+    setHidden(img, true);
+    setHidden(mark, false);
+  }
+}
+
+/* ---------- outreach preview ---------- */
+function isDemo(){ return !!cfg.demoFor; }
+
+function renderDemoChrome(){
+  if(!isDemo()) return;
+  $("demoStrip").className = "demo-strip";
+  $("demoStrip").innerHTML =
+    '<div class="wrap"><p><b>Preview built for ' + esc(cfg.demoFor) + '.</b> ' +
+    'This is a working quote page, not your live site. The prices are my guesses ' +
+    'at your rates — send me yours and they take a minute to fix.</p>' +
+    '<a class="jump" href="#pitch">What this costs</a></div>';
+
+  $("demoPitch").innerHTML =
+    '<div class="pitch" id="pitch"><h2>Want this on your site?</h2>' +
+    '<p>Every quote request comes to your inbox with the homeowner\'s name, number, ' +
+    'address and the price they were shown. Nothing to install and nothing to learn — ' +
+    'I set the whole thing up and send you a link.</p>' +
+    '<p class="price">' + esc(cfg.demoPrice) + ', cancel any time.</p>' +
+    '<div class="pitch-btns">' +
+      (cfg.demoReply
+        ? '<a href="mailto:' + esc(cfg.demoReply) + '?subject=' +
+          encodeURIComponent("Yes — set this up for " + cfg.demoFor) + '">Set it up for me</a>' +
+          '<a class="ghost" href="mailto:' + esc(cfg.demoReply) + '?subject=' +
+          encodeURIComponent("My real rates — " + cfg.demoFor) + '">My prices are wrong, here they are</a>'
+        : '') +
+    '</div></div>';
+}
+
+function showDemoResult(L){
+  state.sent = true;
+  document.querySelector("main").innerHTML =
+    '<div class="done"><h2>That is the whole thing.</h2>' +
+    '<p>On your live page, this is the email that would have just landed in your inbox — ' +
+    'while the homeowner sees a confirmation and expects your call.</p>' +
+    '<div class="mock-mail"><div class="mh">To: you &nbsp;·&nbsp; Subject: Quote request — ' +
+    esc(L.name || "Homeowner") + ' — ' + esc(L.headline) + '</div>' +
+    '<pre>' + esc(leadAsText(L)) + '</pre></div></div>';
+  $("mobileBar").hidden = true;
+  document.querySelector("main").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 function renderBiz(){
   $("bizName").textContent = cfg.bizName;
   $("footName").textContent = cfg.bizName;
@@ -608,7 +767,8 @@ function renderBiz(){
 }
 
 function render(){
-  renderBiz(); renderLots(); renderSvcs(); renderMods(); renderQuote(); renderPanel();
+  applyBrand(); renderLogo(); renderBiz(); renderDemoChrome();
+  renderLots(); renderSvcs(); renderMods(); renderQuote(); renderPanel();
 }
 
 /* ---------- setup panel (you, not the homeowner) ---------- */
@@ -748,6 +908,12 @@ function submitLead(){
   var btn = $("submitBtn"), err = $("formErr");
   var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
 
+  if(isDemo() && !name && !phone && !addr){  // let them click straight through
+    $("cName").value = "Sample Homeowner";
+    $("cPhone").value = "(555) 018-2245";
+    $("cAddr").value = "142 Beechwood Dr";
+    name = "Sample Homeowner"; phone = "(555) 018-2245"; addr = "142 Beechwood Dr";
+  }
   if(!name || !phone || !addr){
     err.hidden = false;
     err.textContent = "We need a name, a phone number and the service address to hold this price.";
@@ -758,6 +924,12 @@ function submitLead(){
   err.hidden = true;
 
   var lead = buildLead();
+
+  if(isDemo()){                            // a preview shows the email, never sends it
+    showDemoResult(lead);
+    return;
+  }
+
   leads.push(lead); saveLeads();          // local backup before anything can fail
 
   if(!cfg.leadEndpoint){
