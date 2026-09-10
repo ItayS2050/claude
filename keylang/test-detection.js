@@ -62,6 +62,7 @@ function loadContentScript() {
     '\nreturn { analyzeText: analyzeByLines, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
+    '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
     '         down: {he:convertToEnglish, ru:convertFromRussian,' +
@@ -1896,6 +1897,59 @@ function okk(cond, label) {
   check('the Arabic sentence keeps its last word',
         'a;vh [.dgh ugn hglshu]m', 'english_as_arabic',
         { converted: 'شكرا جزيلا على المساعدة' });
+}
+
+
+// ── Silence reads as broken software
+//
+// The expiry notice showed once, ever. Miss it — a background tab, a step away
+// from the desk — and Kiko goes quiet permanently with no explanation. That
+// reads as broken, and people uninstall broken software rather than subscribe
+// to it. It is also the single best conversion moment there is, and one
+// fourteen-second impression is not a use of it.
+{
+  console.log('Somebody whose trial ended is told more than once');
+
+  const DAY = kiko.EXPIRY_GAP_MS;
+  const t0  = Date.parse('2026-09-12T09:00:00Z');
+
+  okk(kiko.expiryNoticeDue({}, t0), 'the first notice is due immediately');
+
+  // Walk the whole schedule the way a user would meet it.
+  let seen = {}, shown = [];
+  for (let h = 0; h <= 24 * 6; h++) {
+    const now = t0 + h * 3600e3;
+    if (kiko.expiryNoticeDue(seen, now)) { shown.push(h); seen = kiko.spendExpiryNotice(seen, now); }
+  }
+  okk(shown.length === kiko.EXPIRY_NOTICES,
+      `it shows exactly ${kiko.EXPIRY_NOTICES} times, not ${shown.length}`);
+  okk(shown.join() === '0,24,48', `a day apart, at hours ${shown.join()}`);
+  okk(!kiko.expiryNoticeDue(seen, t0 + 30 * DAY), 'and then it stops for good');
+
+  // Not twice in one sitting, which is what a per-page check would do.
+  const once = kiko.spendExpiryNotice({}, t0);
+  okk(!kiko.expiryNoticeDue(once, t0 + 60e3), 'not again a minute later');
+  okk(!kiko.expiryNoticeDue(once, t0 + 23 * 3600e3), 'not again after 23 hours');
+  okk(kiko.expiryNoticeDue(once, t0 + DAY), 'but yes after a day');
+
+  // Anyone already carrying the old one-shot flag has had the first of three,
+  // not none — upgrading must not restart the sequence from zero.
+  const legacy = { expired: true };
+  okk(kiko.expiryNoticeDue(legacy, t0), 'an older install still gets the rest');
+  // Both halves have to agree that the old flag means one shown, or the count
+  // drifts and the sequence quietly restarts from zero.
+  okk(kiko.spendExpiryNotice(legacy, t0).expiredShown === 2,
+      `spending the old flag counts it as the first, got ${kiko.spendExpiryNotice(legacy, t0).expiredShown}`);
+  let l = legacy, n = 0;
+  for (let d = 0; d < 6; d++) if (kiko.expiryNoticeDue(l, t0 + d * DAY)) { n++; l = kiko.spendExpiryNotice(l, t0 + d * DAY); }
+  okk(n === kiko.EXPIRY_NOTICES - 1, `and only the remaining ${kiko.EXPIRY_NOTICES - 1}, got ${n}`);
+
+  // The schedule is only worth anything if the notice actually consults it.
+  const handler = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8')
+    .match(/async function maybeShowTrialNotice[\s\S]*?\n}/)[0];
+  okk(/expiryNoticeDue\(/.test(handler), 'the expiry notice asks the schedule');
+  okk(/spendExpiryNotice\(/.test(handler), 'and records having shown one');
+  okk(!/if \(seen\.expired\) return;/.test(handler), 'and no longer stops after the first');
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

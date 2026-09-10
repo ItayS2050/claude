@@ -3372,6 +3372,41 @@ function showReviewToast(nudge) {
 const TRIAL_NAG_DAYS  = [7, 1];
 const KIKO_CHECKOUT   = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
 
+// The expiry notice used to show once, ever. That is the wrong number.
+//
+// It is the single moment Kiko has to explain itself: detection has just gone
+// quiet, and to someone who misses the toast — a background tab, a step away
+// from the desk — silence reads as broken software rather than as a trial that
+// ended. People uninstall broken software; they do not subscribe to it. It is
+// also the best conversion moment there is, and spending it on one fourteen
+// second impression is throwing it away.
+//
+// Three times, a day apart, then it stops. Anyone who has not decided by the
+// third has decided.
+const EXPIRY_NOTICES  = 3;
+const EXPIRY_GAP_MS   = 24 * 60 * 60 * 1000;
+
+// Whether to raise the expiry notice now, and nothing else — no storage, no
+// DOM, so the schedule can be tested without either.
+// Anyone carrying the old one-shot flag has had the first of the three, not
+// none — upgrading must not restart the sequence. Written once and used by
+// both halves: when the two disagreed, one could be broken and the other
+// would hide it.
+function expiryNoticesShown(seen = {}) {
+  if (seen.expiredShown != null) return seen.expiredShown;
+  return seen.expired ? 1 : 0;
+}
+
+function expiryNoticeDue(seen = {}, now = Date.now()) {
+  if (expiryNoticesShown(seen) >= EXPIRY_NOTICES) return false;
+  return now - (seen.expiredAt || 0) >= EXPIRY_GAP_MS;
+}
+
+function spendExpiryNotice(seen = {}, now = Date.now()) {
+  return { ...seen, expired: true,
+           expiredShown: expiryNoticesShown(seen) + 1, expiredAt: now };
+}
+
 // Smallest milestone reached but not yet used. Someone who closes the laptop on
 // day 9 and opens it on day 1 should get "last day", not a stale warning about
 // next week — so the urgent one wins and the passed one is spent silently.
@@ -3441,7 +3476,7 @@ async function maybeShowTrialNotice() {
     const seen = d.trialNotices || {};
 
     if (ent.state === 'expired') {
-      if (seen.expired) return;
+      if (!expiryNoticeDue(seen)) return;
       const shown = showTrialToast({
         title:  t('trialEndedTitle', null, 'Your free trial has ended'),
         body:   t('trialEndedBody', null,
@@ -3451,7 +3486,7 @@ async function maybeShowTrialNotice() {
         accent: '#f87171',
       });
       if (shown) {
-        await chrome.storage.local.set({ trialNotices: { ...seen, expired: true } });
+        await chrome.storage.local.set({ trialNotices: spendExpiryNotice(seen) });
       }
       return;
     }
