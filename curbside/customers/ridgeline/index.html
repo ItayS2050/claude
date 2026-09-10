@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curbside Quote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap">
+<style>
+:root{
+  --ground:#F5F4EE; --surface:#FFFFFF; --surface-2:#EDEBE2;
+  --ink:#17201A; --ink-2:#4E5A51; --ink-3:#7C877E;
+  --line:#DCD9CD; --line-2:#C7C3B4;
+  --moss:#2E5B43; --moss-hi:#3B7355; --on-moss:#FFFFFF;
+  --accent:#9C6A12; --accent-soft:#F4E7C9; --accent-line:#DFC488;
+  --good:#2E5B43; --warn:#9C6A12; --danger:#B3401E;
+  --shadow:0 1px 2px rgba(23,32,26,.06), 0 8px 24px -12px rgba(23,32,26,.18);
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131711; --surface:#1B211A; --surface-2:#232A21;
+    --ink:#ECEFE7; --ink-2:#A9B3A6; --ink-3:#7F8A7C;
+    --line:#2E362C; --line-2:#3D4739;
+    --moss:#7CBB95; --moss-hi:#93CCA9; --on-moss:#10170F;
+    --accent:#E3B95C; --accent-soft:#332C18; --accent-line:#5A4A22;
+    --good:#7CBB95; --warn:#E3B95C; --danger:#E8917A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131711; --surface:#1B211A; --surface-2:#232A21;
+  --ink:#ECEFE7; --ink-2:#A9B3A6; --ink-3:#7F8A7C;
+  --line:#2E362C; --line-2:#3D4739;
+  --moss:#7CBB95; --moss-hi:#93CCA9; --on-moss:#10170F;
+  --accent:#E3B95C; --accent-soft:#332C18; --accent-line:#5A4A22;
+  --good:#7CBB95; --warn:#E3B95C; --danger:#E8917A;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:Fraunces,Georgia,serif; font-weight:700; text-wrap:balance; margin:0}
+button,input,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--moss); outline-offset:2px; border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+[hidden]{display:none!important}
+
+.wrap{max-width:1080px; margin:0 auto; padding-inline:20px}
+
+/* ---------- header ---------- */
+.top{border-bottom:1px solid var(--line); background:var(--surface)}
+.top-in{display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding-block:14px}
+.biz{display:flex; align-items:center; gap:10px; margin-right:auto; min-width:0}
+.sprig{width:26px; height:26px; flex:none; color:var(--moss)}
+.biz-name{font-family:Fraunces,Georgia,serif; font-weight:700; font-size:18px; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.biz-tel{color:var(--ink-2); font-size:14px; font-variant-numeric:tabular-nums; text-decoration:none}
+.biz-tel:hover{color:var(--moss)}
+.setup-btn{
+  background:none; border:1px solid var(--line-2); color:var(--ink-2);
+  padding:6px 12px; border-radius:99px; font-size:13px; cursor:pointer;
+}
+.setup-btn:hover{border-color:var(--moss); color:var(--moss)}
+
+/* ---------- hero ---------- */
+.hero{padding-block:34px 26px; border-bottom:1px solid var(--line)}
+.hero h1{font-size:clamp(30px,5.2vw,46px); line-height:1.05; letter-spacing:-.02em; max-width:16ch}
+.hero p{margin:12px 0 0; color:var(--ink-2); max-width:52ch; font-size:16px}
+.eyebrow{
+  font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--moss); margin-bottom:12px;
+}
+
+/* ---------- layout ---------- */
+.cols{display:grid; grid-template-columns:1fr; gap:32px; padding-block:32px 140px}
+@media(min-width:920px){
+  .cols{grid-template-columns:1fr 350px; gap:44px; padding-block:36px 60px}
+}
+
+/* ---------- form ---------- */
+.step{border-top:1px solid var(--line); padding-block:26px}
+.step:first-child{border-top:none; padding-top:4px}
+.step-head{display:flex; align-items:baseline; gap:10px; margin-bottom:4px}
+.step-n{
+  font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--ink-3);
+  font-variant-numeric:tabular-nums;
+}
+.step h2{font-size:21px; letter-spacing:-.01em}
+.step-sub{color:var(--ink-2); font-size:14px; margin:0 0 16px}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
+.tile{
+  text-align:left; background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r); padding:13px 14px; cursor:pointer; transition:.12s;
+}
+.tile:hover{border-color:var(--line-2)}
+.tile[aria-pressed="true"]{border-color:var(--moss); box-shadow:inset 0 0 0 1px var(--moss); background:var(--surface)}
+.tile-t{font-weight:600; display:block}
+.tile-d{color:var(--ink-3); font-size:12.5px; display:block; margin-top:2px; font-variant-numeric:tabular-nums}
+
+.exact{display:flex; align-items:center; gap:8px; margin-top:12px; color:var(--ink-2); font-size:13.5px; flex-wrap:wrap}
+input[type=number],input[type=text],input[type=tel],input[type=email]{
+  background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; width:100%; font-variant-numeric:tabular-nums;
+}
+input::placeholder{color:var(--ink-3)}
+input.num-sm{width:110px; flex:none}
+
+/* service rows */
+.svcs{display:flex; flex-direction:column; gap:8px}
+.svc{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.svc.on{border-color:var(--moss)}
+.svc-hd{display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; border:0; padding:13px 14px; cursor:pointer}
+.check{
+  width:19px; height:19px; flex:none; border:1.5px solid var(--line-2); border-radius:5px;
+  display:grid; place-items:center; color:transparent; font-size:12px; font-weight:700;
+}
+.svc.on .check{background:var(--moss); border-color:var(--moss); color:var(--on-moss)}
+.svc-t{font-weight:600; flex:1}
+.svc-p{color:var(--ink-3); font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap}
+.svc.on .svc-p{color:var(--moss); font-weight:600}
+.svc-body{padding:0 14px 14px 45px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--ink-2); font-size:13.5px}
+
+.chips{display:flex; flex-wrap:wrap; gap:7px}
+.chip{
+  background:var(--surface); border:1px solid var(--line); border-radius:99px;
+  padding:6px 13px; font-size:13.5px; cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--moss); border-color:var(--moss); color:var(--on-moss); font-weight:500}
+.chip.sm{padding:5px 11px; font-size:13px}
+
+/* ---------- quote card ---------- */
+.quote-col{position:relative}
+@media(min-width:920px){.quote-col{position:sticky; top:22px; align-self:start}}
+.quote{
+  background:var(--surface); border:1px solid var(--line-2); border-radius:14px;
+  box-shadow:var(--shadow); overflow:hidden;
+}
+.q-top{padding:18px 18px 14px; border-bottom:1px dashed var(--line)}
+.q-label{font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3)}
+.q-amt{
+  font-family:Fraunces,Georgia,serif; font-weight:700; letter-spacing:-.02em;
+  font-size:38px; line-height:1.05; margin-top:6px; font-variant-numeric:tabular-nums;
+}
+.q-per{font-size:14px; color:var(--ink-2); font-family:Archivo,sans-serif; font-weight:400}
+.q-note{font-size:12.5px; color:var(--ink-3); margin-top:7px}
+.q-lines{padding:14px 18px; display:flex; flex-direction:column; gap:9px}
+.line{display:flex; gap:10px; align-items:baseline; font-size:13.5px}
+.line-t{flex:1; min-width:0}
+.line-d{color:var(--ink-3); font-size:12px; display:block}
+.line-a{font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap}
+.q-empty{padding:16px 18px; color:var(--ink-3); font-size:13.5px}
+.q-sub{
+  padding:12px 18px; border-top:1px solid var(--line); background:var(--surface-2);
+  display:flex; justify-content:space-between; font-size:13.5px; font-variant-numeric:tabular-nums;
+}
+.q-sub b{font-weight:600}
+.surch{color:var(--warn)}
+.cta{
+  display:block; width:100%; border:0; background:var(--moss); color:var(--on-moss);
+  padding:15px; font-size:15.5px; font-weight:600; cursor:pointer;
+}
+.cta:hover{background:var(--moss-hi)}
+.cta[disabled]{background:var(--surface-2); color:var(--ink-3); cursor:not-allowed}
+
+/* mobile price bar */
+.bar{
+  position:fixed; left:0; right:0; bottom:0; z-index:40; background:var(--surface);
+  border-top:1px solid var(--line-2); box-shadow:0 -6px 20px -12px rgba(0,0,0,.4);
+  padding:10px 20px calc(10px + env(safe-area-inset-bottom));
+  display:flex; align-items:center; gap:14px;
+}
+@media(min-width:920px){.bar{display:none}}
+.bar-amt{font-family:Fraunces,Georgia,serif; font-weight:700; font-size:22px; font-variant-numeric:tabular-nums; line-height:1.1}
+.bar-l{font-size:11.5px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase}
+.bar-b{margin-left:auto; background:var(--moss); color:var(--on-moss); border:0; border-radius:8px; padding:11px 16px; font-weight:600; cursor:pointer}
+
+/* ---------- contact ---------- */
+.fields{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media(max-width:560px){.fields{grid-template-columns:1fr}}
+.field-wide{grid-column:1/-1}
+label.fl{display:block; font-size:12.5px; color:var(--ink-2); margin-bottom:4px; font-weight:500}
+.err{color:var(--danger); font-size:13px; margin-top:8px}
+
+.done{
+  background:var(--surface); border:1px solid var(--moss); border-radius:12px; padding:22px;
+}
+.done h2{font-size:22px; margin-bottom:8px}
+.done p{color:var(--ink-2); margin:0 0 6px}
+.recap{
+  margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);
+  font-size:13.5px; color:var(--ink-2); white-space:pre-wrap; font-variant-numeric:tabular-nums;
+}
+
+/* ---------- owner panel ---------- */
+.panel{
+  background:var(--surface); border:1px solid var(--accent-line); border-radius:12px;
+  margin-block:20px; overflow:hidden;
+}
+.panel-hd{background:var(--accent-soft); padding:14px 18px; border-bottom:1px solid var(--accent-line)}
+.panel-hd h2{font-size:18px}
+.panel-hd p{margin:4px 0 0; font-size:13px; color:var(--ink-2)}
+.panel-bd{padding:18px; display:flex; flex-direction:column; gap:22px}
+.grp h3{font-size:13px; text-transform:uppercase; letter-spacing:.1em; font-family:Archivo,sans-serif; font-weight:700; color:var(--ink-3); margin-bottom:10px}
+.rates{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px}
+.rate{display:flex; flex-direction:column; gap:5px; font-size:13px}
+.rate span{color:var(--ink-2)}
+.rate input{width:100%; text-align:left}
+.leads{display:flex; flex-direction:column; gap:8px}
+.lead{border:1px solid var(--line); border-radius:8px; padding:11px 13px; font-size:13.5px}
+.lead-top{display:flex; gap:10px; align-items:baseline}
+.lead-nm{font-weight:600; flex:1}
+.lead-amt{font-variant-numeric:tabular-nums; color:var(--moss); font-weight:600}
+.lead-meta{color:var(--ink-3); font-size:12.5px; margin-top:3px}
+.mini{background:none; border:1px solid var(--line-2); border-radius:7px; padding:6px 11px; font-size:13px; cursor:pointer; color:var(--ink-2)}
+.mini:hover{border-color:var(--moss); color:var(--moss)}
+.row-btns{display:flex; gap:8px; flex-wrap:wrap}
+code.snip{
+  display:block; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+  padding:11px 13px; font-size:12.5px; overflow-x:auto; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.rate-wide{grid-column:span 2}
+@media(max-width:560px){.rate-wide{grid-column:1/-1}}
+.warn-note{margin:12px 0 0; padding:10px 12px; background:var(--accent-soft); border:1px solid var(--accent-line); border-radius:8px; font-size:13px; color:var(--ink-2)}
+.mini.primary{background:var(--moss); border-color:var(--moss); color:var(--on-moss); font-weight:600}
+.mini.primary:hover{background:var(--moss-hi); color:var(--on-moss)}
+.panel-hd code{background:var(--surface); padding:1px 5px; border-radius:4px; font-size:12.5px}
+.err a{color:inherit}
+#cfgOut{max-height:280px; overflow:auto; user-select:all}
+.foot{border-top:1px solid var(--line); padding-block:22px 30px; color:var(--ink-3); font-size:12.5px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="biz">
+      <svg class="sprig" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 22V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M12 13c0-3.3-2.5-6-5.5-6C6.5 10.3 9 13 12 13Z" fill="currentColor"/>
+        <path d="M12 9c0-3.3 2.5-6 5.5-6C17.5 6.3 15 9 12 9Z" fill="currentColor"/>
+      </svg>
+      <div>
+        <div class="biz-name" id="bizName">Ridgeline Lawn &amp; Landscape</div>
+        <a class="biz-tel" id="bizTel" href="tel:5551240188">(555) 124-0188</a>
+      </div>
+    </div>
+    <button class="setup-btn" id="setupToggle" aria-expanded="false" hidden>Contractor setup</button>
+  </div>
+</header>
+
+<div class="wrap" id="panelMount"></div>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Free estimate &middot; no visit needed</div>
+    <h1>Know what your yard costs before we ring the doorbell.</h1>
+    <p>Answer four quick questions and your price appears as you go. Takes about a minute — no waiting three days for a callback.</p>
+  </div>
+</section>
+
+<div class="wrap cols">
+  <main>
+    <!-- 1 -->
+    <section class="step">
+      <div class="step-head"><span class="step-n">01</span><h2>Your lawn</h2></div>
+      <p class="step-sub">Pick the closest match. We confirm the exact measurement on the first visit.</p>
+      <div class="tiles" id="lotTiles"></div>
+      <div class="exact">
+        <label for="exactSqft">Know your lot size?</label>
+        <input class="num-sm" type="number" id="exactSqft" min="200" max="200000" step="100" placeholder="sq ft" inputmode="numeric">
+        <span id="lotEcho"></span>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="step">
+      <div class="step-head"><span class="step-n">02</span><h2>What do you need?</h2></div>
+      <p class="step-sub">Pick as many as you like. Prices update on the right as you choose.</p>
+      <div class="svcs" id="svcList"></div>
+    </section>
+
+    <!-- 3 -->
+    <section class="step">
+      <div class="step-head"><span class="step-n">03</span><h2>Anything that slows us down?</h2></div>
+      <p class="step-sub">Honest answers here keep the final invoice matching this estimate.</p>
+      <div class="chips" id="modChips"></div>
+    </section>
+
+    <!-- 4 -->
+    <section class="step" id="contactStep">
+      <div class="step-head"><span class="step-n">04</span><h2>Lock in this price</h2></div>
+      <p class="step-sub">We hold this estimate for 30 days. No deposit, no card.</p>
+      <div class="fields">
+        <div><label class="fl" for="cName">Name</label><input type="text" id="cName" autocomplete="name"></div>
+        <div><label class="fl" for="cPhone">Phone</label><input type="tel" id="cPhone" autocomplete="tel" inputmode="tel"></div>
+        <div class="field-wide"><label class="fl" for="cAddr">Service address</label><input type="text" id="cAddr" autocomplete="street-address"></div>
+        <div class="field-wide"><label class="fl" for="cEmail">Email <span style="color:var(--ink-3)">(optional — for the written quote)</span></label><input type="email" id="cEmail" autocomplete="email"></div>
+      </div>
+      <div class="err" id="formErr" hidden></div>
+    </section>
+  </main>
+
+  <aside class="quote-col">
+    <div class="quote">
+      <div class="q-top">
+        <div class="q-label" id="qLabel">Your estimate</div>
+        <div class="q-amt" id="qAmt">—</div>
+        <div class="q-note" id="qNote">Choose a service to see your price.</div>
+      </div>
+      <div id="qLines" class="q-lines"></div>
+      <div id="qSurch"></div>
+      <button class="cta" id="submitBtn" disabled>Request this quote</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-3);margin-top:10px">
+      Estimates assume standard access and turf in normal condition. Final price is confirmed on the first visit — it has not moved by more than 10% on 9 of our last 10 jobs.
+    </p>
+  </aside>
+</div>
+
+<div class="bar" id="mobileBar">
+  <div>
+    <div class="bar-l" id="barLabel">Estimate</div>
+    <div class="bar-amt" id="barAmt">—</div>
+  </div>
+  <button class="bar-b" id="barBtn">Get quote</button>
+</div>
+
+<footer class="foot">
+  <div class="wrap"><span id="footName">Ridgeline Lawn &amp; Landscape</span> &middot; Licensed &amp; insured &middot; Estimates are good for 30 days</div>
+</footer>
+
+<script>
+/* ==========================================================
+   Curbside Quote
+
+   EDIT THIS BLOCK FOR EACH CUSTOMER — nothing else in this
+   file needs to change. Then upload the folder.
+
+   To tune rates visually, open this page with ?setup on the
+   end of the URL, drag the numbers, and click "Copy config
+   block" to get a replacement for this block.
+   ========================================================== */
+var CONFIG = {
+  // --- who this copy belongs to ---
+  bizName:  "Ridgeline Lawn & Landscape",
+  bizTel:   "(555) 124-0188",
+
+  // --- where quote requests go ---
+  // A form endpoint that emails the customer. Formspree, Web3Forms,
+  // or your own URL — anything that accepts a JSON POST.
+  leadEndpoint: "",
+  // Fallback if the endpoint is missing or down. Always fill this in.
+  notifyEmail:  "quotes@ridgelinelawn.com",
+
+  // --- their rates (dollars) ---
+  mowBase:     42,    // per visit, before lawn size
+  mowPerK:     7.5,   // added per 1,000 sq ft of lawn
+  cleanupBase: 165,
+  cleanupPerK: 32,
+  mulchPerYard: 92,   // installed, per cubic yard
+  edgePerFt:   2.75,
+  shrubEach:   17,
+  aeratePerK:  21,
+  aerateMin:   125,
+
+  // --- surcharges (percent) ---
+  gatedPct:    8,
+  slopePct:    12,
+  obstaclePct: 10,
+
+  // --- how wide a range the homeowner is shown (percent) ---
+  bandPct:     12,
+
+  // Demo copies show the setup button to everyone. Keep this
+  // false on a live customer page.
+  demo: false
+};
+/* ================= end of editable block ================= */
+
+var setupMode = CONFIG.demo ||
+  /[?&]setup(=|&|$)/.test(location.search) ||
+  location.hash === "#setup";
+
+var LOTS = [
+  {id:"s",  t:"Small",  d:"under 3,000 sq ft",   sqft:2200},
+  {id:"m",  t:"Medium", d:"3,000 – 8,000 sq ft", sqft:5200},
+  {id:"l",  t:"Large",  d:"8,000 – 15,000 sq ft",sqft:11000},
+  {id:"xl", t:"Estate", d:"half acre and up",    sqft:22000}
+];
+
+var FREQS = [
+  {id:"weekly",  t:"Weekly",       mult:1.00, visits:4.33},
+  {id:"biweekly",t:"Every 2 weeks",mult:1.15, visits:2.17},
+  {id:"monthly", t:"Monthly",      mult:1.35, visits:1.00}
+];
+
+var MODS = [
+  {id:"gated",    t:"Gated or fenced backyard", key:"gatedPct"},
+  {id:"slope",    t:"Steep slope",              key:"slopePct"},
+  {id:"obstacle", t:"Lots of trees or beds",    key:"obstaclePct"}
+];
+
+/* Rates come from CONFIG, never from storage — a homeowner's browser
+   must not be able to hold stale prices. The setup panel edits this
+   copy in memory so you can preview, then hand you the block to paste. */
+var cfg = Object.assign({}, CONFIG);
+
+/* Submitted quotes are kept locally too, as a backup if the endpoint
+   ever fails. The customer's real copy arrives by email. */
+var leads = loadLeads();
+
+var state = {
+  lot:"m", exact:null,
+  svc:{mow:true, cleanup:false, mulch:false, edge:false, shrub:false, aerate:false},
+  freq:"weekly", bedSqft:400, edgeFt:120, shrubQty:8,
+  mods:{}, sent:false, panelOpen:false
+};
+
+function loadLeads(){
+  try{ var v = localStorage.getItem("cq.leads"); var p = v ? JSON.parse(v) : []; return Array.isArray(p) ? p : []; }
+  catch(e){ return []; }
+}
+function saveLeads(){ try{ localStorage.setItem("cq.leads", JSON.stringify(leads)); }catch(e){} }
+function $(id){ return document.getElementById(id); }
+function money(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function lawnSqft(){
+  if(state.exact && state.exact >= 200) return state.exact;
+  for(var i=0;i<LOTS.length;i++) if(LOTS[i].id===state.lot) return LOTS[i].sqft;
+  return 5200;
+}
+function freqObj(){
+  for(var i=0;i<FREQS.length;i++) if(FREQS[i].id===state.freq) return FREQS[i];
+  return FREQS[0];
+}
+
+/* ---------- pricing ---------- */
+function compute(){
+  var k = lawnSqft()/1000, lines = [], monthly = 0, once = 0;
+
+  if(state.svc.mow){
+    var f = freqObj();
+    var per = (Number(cfg.mowBase) + Number(cfg.mowPerK)*k) * f.mult;
+    monthly += per * f.visits;
+    lines.push({t:"Mow, trim & blow", d:f.t + " · " + money(per) + " per visit", a:per*f.visits, rec:true});
+  }
+  if(state.svc.cleanup){
+    var cl = Number(cfg.cleanupBase) + Number(cfg.cleanupPerK)*k;
+    once += cl;
+    lines.push({t:"Seasonal cleanup", d:"Beds, leaves, cutbacks · one visit", a:cl, rec:false});
+  }
+  if(state.svc.mulch){
+    var yards = Math.max(1, Math.round((state.bedSqft/162)*10)/10);
+    var mu = yards * Number(cfg.mulchPerYard);
+    once += mu;
+    lines.push({t:"Mulch, installed", d:yards.toFixed(1) + " cu yd at 2\" depth · " + state.bedSqft + " sq ft of beds", a:mu, rec:false});
+  }
+  if(state.svc.edge){
+    var ed = state.edgeFt * Number(cfg.edgePerFt);
+    once += ed;
+    lines.push({t:"Bed edging", d:state.edgeFt + " linear ft, cut fresh", a:ed, rec:false});
+  }
+  if(state.svc.shrub){
+    var sh = state.shrubQty * Number(cfg.shrubEach);
+    once += sh;
+    lines.push({t:"Hedge & shrub trimming", d:state.shrubQty + " shrubs · debris hauled", a:sh, rec:false});
+  }
+  if(state.svc.aerate){
+    var ae = Math.max(Number(cfg.aerateMin), k * Number(cfg.aeratePerK));
+    once += ae;
+    lines.push({t:"Aeration & overseed", d:Math.round(lawnSqft()).toLocaleString("en-US") + " sq ft · fall service", a:ae, rec:false});
+  }
+
+  var pct = 0, names = [];
+  for(var i=0;i<MODS.length;i++){
+    if(state.mods[MODS[i].id]){ pct += Number(cfg[MODS[i].key]); names.push(MODS[i].t.toLowerCase()); }
+  }
+  var mult = 1 + pct/100;
+  var surcharge = (monthly + once) * (mult - 1);
+  monthly *= mult; once *= mult;
+
+  return {lines:lines, monthly:monthly, once:once, pct:pct, surchargeAmt:surcharge, modNames:names,
+          any:lines.length>0, band:Number(cfg.bandPct)/100};
+}
+
+/* ---------- render ---------- */
+function renderLots(){
+  var h = "";
+  for(var i=0;i<LOTS.length;i++){
+    var L = LOTS[i], on = (!state.exact && state.lot===L.id);
+    h += '<button class="tile" type="button" data-lot="'+L.id+'" aria-pressed="'+on+'">'+
+         '<span class="tile-t">'+L.t+'</span><span class="tile-d">'+L.d+'</span></button>';
+  }
+  $("lotTiles").innerHTML = h;
+  $("lotEcho").textContent = state.exact ? "" : "Using " + lawnSqft().toLocaleString("en-US") + " sq ft";
+}
+
+function svcRow(id, title, priceHint, bodyHtml){
+  var on = state.svc[id];
+  return '<div class="svc'+(on?" on":"")+'" data-svc="'+id+'">'+
+    '<button class="svc-hd" type="button" data-toggle="'+id+'" aria-pressed="'+on+'">'+
+      '<span class="check" aria-hidden="true">&#10003;</span>'+
+      '<span class="svc-t">'+title+'</span>'+
+      '<span class="svc-p">'+priceHint+'</span>'+
+    '</button>'+
+    (on && bodyHtml ? '<div class="svc-body">'+bodyHtml+'</div>' : '')+
+  '</div>';
+}
+
+function renderSvcs(){
+  var k = lawnSqft()/1000;
+  var f = freqObj();
+  var mowPer = (Number(cfg.mowBase) + Number(cfg.mowPerK)*k) * f.mult;
+  var freqChips = "";
+  for(var i=0;i<FREQS.length;i++){
+    freqChips += '<button class="chip sm" type="button" data-freq="'+FREQS[i].id+'" aria-pressed="'+(state.freq===FREQS[i].id)+'">'+FREQS[i].t+'</button>';
+  }
+
+  var h = "";
+  h += svcRow("mow","Mowing & maintenance", money(mowPer)+"/visit",
+        '<span>How often?</span><div class="chips">'+freqChips+'</div>');
+  h += svcRow("cleanup","Spring or fall cleanup", money(Number(cfg.cleanupBase)+Number(cfg.cleanupPerK)*k), "");
+  h += svcRow("mulch","Mulch delivered & spread", money(cfg.mulchPerYard)+"/cu yd",
+        '<label for="bedSqft">Bed area</label><input class="num-sm" type="number" id="bedSqft" min="20" max="20000" step="20" value="'+state.bedSqft+'" inputmode="numeric"><span>sq ft</span>');
+  h += svcRow("edge","Bed edging", "$"+cfg.edgePerFt+"/ft",
+        '<label for="edgeFt">Length</label><input class="num-sm" type="number" id="edgeFt" min="10" max="5000" step="10" value="'+state.edgeFt+'" inputmode="numeric"><span>linear ft</span>');
+  h += svcRow("shrub","Hedge & shrub trimming", money(cfg.shrubEach)+" each",
+        '<label for="shrubQty">How many shrubs?</label><input class="num-sm" type="number" id="shrubQty" min="1" max="300" step="1" value="'+state.shrubQty+'" inputmode="numeric">');
+  h += svcRow("aerate","Aeration & overseeding", "from "+money(cfg.aerateMin), "");
+  $("svcList").innerHTML = h;
+}
+
+function renderMods(){
+  var h = "";
+  for(var i=0;i<MODS.length;i++){
+    var M = MODS[i];
+    h += '<button class="chip" type="button" data-mod="'+M.id+'" aria-pressed="'+(!!state.mods[M.id])+'">'+
+         M.t+' <span style="opacity:.7">+'+cfg[M.key]+'%</span></button>';
+  }
+  $("modChips").innerHTML = h;
+}
+
+function renderQuote(){
+  var q = compute();
+  var lines = $("qLines"), amtEl = $("qAmt"), noteEl = $("qNote"), labelEl = $("qLabel");
+
+  if(!q.any){
+    lines.className = "q-empty";
+    lines.textContent = "Nothing selected yet.";
+    amtEl.textContent = "—";
+    labelEl.textContent = "Your estimate";
+    noteEl.textContent = "Choose a service to see your price.";
+    $("qSurch").innerHTML = "";
+    $("submitBtn").disabled = true;
+    $("barAmt").textContent = "—";
+    $("barLabel").textContent = "Estimate";
+    return;
+  }
+
+  lines.className = "q-lines";
+  var h = "";
+  for(var i=0;i<q.lines.length;i++){
+    var L = q.lines[i];
+    h += '<div class="line"><div class="line-t">'+L.t+'<span class="line-d">'+L.d+'</span></div>'+
+         '<div class="line-a">'+money(L.a)+(L.rec?'<span style="font-weight:400;color:var(--ink-3)">/mo</span>':'')+'</div></div>';
+  }
+  lines.innerHTML = h;
+
+  var sh = "";
+  if(q.pct > 0){
+    sh += '<div class="q-sub"><span class="surch">Access &amp; terrain (+'+q.pct+'%)</span><b class="surch">'+money(q.surchargeAmt)+'</b></div>';
+  }
+  if(q.monthly > 0 && q.once > 0){
+    sh += '<div class="q-sub"><span>One-time work</span><b>'+money(q.once)+'</b></div>';
+  }
+  $("qSurch").innerHTML = sh;
+
+  var headline, label, note;
+  if(q.monthly > 0){
+    label = "Ongoing service";
+    headline = money(q.monthly*(1-q.band)) + "–" + money(q.monthly*(1+q.band));
+    note = "per month, " + freqObj().t.toLowerCase() + (q.once>0 ? " · plus " + money(q.once) + " one-time" : "");
+  } else {
+    label = "One-time work";
+    headline = money(q.once*(1-q.band)) + "–" + money(q.once*(1+q.band));
+    note = "total, materials and haul-away included";
+  }
+  labelEl.textContent = label;
+  amtEl.textContent = headline;
+  noteEl.textContent = note;
+  $("submitBtn").disabled = false;
+  $("barLabel").textContent = q.monthly > 0 ? "Per month" : "One-time";
+  $("barAmt").textContent = headline;
+}
+
+function renderBiz(){
+  $("bizName").textContent = cfg.bizName;
+  $("footName").textContent = cfg.bizName;
+  var tel = $("bizTel");
+  tel.textContent = cfg.bizTel;
+  tel.href = "tel:" + String(cfg.bizTel).replace(/[^0-9+]/g,"");
+}
+
+function render(){
+  renderBiz(); renderLots(); renderSvcs(); renderMods(); renderQuote(); renderPanel();
+}
+
+/* ---------- setup panel (you, not the homeowner) ---------- */
+function configBlock(){
+  var order = ["bizName","bizTel","leadEndpoint","notifyEmail","mowBase","mowPerK",
+    "cleanupBase","cleanupPerK","mulchPerYard","edgePerFt","shrubEach","aeratePerK",
+    "aerateMin","gatedPct","slopePct","obstaclePct","bandPct","demo"];
+  var out = ["var CONFIG = {"];
+  for(var i=0;i<order.length;i++){
+    var k = order[i], v = cfg[k];
+    var lit = (typeof v === "number") ? v :
+              (typeof v === "boolean") ? v :
+              '"' + String(v).replace(/\\/g,"\\\\").replace(/"/g,'\\"') + '"';
+    out.push("  " + k + ": " + lit + (i < order.length-1 ? "," : ""));
+  }
+  out.push("};");
+  return out.join("\n");
+}
+
+function renderPanel(){
+  var mount = $("panelMount");
+  if(!state.panelOpen){ mount.innerHTML = ""; return; }
+
+  var rateDefs = [
+    ["bizName","Business name","text"], ["bizTel","Phone number","text"],
+    ["notifyEmail","Send quotes to","text"], ["leadEndpoint","Form endpoint URL","text"],
+    ["mowBase","Mowing base, per visit","n"], ["mowPerK","Mowing, per 1,000 sq ft","n"],
+    ["cleanupBase","Cleanup base","n"], ["cleanupPerK","Cleanup, per 1,000 sq ft","n"],
+    ["mulchPerYard","Mulch, per cu yd installed","n"], ["edgePerFt","Edging, per linear ft","n"],
+    ["shrubEach","Shrub trim, each","n"], ["aeratePerK","Aeration, per 1,000 sq ft","n"],
+    ["aerateMin","Aeration minimum","n"], ["gatedPct","Gated yard surcharge %","n"],
+    ["slopePct","Steep slope surcharge %","n"], ["obstaclePct","Obstacles surcharge %","n"],
+    ["bandPct","Quote range, +/- %","n"]
+  ];
+  var rates = "";
+  for(var i=0;i<rateDefs.length;i++){
+    var d = rateDefs[i];
+    var wide = (d[2] === "text" && (d[0] === "leadEndpoint" || d[0] === "notifyEmail" || d[0] === "bizName"));
+    rates += '<label class="rate'+(wide?" rate-wide":"")+'"><span>'+d[1]+'</span>'+
+      '<input type="'+(d[2]==="n"?"number":"text")+'" data-cfg="'+d[0]+'" value="'+esc(cfg[d[0]])+'"'+
+      (d[2]==="n"?' step="0.25" min="0"':'')+'></label>';
+  }
+
+  var endpointWarn = cfg.leadEndpoint ? "" :
+    '<p class="warn-note">No form endpoint set. Quote requests will fall back to opening the homeowner\'s email app addressed to <strong>'+esc(cfg.notifyEmail)+'</strong> — that works, but fewer people finish. Set an endpoint before this copy goes live.</p>';
+
+  var leadHtml = "";
+  if(!leads.length){
+    leadHtml = '<p style="color:var(--ink-3);font-size:13.5px;margin:0">Nothing submitted from this browser yet. Real requests are emailed — this list is only a local backup.</p>';
+  } else {
+    for(var j=leads.length-1;j>=0;j--){
+      var L = leads[j];
+      leadHtml += '<div class="lead"><div class="lead-top"><span class="lead-nm">'+esc(L.name)+'</span>'+
+        '<span class="lead-amt">'+esc(L.headline)+'</span></div>'+
+        '<div class="lead-meta">'+esc(L.phone)+' · '+esc(L.addr)+'</div>'+
+        '<div class="lead-meta">'+esc(L.services)+' · '+esc(L.when)+'</div></div>';
+    }
+  }
+
+  mount.innerHTML =
+  '<div class="panel"><div class="panel-hd"><h2>Setup — '+esc(cfg.bizName)+'</h2>'+
+  '<p>Only you see this. It opens because the URL ends in <code>?setup</code>. Changes here preview instantly but are <strong>not saved</strong> — copy the config block when the numbers look right and paste it into the top of the file.</p></div>'+
+  '<div class="panel-bd">'+
+    '<div class="grp"><h3>Rates &amp; details</h3><div class="rates">'+rates+'</div>'+endpointWarn+
+      '<div class="row-btns" style="margin-top:12px"><button class="mini primary" id="copyCfg">Copy config block</button>'+
+      '<button class="mini" id="resetCfg">Undo my changes</button></div></div>'+
+    '<div class="grp"><h3>Config block</h3><code class="snip" id="cfgOut">'+esc(configBlock())+'</code></div>'+
+    '<div class="grp"><h3>Local backup ('+leads.length+')</h3><div class="leads">'+leadHtml+'</div>'+
+      (leads.length?'<div class="row-btns" style="margin-top:10px"><button class="mini" id="copyLeads">Copy all as text</button><button class="mini" id="clearLeads">Clear list</button></div>':'')+
+    '</div>'+
+  '</div></div>';
+}
+
+/* ---------- submit ---------- */
+function serviceSummary(){
+  var q = compute(), out = [];
+  for(var i=0;i<q.lines.length;i++) out.push(q.lines[i].t);
+  return out.join(", ") || "none";
+}
+
+function leadAsText(L){
+  return "New quote request — " + L.headline + " (" + L.note + ")\n\n" +
+    "Name:     " + L.name + "\n" +
+    "Phone:    " + L.phone + "\n" +
+    "Email:    " + (L.email || "not given") + "\n" +
+    "Address:  " + L.addr + "\n\n" +
+    "Services: " + L.services + "\n" +
+    "Lawn:     " + L.lawnSqft.toLocaleString("en-US") + " sq ft (" + L.lawnSource + ")\n" +
+    "Access:   " + L.surcharge + "\n" +
+    "Sent:     " + L.when;
+}
+
+function mailtoFor(L){
+  return "mailto:" + encodeURIComponent(cfg.notifyEmail) +
+    "?subject=" + encodeURIComponent("Quote request — " + L.name + " — " + L.headline) +
+    "&body=" + encodeURIComponent(leadAsText(L));
+}
+
+function buildLead(){
+  var q = compute();
+  return {
+    name:  $("cName").value.trim(),
+    phone: $("cPhone").value.trim(),
+    addr:  $("cAddr").value.trim(),
+    email: $("cEmail").value.trim(),
+    business: cfg.bizName,
+    headline: $("qAmt").textContent,
+    note: $("qNote").textContent,
+    services: serviceSummary(),
+    lawnSqft: lawnSqft(),
+    lawnSource: state.exact ? "entered by homeowner" : "size bracket",
+    surcharge: q.pct ? ("+"+q.pct+"% "+q.modNames.join(", ")) : "none",
+    when: new Date().toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"})
+  };
+}
+
+function showSent(L){
+  state.sent = true;
+  document.querySelector("main").innerHTML =
+    '<div class="done"><h2>You\'re on the schedule board, '+esc(L.name.split(" ")[0])+'.</h2>'+
+    '<p>'+esc(cfg.bizName)+' will call '+esc(L.phone)+' within one business day to confirm the start date. Nothing is charged until the work is done.</p>'+
+    '<div class="recap"><strong>'+esc(L.headline)+'</strong> — '+esc(L.note)+'\n'+
+    esc(L.services)+'\n'+esc(L.addr)+'</div></div>';
+  $("mobileBar").hidden = true;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function showSendFailed(L){
+  var err = $("formErr");
+  err.hidden = false;
+  err.innerHTML = 'We couldn\'t send that automatically. Your price is saved — '+
+    '<a href="'+esc(mailtoFor(L))+'">send it by email instead</a>, or call '+
+    '<a href="tel:'+esc(String(cfg.bizTel).replace(/[^0-9+]/g,""))+'">'+esc(cfg.bizTel)+'</a>.';
+}
+
+function submitLead(){
+  var btn = $("submitBtn"), err = $("formErr");
+  var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
+
+  if(!name || !phone || !addr){
+    err.hidden = false;
+    err.textContent = "We need a name, a phone number and the service address to hold this price.";
+    $("contactStep").scrollIntoView({behavior:"smooth", block:"center"});
+    (!name ? $("cName") : !phone ? $("cPhone") : $("cAddr")).focus();
+    return;
+  }
+  err.hidden = true;
+
+  var lead = buildLead();
+  leads.push(lead); saveLeads();          // local backup before anything can fail
+
+  if(!cfg.leadEndpoint){
+    // No endpoint configured: hand it to the homeowner's mail app.
+    window.location.href = mailtoFor(lead);
+    showSent(lead);
+    return;
+  }
+
+  btn.disabled = true;
+  var label = btn.textContent;
+  btn.textContent = "Sending…";
+
+  fetch(cfg.leadEndpoint, {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "Accept":"application/json"},
+    body: JSON.stringify(Object.assign({}, lead, {text: leadAsText(lead)}))
+  }).then(function(res){
+    if(!res.ok) throw new Error("endpoint returned " + res.status);
+    showSent(lead);
+  }).catch(function(){
+    btn.disabled = false;
+    btn.textContent = label;
+    showSendFailed(lead);
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", function(e){
+  var t = e.target.closest("button");
+  if(!t) return;
+
+  if(t.id === "setupToggle"){
+    state.panelOpen = !state.panelOpen;
+    t.setAttribute("aria-expanded", String(state.panelOpen));
+    t.textContent = state.panelOpen ? "Close setup" : "Contractor setup";
+    renderPanel();
+    if(state.panelOpen) $("panelMount").scrollIntoView({behavior:"smooth", block:"start"});
+    return;
+  }
+  if(t.dataset.lot){ state.lot = t.dataset.lot; state.exact = null; $("exactSqft").value = ""; render(); return; }
+  if(t.dataset.toggle){ var s = t.dataset.toggle; state.svc[s] = !state.svc[s]; renderSvcs(); renderQuote(); return; }
+  if(t.dataset.freq){ state.freq = t.dataset.freq; renderSvcs(); renderQuote(); return; }
+  if(t.dataset.mod){ var m = t.dataset.mod; state.mods[m] = !state.mods[m]; renderMods(); renderQuote(); return; }
+  if(t.id === "submitBtn"){ submitLead(); return; }
+  if(t.id === "barBtn"){
+    if(state.sent) return;
+    $("contactStep").scrollIntoView({behavior:"smooth", block:"start"});
+    setTimeout(function(){ $("cName").focus(); }, 400);
+    return;
+  }
+  if(t.id === "resetCfg"){ cfg = Object.assign({}, CONFIG); render(); return; }
+  if(t.id === "clearLeads"){ leads = []; saveLeads(); renderPanel(); return; }
+  if(t.id === "copyCfg"){ copyText(configBlock(), t, "Copy config block"); return; }
+  if(t.id === "copyLeads"){
+    copyText(leads.map(leadAsText).join("\n\n———\n\n"), t, "Copy all as text");
+    return;
+  }
+});
+
+function copyText(txt, btn, label){
+  var done = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = label; }, 1400); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done, function(){ btn.textContent = "Select it manually"; });
+  } else {
+    btn.textContent = "Select it manually";
+  }
+}
+
+document.addEventListener("input", function(e){
+  var el = e.target;
+  if(el.id === "exactSqft"){
+    var v = parseInt(el.value,10);
+    state.exact = (v && v >= 200) ? v : null;
+    renderLots(); renderSvcs(); renderQuote(); return;
+  }
+  if(el.id === "bedSqft"){ state.bedSqft = Math.max(20, parseInt(el.value,10)||0); renderQuote(); return; }
+  if(el.id === "edgeFt"){ state.edgeFt = Math.max(0, parseInt(el.value,10)||0); renderQuote(); return; }
+  if(el.id === "shrubQty"){ state.shrubQty = Math.max(0, parseInt(el.value,10)||0); renderQuote(); return; }
+  if(el.dataset && el.dataset.cfg){
+    var key = el.dataset.cfg;
+    cfg[key] = (el.type === "number") ? (parseFloat(el.value)||0) : el.value;
+    renderBiz(); renderLots(); renderSvcs(); renderMods(); renderQuote();
+    var out = $("cfgOut"); if(out) out.textContent = configBlock();
+    return;
+  }
+});
+
+if(setupMode) $("setupToggle").hidden = false;
+render();
+</script>
+
+</body>
+</html>

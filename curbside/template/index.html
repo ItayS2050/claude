@@ -207,10 +207,10 @@ label.fl{display:block; font-size:12.5px; color:var(--ink-2); margin-bottom:4px;
 .panel-hd p{margin:4px 0 0; font-size:13px; color:var(--ink-2)}
 .panel-bd{padding:18px; display:flex; flex-direction:column; gap:22px}
 .grp h3{font-size:13px; text-transform:uppercase; letter-spacing:.1em; font-family:Archivo,sans-serif; font-weight:700; color:var(--ink-3); margin-bottom:10px}
-.rates{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px}
-.rate{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px}
-.rate span{color:var(--ink-2); flex:1}
-.rate input{width:88px; flex:none; text-align:right}
+.rates{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px}
+.rate{display:flex; flex-direction:column; gap:5px; font-size:13px}
+.rate span{color:var(--ink-2)}
+.rate input{width:100%; text-align:left}
 .leads{display:flex; flex-direction:column; gap:8px}
 .lead{border:1px solid var(--line); border-radius:8px; padding:11px 13px; font-size:13.5px}
 .lead-top{display:flex; gap:10px; align-items:baseline}
@@ -224,6 +224,14 @@ code.snip{
   display:block; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
   padding:11px 13px; font-size:12.5px; overflow-x:auto; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
 }
+.rate-wide{grid-column:span 2}
+@media(max-width:560px){.rate-wide{grid-column:1/-1}}
+.warn-note{margin:12px 0 0; padding:10px 12px; background:var(--accent-soft); border:1px solid var(--accent-line); border-radius:8px; font-size:13px; color:var(--ink-2)}
+.mini.primary{background:var(--moss); border-color:var(--moss); color:var(--on-moss); font-weight:600}
+.mini.primary:hover{background:var(--moss-hi); color:var(--on-moss)}
+.panel-hd code{background:var(--surface); padding:1px 5px; border-radius:4px; font-size:12.5px}
+.err a{color:inherit}
+#cfgOut{max-height:280px; overflow:auto; user-select:all}
 .foot{border-top:1px solid var(--line); padding-block:22px 30px; color:var(--ink-3); font-size:12.5px}
 </style>
 </head>
@@ -242,7 +250,7 @@ code.snip{
         <a class="biz-tel" id="bizTel" href="tel:5551240188">(555) 124-0188</a>
       </div>
     </div>
-    <button class="setup-btn" id="setupToggle" aria-expanded="false">Contractor setup</button>
+    <button class="setup-btn" id="setupToggle" aria-expanded="false" hidden>Contractor setup</button>
   </div>
 </header>
 
@@ -328,27 +336,56 @@ code.snip{
 </footer>
 
 <script>
-/* ============================================================
-   Curbside Quote — single-file instant quoting page.
-   Deploy: upload this file anywhere (Netlify, S3, your host).
-   Leads: set LEAD_ENDPOINT to a form endpoint (Formspree, your
-   own URL) and submissions POST there as JSON. With it empty,
-   leads are kept in this browser and shown in Contractor setup.
-   ============================================================ */
-var LEAD_ENDPOINT = "";
+/* ==========================================================
+   Curbside Quote
 
-var DEFAULTS = {
-  bizName: "Ridgeline Lawn & Landscape",
-  bizTel: "(555) 124-0188",
-  mowBase: 42, mowPerK: 7.5,
-  cleanupBase: 165, cleanupPerK: 32,
-  mulchPerYard: 92,
-  edgePerFt: 2.75,
-  shrubEach: 17,
-  aeratePerK: 21, aerateMin: 125,
-  gatedPct: 8, slopePct: 12, obstaclePct: 10,
-  bandPct: 12
+   EDIT THIS BLOCK FOR EACH CUSTOMER — nothing else in this
+   file needs to change. Then upload the folder.
+
+   To tune rates visually, open this page with ?setup on the
+   end of the URL, drag the numbers, and click "Copy config
+   block" to get a replacement for this block.
+   ========================================================== */
+var CONFIG = {
+  // --- who this copy belongs to ---
+  bizName:  "Ridgeline Lawn & Landscape",
+  bizTel:   "(555) 124-0188",
+
+  // --- where quote requests go ---
+  // A form endpoint that emails the customer. Formspree, Web3Forms,
+  // or your own URL — anything that accepts a JSON POST.
+  leadEndpoint: "",
+  // Fallback if the endpoint is missing or down. Always fill this in.
+  notifyEmail:  "quotes@example.com",
+
+  // --- their rates (dollars) ---
+  mowBase:     42,    // per visit, before lawn size
+  mowPerK:     7.5,   // added per 1,000 sq ft of lawn
+  cleanupBase: 165,
+  cleanupPerK: 32,
+  mulchPerYard: 92,   // installed, per cubic yard
+  edgePerFt:   2.75,
+  shrubEach:   17,
+  aeratePerK:  21,
+  aerateMin:   125,
+
+  // --- surcharges (percent) ---
+  gatedPct:    8,
+  slopePct:    12,
+  obstaclePct: 10,
+
+  // --- how wide a range the homeowner is shown (percent) ---
+  bandPct:     12,
+
+  // Demo copies show the setup button to everyone. Keep this
+  // false on a live customer page.
+  demo: false
 };
+/* ================= end of editable block ================= */
+
+var setupMode = CONFIG.demo ||
+  /[?&]setup(=|&|$)/.test(location.search) ||
+  location.hash === "#setup";
 
 var LOTS = [
   {id:"s",  t:"Small",  d:"under 3,000 sq ft",   sqft:2200},
@@ -369,8 +406,15 @@ var MODS = [
   {id:"obstacle", t:"Lots of trees or beds",    key:"obstaclePct"}
 ];
 
-var cfg = load("cq.cfg", DEFAULTS);
-var leads = load("cq.leads", []);
+/* Rates come from CONFIG, never from storage — a homeowner's browser
+   must not be able to hold stale prices. The setup panel edits this
+   copy in memory so you can preview, then hand you the block to paste. */
+var cfg = Object.assign({}, CONFIG);
+
+/* Submitted quotes are kept locally too, as a backup if the endpoint
+   ever fails. The customer's real copy arrives by email. */
+var leads = loadLeads();
+
 var state = {
   lot:"m", exact:null,
   svc:{mow:true, cleanup:false, mulch:false, edge:false, shrub:false, aerate:false},
@@ -378,18 +422,14 @@ var state = {
   mods:{}, sent:false, panelOpen:false
 };
 
-function load(k, fb){
-  try{
-    var v = localStorage.getItem(k);
-    if(!v) return fb;
-    var parsed = JSON.parse(v);
-    if(Array.isArray(fb)) return Array.isArray(parsed) ? parsed : fb;
-    return Object.assign({}, fb, parsed);
-  }catch(e){ return fb; }
+function loadLeads(){
+  try{ var v = localStorage.getItem("cq.leads"); var p = v ? JSON.parse(v) : []; return Array.isArray(p) ? p : []; }
+  catch(e){ return []; }
 }
-function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function saveLeads(){ try{ localStorage.setItem("cq.leads", JSON.stringify(leads)); }catch(e){} }
 function $(id){ return document.getElementById(id); }
 function money(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
 function lawnSqft(){
   if(state.exact && state.exact >= 200) return state.exact;
   for(var i=0;i<LOTS.length;i++) if(LOTS[i].id===state.lot) return LOTS[i].sqft;
@@ -565,20 +605,36 @@ function renderBiz(){
   var tel = $("bizTel");
   tel.textContent = cfg.bizTel;
   tel.href = "tel:" + String(cfg.bizTel).replace(/[^0-9+]/g,"");
-  document.title = "Curbside Quote";
 }
 
 function render(){
   renderBiz(); renderLots(); renderSvcs(); renderMods(); renderQuote(); renderPanel();
 }
 
-/* ---------- owner panel ---------- */
+/* ---------- setup panel (you, not the homeowner) ---------- */
+function configBlock(){
+  var order = ["bizName","bizTel","leadEndpoint","notifyEmail","mowBase","mowPerK",
+    "cleanupBase","cleanupPerK","mulchPerYard","edgePerFt","shrubEach","aeratePerK",
+    "aerateMin","gatedPct","slopePct","obstaclePct","bandPct","demo"];
+  var out = ["var CONFIG = {"];
+  for(var i=0;i<order.length;i++){
+    var k = order[i], v = cfg[k];
+    var lit = (typeof v === "number") ? v :
+              (typeof v === "boolean") ? v :
+              '"' + String(v).replace(/\\/g,"\\\\").replace(/"/g,'\\"') + '"';
+    out.push("  " + k + ": " + lit + (i < order.length-1 ? "," : ""));
+  }
+  out.push("};");
+  return out.join("\n");
+}
+
 function renderPanel(){
   var mount = $("panelMount");
   if(!state.panelOpen){ mount.innerHTML = ""; return; }
 
   var rateDefs = [
     ["bizName","Business name","text"], ["bizTel","Phone number","text"],
+    ["notifyEmail","Send quotes to","text"], ["leadEndpoint","Form endpoint URL","text"],
     ["mowBase","Mowing base, per visit","n"], ["mowPerK","Mowing, per 1,000 sq ft","n"],
     ["cleanupBase","Cleanup base","n"], ["cleanupPerK","Cleanup, per 1,000 sq ft","n"],
     ["mulchPerYard","Mulch, per cu yd installed","n"], ["edgePerFt","Edging, per linear ft","n"],
@@ -590,13 +646,18 @@ function renderPanel(){
   var rates = "";
   for(var i=0;i<rateDefs.length;i++){
     var d = rateDefs[i];
-    rates += '<label class="rate"><span>'+d[1]+'</span>'+
-      '<input type="'+(d[2]==="n"?"number":"text")+'" data-cfg="'+d[0]+'" value="'+String(cfg[d[0]]).replace(/"/g,"&quot;")+'"'+(d[2]==="n"?' step="0.25" min="0"':'')+'></label>';
+    var wide = (d[2] === "text" && (d[0] === "leadEndpoint" || d[0] === "notifyEmail" || d[0] === "bizName"));
+    rates += '<label class="rate'+(wide?" rate-wide":"")+'"><span>'+d[1]+'</span>'+
+      '<input type="'+(d[2]==="n"?"number":"text")+'" data-cfg="'+d[0]+'" value="'+esc(cfg[d[0]])+'"'+
+      (d[2]==="n"?' step="0.25" min="0"':'')+'></label>';
   }
+
+  var endpointWarn = cfg.leadEndpoint ? "" :
+    '<p class="warn-note">No form endpoint set. Quote requests will fall back to opening the homeowner\'s email app addressed to <strong>'+esc(cfg.notifyEmail)+'</strong> — that works, but fewer people finish. Set an endpoint before this copy goes live.</p>';
 
   var leadHtml = "";
   if(!leads.length){
-    leadHtml = '<p style="color:var(--ink-3);font-size:13.5px;margin:0">No requests yet. Every quote a homeowner submits lands here, with the price they were shown.</p>';
+    leadHtml = '<p style="color:var(--ink-3);font-size:13.5px;margin:0">Nothing submitted from this browser yet. Real requests are emailed — this list is only a local backup.</p>';
   } else {
     for(var j=leads.length-1;j>=0;j--){
       var L = leads[j];
@@ -608,22 +669,18 @@ function renderPanel(){
   }
 
   mount.innerHTML =
-  '<div class="panel"><div class="panel-hd"><h2>Contractor setup</h2>'+
-  '<p>Your rates, your name on the page. Homeowners never see this panel unless they click the button — delete the button from the file to hide it for good.</p></div>'+
+  '<div class="panel"><div class="panel-hd"><h2>Setup — '+esc(cfg.bizName)+'</h2>'+
+  '<p>Only you see this. It opens because the URL ends in <code>?setup</code>. Changes here preview instantly but are <strong>not saved</strong> — copy the config block when the numbers look right and paste it into the top of the file.</p></div>'+
   '<div class="panel-bd">'+
-    '<div class="grp"><h3>Your rates</h3><div class="rates">'+rates+'</div></div>'+
-    '<div class="grp"><h3>Quote requests ('+leads.length+')</h3><div class="leads">'+leadHtml+'</div>'+
+    '<div class="grp"><h3>Rates &amp; details</h3><div class="rates">'+rates+'</div>'+endpointWarn+
+      '<div class="row-btns" style="margin-top:12px"><button class="mini primary" id="copyCfg">Copy config block</button>'+
+      '<button class="mini" id="resetCfg">Undo my changes</button></div></div>'+
+    '<div class="grp"><h3>Config block</h3><code class="snip" id="cfgOut">'+esc(configBlock())+'</code></div>'+
+    '<div class="grp"><h3>Local backup ('+leads.length+')</h3><div class="leads">'+leadHtml+'</div>'+
       (leads.length?'<div class="row-btns" style="margin-top:10px"><button class="mini" id="copyLeads">Copy all as text</button><button class="mini" id="clearLeads">Clear list</button></div>':'')+
     '</div>'+
-    '<div class="grp"><h3>Put it on your site</h3>'+
-      '<code class="snip">&lt;a href="https://yoursite.com/quote.html"&gt;Get an instant price&lt;/a&gt;</code>'+
-      '<p style="font-size:13px;color:var(--ink-2);margin:8px 0 0">Upload this one file to your host, then link it from your website, your Facebook page, and the QR code on your truck. To email yourself every lead, set <code>LEAD_ENDPOINT</code> at the top of the file to a form URL.</p>'+
-    '</div>'+
-    '<div class="row-btns"><button class="mini" id="resetCfg">Reset rates to defaults</button></div>'+
   '</div></div>';
 }
-
-function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
 
 /* ---------- submit ---------- */
 function serviceSummary(){
@@ -632,10 +689,65 @@ function serviceSummary(){
   return out.join(", ") || "none";
 }
 
-function submitLead(){
-  var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
-  var email = $("cEmail").value.trim();
+function leadAsText(L){
+  return "New quote request — " + L.headline + " (" + L.note + ")\n\n" +
+    "Name:     " + L.name + "\n" +
+    "Phone:    " + L.phone + "\n" +
+    "Email:    " + (L.email || "not given") + "\n" +
+    "Address:  " + L.addr + "\n\n" +
+    "Services: " + L.services + "\n" +
+    "Lawn:     " + L.lawnSqft.toLocaleString("en-US") + " sq ft (" + L.lawnSource + ")\n" +
+    "Access:   " + L.surcharge + "\n" +
+    "Sent:     " + L.when;
+}
+
+function mailtoFor(L){
+  return "mailto:" + encodeURIComponent(cfg.notifyEmail) +
+    "?subject=" + encodeURIComponent("Quote request — " + L.name + " — " + L.headline) +
+    "&body=" + encodeURIComponent(leadAsText(L));
+}
+
+function buildLead(){
+  var q = compute();
+  return {
+    name:  $("cName").value.trim(),
+    phone: $("cPhone").value.trim(),
+    addr:  $("cAddr").value.trim(),
+    email: $("cEmail").value.trim(),
+    business: cfg.bizName,
+    headline: $("qAmt").textContent,
+    note: $("qNote").textContent,
+    services: serviceSummary(),
+    lawnSqft: lawnSqft(),
+    lawnSource: state.exact ? "entered by homeowner" : "size bracket",
+    surcharge: q.pct ? ("+"+q.pct+"% "+q.modNames.join(", ")) : "none",
+    when: new Date().toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"})
+  };
+}
+
+function showSent(L){
+  state.sent = true;
+  document.querySelector("main").innerHTML =
+    '<div class="done"><h2>You\'re on the schedule board, '+esc(L.name.split(" ")[0])+'.</h2>'+
+    '<p>'+esc(cfg.bizName)+' will call '+esc(L.phone)+' within one business day to confirm the start date. Nothing is charged until the work is done.</p>'+
+    '<div class="recap"><strong>'+esc(L.headline)+'</strong> — '+esc(L.note)+'\n'+
+    esc(L.services)+'\n'+esc(L.addr)+'</div></div>';
+  $("mobileBar").hidden = true;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function showSendFailed(L){
   var err = $("formErr");
+  err.hidden = false;
+  err.innerHTML = 'We couldn\'t send that automatically. Your price is saved — '+
+    '<a href="'+esc(mailtoFor(L))+'">send it by email instead</a>, or call '+
+    '<a href="tel:'+esc(String(cfg.bizTel).replace(/[^0-9+]/g,""))+'">'+esc(cfg.bizTel)+'</a>.';
+}
+
+function submitLead(){
+  var btn = $("submitBtn"), err = $("formErr");
+  var name = $("cName").value.trim(), phone = $("cPhone").value.trim(), addr = $("cAddr").value.trim();
+
   if(!name || !phone || !addr){
     err.hidden = false;
     err.textContent = "We need a name, a phone number and the service address to hold this price.";
@@ -645,32 +757,32 @@ function submitLead(){
   }
   err.hidden = true;
 
-  var q = compute();
-  var lead = {
-    name:name, phone:phone, addr:addr, email:email,
-    headline:$("qAmt").textContent, note:$("qNote").textContent,
-    services:serviceSummary(), lawnSqft:lawnSqft(),
-    surcharge:q.pct ? ("+"+q.pct+"% "+q.modNames.join(", ")) : "none",
-    when:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})
-  };
-  leads.push(lead); save("cq.leads", leads);
+  var lead = buildLead();
+  leads.push(lead); saveLeads();          // local backup before anything can fail
 
-  if(LEAD_ENDPOINT){
-    try{
-      fetch(LEAD_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(lead)})
-        .catch(function(){});
-    }catch(e){}
+  if(!cfg.leadEndpoint){
+    // No endpoint configured: hand it to the homeowner's mail app.
+    window.location.href = mailtoFor(lead);
+    showSent(lead);
+    return;
   }
 
-  state.sent = true;
-  var main = document.querySelector("main");
-  main.innerHTML =
-    '<div class="done"><h2>You\'re on the schedule board, '+esc(name.split(" ")[0])+'.</h2>'+
-    '<p>'+esc(cfg.bizName)+' will call '+esc(phone)+' within one business day to confirm the start date. Nothing is charged until the work is done.</p>'+
-    '<div class="recap"><strong>'+esc(lead.headline)+'</strong> — '+esc(lead.note)+'\n'+
-    esc(lead.services)+'\n'+esc(addr)+'</div></div>';
-  $("mobileBar").hidden = true;
-  window.scrollTo({top:0, behavior:"smooth"});
+  btn.disabled = true;
+  var label = btn.textContent;
+  btn.textContent = "Sending…";
+
+  fetch(cfg.leadEndpoint, {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "Accept":"application/json"},
+    body: JSON.stringify(Object.assign({}, lead, {text: leadAsText(lead)}))
+  }).then(function(res){
+    if(!res.ok) throw new Error("endpoint returned " + res.status);
+    showSent(lead);
+  }).catch(function(){
+    btn.disabled = false;
+    btn.textContent = label;
+    showSendFailed(lead);
+  });
 }
 
 /* ---------- events ---------- */
@@ -697,16 +809,23 @@ document.addEventListener("click", function(e){
     setTimeout(function(){ $("cName").focus(); }, 400);
     return;
   }
-  if(t.id === "resetCfg"){ cfg = Object.assign({}, DEFAULTS); save("cq.cfg", cfg); render(); return; }
-  if(t.id === "clearLeads"){ leads = []; save("cq.leads", leads); renderPanel(); return; }
+  if(t.id === "resetCfg"){ cfg = Object.assign({}, CONFIG); render(); return; }
+  if(t.id === "clearLeads"){ leads = []; saveLeads(); renderPanel(); return; }
+  if(t.id === "copyCfg"){ copyText(configBlock(), t, "Copy config block"); return; }
   if(t.id === "copyLeads"){
-    var txt = leads.map(function(L){
-      return L.when+" — "+L.name+" · "+L.phone+" · "+L.addr+"\n  "+L.headline+" ("+L.note+")\n  "+L.services+"\n  Access: "+L.surcharge;
-    }).join("\n\n");
-    try{ navigator.clipboard.writeText(txt); t.textContent = "Copied"; setTimeout(function(){ t.textContent = "Copy all as text"; },1400); }catch(err){}
+    copyText(leads.map(leadAsText).join("\n\n———\n\n"), t, "Copy all as text");
     return;
   }
 });
+
+function copyText(txt, btn, label){
+  var done = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = label; }, 1400); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done, function(){ btn.textContent = "Select it manually"; });
+  } else {
+    btn.textContent = "Select it manually";
+  }
+}
 
 document.addEventListener("input", function(e){
   var el = e.target;
@@ -721,13 +840,15 @@ document.addEventListener("input", function(e){
   if(el.dataset && el.dataset.cfg){
     var key = el.dataset.cfg;
     cfg[key] = (el.type === "number") ? (parseFloat(el.value)||0) : el.value;
-    save("cq.cfg", cfg);
     renderBiz(); renderLots(); renderSvcs(); renderMods(); renderQuote();
+    var out = $("cfgOut"); if(out) out.textContent = configBlock();
     return;
   }
 });
 
+if(setupMode) $("setupToggle").hidden = false;
 render();
 </script>
+
 </body>
 </html>
