@@ -57,12 +57,22 @@ and refuses to package if any of them fail.
 ### Packaging
 
 ```bash
-./build.sh     # -> dist/rico-1.0.0.zip
+./build.sh           # -> dist/rico-1.2.1.zip, for the store
+./build.sh --dev     # the same package, for load-unpacked testing
 ```
 
-**It will refuse to build until you set your ExtensionPay id** — see below.
-That is deliberate: the placeholder id routes every purchase nowhere, silently,
-and finding that out after launch is worse than finding out now.
+**Always build dev zips with `--dev` rather than copying files by hand.** An
+early round of hand-copied dev packages left out `pay.js` — the manifest never
+names it, only `background.js` does with `importScripts` — and the service
+worker failed to register on every install. The palette is all content script,
+so it kept working and hid the fault. `build.sh` now parses `importScripts` and
+`<script src>` out of the files that do the loading and refuses to package when
+anything they need is missing from the zip.
+
+A store build **refuses until you set your ExtensionPay id** — see below. That
+is deliberate: the placeholder id routes every purchase nowhere, silently, and
+finding that out after launch is worse than finding out now. `--dev` skips that
+one check and no others.
 
 ---
 

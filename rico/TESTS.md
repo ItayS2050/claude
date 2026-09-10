@@ -195,7 +195,11 @@ Privacy:
 - [ ] Total unpacked size — currently **154KB, over the 150KB target**. ExtPay
       is 51KB of that and cannot be trimmed; the mascot icons are 7KB against
       the old flat mark's 1KB. Either accept the number or trim (see README)
-- [ ] `./build.sh` produces a zip and all four test files pass
+- [ ] `./build.sh --dev` produces a zip and all five test files pass
+- [ ] **The service worker registers.** `chrome://extensions` → the Rico card
+      shows no error and *service worker* is a live link. A failure here is
+      near-invisible from Gmail — the palette is all content script and carries
+      on working — so it has to be checked on the card, not by using the product
 - [ ] No errors in the Gmail console during a full open → search → insert cycle
 - [ ] No errors in the service worker console
 - [ ] The palette works in **dark mode** (Gmail dark theme + OS dark)
