@@ -176,8 +176,8 @@
           <li>Folders, JSON import and export</li>
           <li>No account, no server, nothing leaves your browser</li>
         </ul>
-        <p style="margin-top:14px">Your ${Rico.storage.FREE_LIMIT} existing snippets keep working
-           either way — the free tier stops you adding an eleventh, never using what you have.</p>
+        <p style="margin-top:14px">Your existing snippets keep working either way — the free
+           tier stops you adding the next one, never using what you already have.</p>
         <div class="row">
           <button class="ghost" data-act="later">Not now</button>
           <button class="primary" data-act="buy">Unlock Pro</button>

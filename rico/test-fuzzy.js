@@ -43,6 +43,27 @@ ok('a title hit outranks a body hit', refund[0].snippet.title === 'Refund');
 ok('a body hit is still found',       refund.length === 2);
 ok('a body hit is flagged as one',    refund[1].matchedBody === true);
 
+// Bodies match literally, titles fuzzily. Prose contains almost any three
+// letters in order somewhere, so subsequence matching on a body stops
+// filtering: eight real snippets searched for "pri" matched seven of them.
+const prose = S('Chase an invoice', 'Invoice {Invoice} is still showing as outstanding — '
+  + 'it was due last Friday. If it has already gone out, please ignore me.');
+ok('a body is not matched as a subsequence', fuzzy.inBody('pri', prose.body) === null);
+ok('the same letters still match a title fuzzily', fuzzy.match('pri', 'Pricing') !== null);
+ok('a body is matched as a substring', fuzzy.inBody('invoice', prose.body) !== null);
+ok('body matching ignores case', fuzzy.inBody('INVOICE', prose.body) !== null);
+ok('every term has to appear', fuzzy.inBody('invoice tuesday', prose.body) === null);
+ok('but the terms may be in any order', fuzzy.inBody('friday invoice', prose.body) !== null);
+
+// The case that started it: a three-letter query over a realistic set.
+const realistic = [
+  S('Pricing + next steps', 'Happy to put numbers to this for a team your size.'),
+  S('Chase an unpaid invoice', 'Invoice is still showing as outstanding, it was due Friday.'),
+  S('Onboarding steps', 'Three things to get you started: accept the workspace invite.'),
+  S('Refund policy', 'Our refund window is thirty days from purchase, no questions.'),
+];
+ok('"pri" narrows to one, not four', fuzzy.search(realistic, 'pri').length === 1);
+
 // Highlight positions have to line up with the characters they mark, or the
 // palette marks the wrong letters.
 const positions = fuzzy.match('fu', 'Follow up').positions;

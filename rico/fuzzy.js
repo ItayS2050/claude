@@ -67,6 +67,35 @@ Rico.fuzzy = (() => {
   }
 
   /**
+   * Find a query inside a snippet body.
+   *
+   * Bodies are matched literally, not as a subsequence, and that difference is
+   * the whole reason this function exists separately. A paragraph of prose
+   * contains almost any three letters in order somewhere — searching eight
+   * real snippets for "pri" matched seven of them on the body alone, which is
+   * a list that has stopped filtering. Subsequence matching earns its keep on
+   * titles, where the string is short and the letters typed are the letters
+   * meant. On a body, "contains" is what people expect and the only thing that
+   * narrows anything.
+   */
+  function inBody(query, body) {
+    if (!body) return null;
+    const q = query.toLowerCase().trim();
+    const t = body.toLowerCase();
+
+    // Each whitespace-separated term has to appear. Order does not matter —
+    // half of remembering a snippet is remembering two words that were in it.
+    const terms = q.split(/\s+/).filter(Boolean);
+    let score = 0;
+    for (const term of terms) {
+      const at = t.indexOf(term);
+      if (at === -1) return null;
+      score += isBoundary(t[at - 1]) ? START_OF_WORD : LOOSE;
+    }
+    return { score, positions: [] };
+  }
+
+  /**
    * Rank snippets against a query.
    *
    * A title hit outranks a body hit — someone typing "refund" wants the
@@ -84,12 +113,12 @@ Rico.fuzzy = (() => {
     const hits = [];
     for (const snippet of snippets) {
       const inTitle = match(q, snippet.title || '');
-      const inBody = inTitle ? null : match(q, snippet.body || '');
-      if (!inTitle && !inBody) continue;
+      const bodyHit = inTitle ? null : inBody(q, snippet.body || '');
+      if (!inTitle && !bodyHit) continue;
 
       hits.push({
         snippet,
-        score: inTitle ? inTitle.score : inBody.score * 0.35 - 6,
+        score: inTitle ? inTitle.score : bodyHit.score - 14,
         positions: inTitle ? inTitle.positions : [],
         matchedBody: !inTitle,
       });
@@ -100,7 +129,7 @@ Rico.fuzzy = (() => {
     return hits;
   }
 
-  return { match, search };
+  return { match, inBody, search };
 })();
 
 if (typeof module !== 'undefined') module.exports = Rico.fuzzy;
