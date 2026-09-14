@@ -2950,6 +2950,23 @@ const STYLES = `
 // ── UI state ──────────────────────────────────────────────────
 let activeToast        = null;
 let lastDetection      = null;
+// What the toast on screen is actually offering, as opposed to the last thing
+// analyzeText worked out. They are not the same, and treating them as the same
+// is how a toast comes to sit there offering a sentence the person finished
+// typing several keystrokes ago.
+//
+// Reported twice with screenshots: a field reading "why cant they get to" under
+// a toast offering "why cant th", and a field reading "מעדיף את זה עם מסך קטן"
+// under one offering four of its six words. Neither span is produced by any
+// version of the engine from that text — it had already moved on, and the toast
+// had not.
+//
+// showToast has two branches that assign lastDetection and return without
+// rendering anything. After either of them lastDetection sits ahead of the DOM,
+// and the duplicate check — which means "is this the same as what we showed?" —
+// starts answering yes about a toast that was never shown. The question is only
+// worth asking about the screen.
+let shownDetection     = null;
 let lastElement        = null;
 let hintEl             = null;
 let dismissedSignature = null;
@@ -3116,7 +3133,7 @@ function showToast(element, detection, forceShow = false) {
   }
 
   // Same detection as the one already on screen — leave the toast alone
-  if (!forceShow && isDuplicateOfVisibleToast(sig, lastDetection, activeToast)) return;
+  if (!forceShow && isDuplicateOfVisibleToast(sig, shownDetection, activeToast)) return;
 
   // Guard: don't regress to a smaller detection on the same element
   if (activeToast && lastDetection && lastElement === element) {
@@ -3129,7 +3146,7 @@ function showToast(element, detection, forceShow = false) {
   dismissedSignature = null;
   dismissedWordSet   = new Set();
   hideHint();
-  if (activeToast) { activeToast.remove(); activeToast = null; }
+  if (activeToast) { activeToast.remove(); activeToast = null; shownDetection = null; }
   injectStyles();
 
   stats.detected++;
@@ -3256,7 +3273,8 @@ function showToast(element, detection, forceShow = false) {
   applyPos(toast);
   makeDraggable(toast);
   (document.body || document.documentElement).appendChild(toast);
-  activeToast = toast;
+  activeToast    = toast;
+  shownDetection = detection;
 
   // Auto-dismiss after 8 s if the user never touches the toast
   const autoDismissId = setTimeout(() => {
@@ -3290,7 +3308,7 @@ function showConfirm(message, undoFn = null) {
 }
 
 function removeToast(showRecall = true) {
-  if (activeToast) { activeToast.remove(); activeToast = null; }
+  if (activeToast) { activeToast.remove(); activeToast = null; shownDetection = null; }
   if (showRecall && lastDetection) showHint();
 }
 
@@ -3341,13 +3359,13 @@ function showReviewToast(nudge) {
   const close = (state, ms) => {
     const misses = state === 'quiet' ? ((nudge && nudge.misses) || 0) + 1 : 0;
     try { chrome.storage.local.set({ reviewNudge: { state, snoozeUntil: Date.now() + ms, misses } }).catch(() => {}); } catch {}
-    toast.remove(); if (activeToast === toast) activeToast = null;
+    toast.remove(); if (activeToast === toast) { activeToast = null; shownDetection = null; }
   };
   const snooze = () => close('snoozed', REVIEW_SNOOZE_MS);   // they answered
   const unseen = () => close('quiet',   REVIEW_QUIET_MS);    // they never saw it
   toast.querySelector('#kld-rv-rate').addEventListener('click', () => {
     try { chrome.storage.local.set({ reviewNudge: { state: 'done' } }).catch(() => {}); } catch {}
-    toast.remove(); if (activeToast === toast) activeToast = null;
+    toast.remove(); if (activeToast === toast) { activeToast = null; shownDetection = null; }
     window.open(reviewUrl, '_blank');
   });
   toast.querySelector('#kld-rv-x').addEventListener('click', snooze);
@@ -3447,7 +3465,7 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
 
   const close = () => {
     toast.remove();
-    if (activeToast === toast) activeToast = null;
+    if (activeToast === toast) { activeToast = null; shownDetection = null; }
     if (onClose) onClose();
   };
   toast.querySelector('#kld-tr-go').addEventListener('click', () => {
@@ -3760,7 +3778,7 @@ function convertSelection(text, sel) {
   lastDetection = detection;
   lastElement   = document.activeElement;
   hideHint();
-  if (activeToast) { activeToast.remove(); activeToast = null; }
+  if (activeToast) { activeToast.remove(); activeToast = null; shownDetection = null; }
   injectStyles();
 
   const toast = document.createElement('div');

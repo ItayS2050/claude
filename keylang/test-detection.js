@@ -1952,5 +1952,61 @@ function okk(cond, label) {
   okk(!/if \(seen\.expired\) return;/.test(handler), 'and no longer stops after the first');
 }
 
+
+// ── A toast must not outlive the sentence it is about
+//
+// Reported twice, with screenshots. A field reading "why cant they get to"
+// under a toast offering "why cant th"; a field reading "מעדיף את זה עם מסך
+// קטן" under one offering four of its six words. Neither span is produced by
+// any version of the engine from that text — the engine had moved on and the
+// toast had not.
+//
+// showToast has two branches that assign lastDetection and return without
+// rendering: a dismissal it must not re-raise, and a run of ten words or more
+// that only pulses the hint. After either, lastDetection sits ahead of the DOM,
+// and the duplicate check — "is this the same as what we showed?" — starts
+// answering yes about a toast that was never shown. From then on the visible
+// toast is frozen, however much more the person types.
+{
+  console.log('A toast does not outlive the sentence it is about');
+
+  const src = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  const showToast = src.slice(src.indexOf('function showToast('),
+                              src.indexOf('\n}', src.indexOf('function showToast(')));
+
+  okk(/isDuplicateOfVisibleToast\(sig, shownDetection, activeToast\)/.test(showToast),
+      'the duplicate check asks about the screen, not the last thing computed');
+  okk(!/isDuplicateOfVisibleToast\(sig, lastDetection/.test(src),
+      'and nothing still asks it about lastDetection');
+
+  // Set only where a toast is really put on the page.
+  const assigns = (src.match(/shownDetection = detection;/g) || []).length;
+  okk(assigns === 1, `shownDetection is set in exactly one place, found ${assigns}`);
+  okk(/appendChild\(toast\);\n  activeToast    = toast;\n  shownDetection = detection;/.test(src),
+      'and that place is where the toast is appended');
+
+  // Cleared wherever the toast leaves, or a later identical detection would be
+  // mistaken for one already on screen and swallowed.
+  const clears = (src.match(/activeToast = null; shownDetection = null;/g) || []).length
+               + (src.match(/activeToast = null; shownDetection = null; \}/g) || []).length
+               + (src.match(/\{ activeToast = null; shownDetection = null; \}/g) || []).length;
+  okk(clears >= 3, `shownDetection is cleared wherever the toast goes (${clears} sites)`);
+  const stray = (src.match(/activeToast = null(?!;? *shownDetection)/g) || []).length;
+  okk(stray === 0, `no site clears activeToast without shownDetection (${stray})`);
+
+  // The two branches that were the cause still do what they exist to do.
+  okk(/dismissedWordSet\.size >= 2/.test(showToast), 'a dismissal is still respected');
+  okk(/detection\.words\.length >= 10/.test(showToast), 'a very long run still only pulses the hint');
+
+  // And the sentences from the reports convert whole, so the engine was never
+  // the thing at fault here.
+  check('the sentence from the second report',
+        "'יט בשמא איקט עקא אם", 'hebrew_as_english',
+        { converted: 'why cant they get to' });
+  check('the sentence from the first report',
+        'ngsh; t, zv go nxl eyi', 'english_as_hebrew',
+        { converted: 'מעדיף את זה עם מסך קטן' });
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
