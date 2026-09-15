@@ -61,6 +61,20 @@ Overdue, Today, Tomorrow, This week, Later and No date. Overdue is red, today is
 highlighted, `#tags` become filter chips, and the toolbar badge counts what is
 due.
 
+**Warn me first.** Click the date on any task and say how much notice you want —
+at the time, ten minutes, an hour, a day. One notification, at that moment, not
+two: a heads-up followed by another at the time is how a reminder becomes
+something people switch off, and it is not what a calendar does either. A
+default for new tasks lives in Settings.
+
+**And it can reach your phone, without a server.** The same row hands the task
+to a calendar: a Google Calendar link, or an `.ics` file that carries the alarm
+exactly as set and is understood by Apple Calendar and Outlook too. Your
+calendar then does the part Tico cannot — a phone, a watch, an inbox — using
+infrastructure nobody here has to run, pay for, or be trusted with. The Google
+link cannot express an alarm, so it lands with that calendar's default and the
+toast says so rather than letting it be discovered.
+
 **Reminds you, and never loses one.** A Chrome notification at the due time,
 with **Done** and **Snooze** on it. Repeating tasks roll to their next
 occurrence when ticked off instead of disappearing.
@@ -113,6 +127,8 @@ node test-nlp.js      # the language parser, against a fixed clock
 node test-classify.js # the work/personal split, both languages
 node test-clients.js  # client detection, and the phrases that must NOT be one
 node test-sync.js     # the merge: edits, deletes, tombstones, quota, round trip
+node test-calendar.js # the .ics a calendar will accept, or silently drop
+npx eslint .          # no-undef — the check that would have caught three bugs
 node test-store.js    # the task model: completion, repeats, grouping, filing
 ./build.sh            # runs both, then writes dist/tico-<version>.zip
 python3 make-icons.py  # regenerates the PNGs

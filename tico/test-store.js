@@ -235,6 +235,29 @@ check('the buckets come out newest first',
   store.doneOrder(['Earlier', 'Sunday', 'Today', 'Last week', 'Yesterday']),
   ['Today', 'Yesterday', 'Sunday', 'Last week', 'Earlier']);
 
+// --- how much warning ---
+const AT = +new Date(2026, 8, 16, 17, 0);
+check('no lead fires at the due time',
+  store.reminderAt({ due: AT, lead: 0 }), AT);
+check('an hour of lead fires an hour early',
+  store.reminderAt({ due: AT, lead: 60 }), AT - 3600000);
+check('a day of lead fires a day early',
+  store.reminderAt({ due: AT, lead: 1440 }), AT - 86400000);
+check('a task with no due time has no reminder',
+  store.reminderAt({ due: null, lead: 60 }), null);
+check('a missing lead is treated as none',
+  store.reminderAt({ due: AT }), AT);
+
+// A new task picks up whatever default was set, but only if it has a time.
+memory.tasks = [];
+await store.saveSettings({ ...store.DEFAULT_SETTINGS, defaultLead: 30 });
+const warned = store.taskFromInput('call mom tomorrow at 5', 'type', new Date(), await store.loadSettings());
+check('a new dated task inherits the default warning', warned.lead, 30);
+const undated = store.taskFromInput('buy milk', 'type', new Date(), await store.loadSettings());
+check('a task with no date gets none', undated.lead, 0);
+check('a negative lead is clamped away',
+  (await store.addTask({ ...warned, id: 'neg', lead: -99 }), (await store.loadTasks()).find((t) => t.id === 'neg').lead), 0);
+
 // --- an empty line never becomes a task ---
 check('blank input is rejected', store.taskFromInput('   '), null);
 // --- a bare date keeps its words rather than saving an empty row ---

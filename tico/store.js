@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   learned: {},          // words the user has re-filed, and where they put them
   clients: {},          // names seen in tasks, and how often
   aiAssist: false,      // use Chrome's on-device model, where there is one
+  defaultLead: 0,       // minutes of warning on a new task, 0 = at the time
   briefHour: 8,         // the morning brief, 0 = off
   briefDays: 'all',     // all | sun-thu | mon-fri
   lastBrief: null,      // the day the last one went out, so it goes once
@@ -126,6 +127,7 @@ function normalise(t, learned = {}, clients = {}) {
     note: t.note || '',
     due: typeof t.due === 'number' ? t.due : null,
     hasTime: Boolean(t.hasTime),
+    lead: Number.isFinite(t.lead) ? Math.max(0, t.lead) : 0,   // minutes early
     repeat: t.repeat || null,
     priority: t.priority || 0,
     tags: Array.isArray(t.tags) ? t.tags : [],
@@ -160,6 +162,7 @@ export function taskFromInput(raw, source = 'type', now = new Date(), settings =
     repeat: parsed.repeat,
     priority: parsed.priority,
     tags: parsed.tags,
+    lead: parsed.due != null ? (settings.defaultLead || 0) : 0,
     created: Date.now(),
     source,
     client: detectClient(parsed.text || String(raw), clients,
@@ -201,6 +204,19 @@ export async function completeTask(id) {
 }
 
 // --- the morning brief -----------------------------------------------------
+
+/**
+ * When the reminder should actually fire: the due time, less however much
+ * warning was asked for.
+ *
+ * One notification, not two. A heads-up an hour before followed by another at
+ * the time is how a reminder becomes something people switch off, and it is not
+ * what a calendar does either.
+ */
+export function reminderAt(task) {
+  if (!task || task.due == null) return null;
+  return task.due - (task.lead || 0) * 60000;
+}
 
 /** Local YYYY-MM-DD. Not toISOString, which is UTC and rolls over at the wrong
  *  time for anyone east or west of Greenwich. */

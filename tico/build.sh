@@ -18,6 +18,7 @@ FILES=(
   clients.js
   ai.js
   sync.js
+  calendar.js
   welcome.html
   welcome.js
   icon16.png
@@ -50,12 +51,18 @@ if bad:
     sys.exit('manifest problems —\n  ' + '\n  '.join(bad))
 PY
 
+# An identifier used but never imported does not crash loudly in a service
+# worker — it just leaves the worker with no listeners, so reminders silently
+# never fire. That has happened three times here. no-undef catches it.
+npx --yes eslint@10 . > /dev/null 2>&1 || { echo "eslint found problems — run: npx eslint ." >&2; exit 1; }
+
 # The parser decides when every reminder fires; shipping it untested is not worth
 # the two seconds saved.
 node test-nlp.js > /dev/null || { echo "test-nlp.js is failing" >&2; exit 1; }
 node test-classify.js > /dev/null || { echo "test-classify.js is failing" >&2; exit 1; }
 node test-clients.js > /dev/null || { echo "test-clients.js is failing" >&2; exit 1; }
 node test-sync.js > /dev/null || { echo "test-sync.js is failing" >&2; exit 1; }
+node test-calendar.js > /dev/null || { echo "test-calendar.js is failing" >&2; exit 1; }
 node test-store.js > /dev/null || { echo "test-store.js is failing" >&2; exit 1; }
 
 # The landing page runs the real parser by keeping a copy of these three

@@ -3,10 +3,11 @@ import {
   loadTasks, saveTasks, loadSettings, saveSettings, taskFromInput, completeTask,
   setLane, setClient, removeClient, establishedClients, classify, parse,
   nextOccurrence, deleteTasks, setTags, loadTombstones, saveTombstones,
-  touch, BUCKETS, bucketOf, doneBucket, doneOrder,
+  BUCKETS, bucketOf, doneBucket, doneOrder,
 } from './store.js';
 import { detectClient, remember, colourOf } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
+import { icsFor, googleUrl, icsName } from './calendar.js';
 
 const $ = (id) => document.getElementById(id);
 const el = { input: $('input'), field: $('field'), mic: $('mic'), add: $('add'),
@@ -494,6 +495,9 @@ function taskHtml(t) {
     const slot = colourOf(settings.clients || {}, t.client);
     meta.push(`<span class="client" style="--chip: var(--c${slot})"><button data-act="client-filter" data-client="${escapeHtml(t.client)}">◆ ${escapeHtml(t.client)}</button><button class="x" data-act="client-clear" data-id="${t.id}" title="Not for ${escapeHtml(t.client)}">×</button></span>`);
   }
+  if (t.lead && t.due != null && !t.done) {
+    meta.push(`<span class="rep">⏰ ${escapeHtml(leadLabel(t.lead))} before</span>`);
+  }
   if (t.repeat) meta.push(`<span class="rep">↻ ${t.repeat}</span>`);
   for (const tag of t.tags) meta.push(`<button class="tag" data-act="tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`);
   if (t.source === 'voice') meta.push('<span class="rep" title="Added by voice">🎙</span>');
@@ -581,15 +585,33 @@ function laneTitle(t) {
   return `${where}${why}. Click to change.`;
 }
 
+const LEADS = [
+  [0, 'At the time'], [10, '10 min'], [30, '30 min'],
+  [60, '1 hour'], [120, '2 hours'], [1440, '1 day'],
+];
+
 function schedHtml(t) {
   const value = t.due ? toLocalInput(new Date(t.due)) : '';
   return `<div class="sched" data-id="${t.id}">
-    <button data-act="due" data-when="1h">In 1 hour</button>
-    <button data-act="due" data-when="evening">Tonight</button>
-    <button data-act="due" data-when="tomorrow">Tomorrow 9am</button>
-    <button data-act="due" data-when="week">Next week</button>
-    <input type="datetime-local" data-act="due-exact" value="${value}">
-    ${t.due ? '<button data-act="due" data-when="clear">Clear</button>' : ''}
+    <div class="sched-row">
+      <button data-act="due" data-when="1h">In 1 hour</button>
+      <button data-act="due" data-when="evening">Tonight</button>
+      <button data-act="due" data-when="tomorrow">Tomorrow 9am</button>
+      <button data-act="due" data-when="week">Next week</button>
+      <input type="datetime-local" data-act="due-exact" value="${value}">
+      ${t.due ? '<button data-act="due" data-when="clear">Clear</button>' : ''}
+    </div>
+    ${t.due ? `
+    <div class="sched-lbl">Warn me</div>
+    <div class="sched-row">
+      ${LEADS.map(([m, label]) => `
+        <button class="${(t.lead || 0) === m ? 'on' : ''}" data-act="lead" data-id="${t.id}" data-lead="${m}">${label}${m ? ' before' : ''}</button>`).join('')}
+    </div>
+    <div class="sched-lbl">Also put it in a calendar — that is what reaches a phone</div>
+    <div class="sched-row">
+      <button data-act="gcal" data-id="${t.id}">Google Calendar</button>
+      <button data-act="ics" data-id="${t.id}">Download .ics</button>
+    </div>` : ''}
   </div>`;
 }
 
@@ -718,6 +740,36 @@ function wireList() {
       node.addEventListener('blur', commit);
     }
 
+    if (act === 'lead') node.addEventListener('click', async () => {
+      await patch(id, { lead: Number(node.dataset.lead) });
+      schedId = id;
+      renderList();
+    });
+
+    // The URL carries no field for an alarm, so Google applies whatever default
+    // that calendar uses. Said out loud rather than left to be discovered.
+    if (act === 'gcal') node.addEventListener('click', () => {
+      const t = tasks.find((x) => x.id === id);
+      const url = googleUrl(t);
+      if (!url) return;
+      chrome.tabs.create({ url });
+      showToast(t.lead ? 'Opened — set the alert in Google, the link cannot carry it'
+                       : 'Opened in Google Calendar');
+    });
+
+    if (act === 'ics') node.addEventListener('click', () => {
+      const t = tasks.find((x) => x.id === id);
+      const text = icsFor(t, { lead: t.lead || 0 });
+      if (!text) return;
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = icsName(t);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      showToast('Saved — open it to add it to your calendar');
+    });
+
     if (act === 'due') node.addEventListener('click', () => {
       const parentId = node.closest('.sched').dataset.id;
       schedId = null;
@@ -734,6 +786,10 @@ function wireList() {
 }
 
 /** One definition of "tonight", shared by the single-task row and the bulk bar. */
+function leadLabel(minutes) {
+  return (LEADS.find(([m]) => m === minutes) || [0, `${minutes} min`])[1];
+}
+
 function quickDue(when) {
   const now = new Date();
   if (when === 'clear') return { due: null, hasTime: false };
@@ -1021,6 +1077,15 @@ function renderSettings() {
       </select>
     </div>
 
+    <div class="row">
+      <div><div class="label">Warn me before a task is due</div>
+        <div class="sub">The default for new tasks. Any task can be changed on its own.</div></div>
+      <select data-set="defaultLead">
+        ${[[0, 'At the time'], [10, '10 min before'], [30, '30 min before'],
+           [60, '1 hour before'], [120, '2 hours before'], [1440, '1 day before']]
+          .map(([m, label]) => `<option value="${m}" ${(settings.defaultLead || 0) === m ? 'selected' : ''}>${label}</option>`).join('')}
+      </select>
+    </div>
     <div class="row">
       <div><div class="label">Morning brief</div>
         <div class="sub">One notification a day with what is on it. Silent when there is nothing.</div></div>

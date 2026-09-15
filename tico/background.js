@@ -3,6 +3,7 @@
 import {
   loadTasks, saveTasks, loadSettings, saveSettings, loadTombstones, saveTombstones,
   addTask, completeTask, taskFromInput, dueCount, briefDue, briefContent, dateKey,
+  arrivalFrom, reminderAt,
 } from './store.js';
 import {
   mergeTasks, mergeTombstones, mergeSettings, planWrite, readRemote,
@@ -228,11 +229,15 @@ async function fireDueReminders() {
   const missed = [];
 
   for (const t of tasks) {
-    if (t.done || t.notified || t.due == null || t.due > now) continue;
+    if (t.done || t.notified || t.due == null) continue;
+    // Fire at the moment the warning was asked for, which is the due time when
+    // no warning was asked for.
+    const at = reminderAt(t);
+    if (at > now) continue;
     t.notified = true;
     dirty = true;
 
-    if (now - t.due > 2 * 60 * 60 * 1000) { missed.push(t); continue; }
+    if (now - at > 2 * 60 * 60 * 1000) { missed.push(t); continue; }
 
     chrome.notifications.create(`${NOTIF}task:${t.id}`, {
       type: 'basic',
@@ -280,9 +285,17 @@ async function fireDueReminders() {
 
 function whenText(t) {
   const d = new Date(t.due);
-  return t.hasTime
-    ? `Due ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-    : 'Due today';
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // With a warning the useful fact is how long is left, not that it is due.
+  if (t.lead) return t.hasTime ? `Due at ${time} — ${leadWords(t.lead)} from now` : `Due today`;
+  return t.hasTime ? `Due ${time}` : 'Due today';
+}
+
+function leadWords(minutes) {
+  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes === 60) return 'an hour';
+  if (minutes < 1440) return `${Math.round(minutes / 60)} hours`;
+  return minutes === 1440 ? 'a day' : `${Math.round(minutes / 1440)} days`;
 }
 
 chrome.notifications.onButtonClicked.addListener(async (id, index) => {

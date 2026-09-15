@@ -80,6 +80,10 @@ The Done list is grouped by day, a week at a time, so "what did I actually finis
 
 Every client or group gets its own colour and keeps it — the same one tomorrow, and the same one on your other computer. Work and personal are marked down the edge of the row, so a glance at the list is enough to see whose is whose. The palette is picked to stay distinguishable to colourblind readers, in both light and dark.
 
+**Warn me an hour before — and on my phone**
+
+Say how much notice you want on any task: at the time, ten minutes, an hour, a day. And hand any task to your own calendar in a click — Google Calendar, or a file that Apple Calendar and Outlook understand, with the alert already set. Your calendar reaches your phone; Tico never has to, which is why it still has no server and nothing to send anywhere.
+
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.
