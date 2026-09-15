@@ -5,7 +5,7 @@ import {
   nextOccurrence, deleteTasks, setTags, loadTombstones, saveTombstones,
   touch, BUCKETS, bucketOf, doneBucket, doneOrder,
 } from './store.js';
-import { detectClient, remember } from './clients.js';
+import { detectClient, remember, colourOf } from './clients.js';
 import { aiStatus, aiExtract } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
@@ -393,13 +393,16 @@ function renderFilters() {
   const chips = [
     { id: 'all', label: 'Open', n: counts.all },
     { id: 'today', label: 'Today', n: counts.today },
-    ...clientChips.map((c) => ({ id: `client:${c.name}`, label: `◆ ${c.name}`, n: 0 })),
+    ...clientChips.map((c) => ({ id: `client:${c.name}`, label: `◆ ${c.name}`, n: 0,
+                                 slot: colourOf(settings.clients || {}, c.name) })),
     ...tags.map((t) => ({ id: `tag:${t}`, label: `#${t}`, n: 0 })),
     { id: 'done', label: 'Done', n: counts.done },
   ];
 
   el.filters.innerHTML = chips.map((c) => `
-    <button class="chip ${filter === c.id ? 'active' : ''}" data-filter="${escapeHtml(c.id)}">
+    <button class="chip ${filter === c.id ? 'active' : ''}"
+            ${Number.isInteger(c.slot) ? `style="--chip: var(--c${c.slot})"` : ''}
+            data-filter="${escapeHtml(c.id)}">
       ${escapeHtml(c.label)}${c.n ? `<span class="n">${c.n}</span>` : ''}
     </button>`).join('') +
     (tasks.length >= 6 ? `<input id="search" placeholder="Search" value="${escapeHtml(query)}">` : '');
@@ -488,7 +491,8 @@ function taskHtml(t) {
     meta.push(`<span class="due" data-act="sched" data-id="${t.id}">Set a time</span>`);
   }
   if (t.client) {
-    meta.push(`<span class="client"><button data-act="client-filter" data-client="${escapeHtml(t.client)}">◆ ${escapeHtml(t.client)}</button><button class="x" data-act="client-clear" data-id="${t.id}" title="Not for ${escapeHtml(t.client)}">×</button></span>`);
+    const slot = colourOf(settings.clients || {}, t.client);
+    meta.push(`<span class="client" style="--chip: var(--c${slot})"><button data-act="client-filter" data-client="${escapeHtml(t.client)}">◆ ${escapeHtml(t.client)}</button><button class="x" data-act="client-clear" data-id="${t.id}" title="Not for ${escapeHtml(t.client)}">×</button></span>`);
   }
   if (t.repeat) meta.push(`<span class="rep">↻ ${t.repeat}</span>`);
   for (const tag of t.tags) meta.push(`<button class="tag" data-act="tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`);
@@ -499,7 +503,7 @@ function taskHtml(t) {
     : `<div class="title" data-act="edit" data-id="${t.id}">${escapeHtml(t.text)}</div>`;
 
   return `
-    <div class="task ${t.done ? 'done' : ''} p${t.priority} ${flashId === t.id ? 'flash' : ''} ${picked.has(t.id) ? 'picked' : ''}" data-id="${t.id}">
+    <div class="task ${t.done ? 'done' : ''} p${t.priority} ${t.lane ? `lane-${t.lane}` : ''} ${flashId === t.id ? 'flash' : ''} ${picked.has(t.id) ? 'picked' : ''}" data-id="${t.id}">
       <button class="check" data-act="toggle" data-id="${t.id}"
               aria-label="Select" title="Select">
         <svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg>
@@ -554,6 +558,7 @@ function fileHtml(t) {
       <button class="opt ${!t.client ? 'on' : ''}" data-act="pick-client" data-id="${t.id}" data-client="">Nothing</button>
       ${known.slice(0, 8).map((name) => `
         <button class="opt ${(t.client || '').toLowerCase() === name.toLowerCase() ? 'on' : ''}"
+                style="--chip: var(--c${colourOf(settings.clients || {}, name)})"
                 data-act="pick-client" data-id="${t.id}" data-client="${escapeHtml(name)}">◆ ${escapeHtml(name)}</button>`).join('')}
       <input data-act="new-client" data-id="${t.id}" placeholder="+ new" maxlength="24">
     </div>
@@ -867,7 +872,7 @@ function renderBulk() {
     el.bulkActs.innerHTML = `
       <button data-bulk="back">←</button>
       <button data-bulk="client" data-client="">Nothing</button>
-      ${known.map((n) => `<button data-bulk="client" data-client="${escapeHtml(n)}">◆ ${escapeHtml(n)}</button>`).join('')}
+      ${known.map((n) => `<button data-bulk="client" data-client="${escapeHtml(n)}" style="--chip: var(--c${colourOf(settings.clients || {}, n)})">◆ ${escapeHtml(n)}</button>`).join('')}
       <input id="bulkNewClient" placeholder="+ new group" maxlength="24"
              style="background:var(--surface-2);border:1px solid var(--line);color:var(--text);
                     border-radius:8px;padding:5px 9px;font-size:11.5px;outline:none;width:104px">`;

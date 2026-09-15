@@ -20,6 +20,8 @@
     --ok: #4ade80;
     --work: #38bdf8;
     --personal: #34d399;
+    --c0: #3987e5; --c1: #d95926; --c2: #199e70; --c3: #c98500;
+    --c4: #d55181; --c5: #008300; --c6: #9085e9; --c7: #e66767;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
   @media (prefers-color-scheme: light) {
@@ -36,6 +38,14 @@
       --danger: #dc2626;
       --warn: #b45309;
       --ok: #16a34a;
+      /* The lane colours and the eight client slots, stepped for a light
+         surface. These were missing entirely until now: they only existed on
+         the dark :root, so light-mode users were being shown hues chosen for a
+         dark background, on white. */
+      --work: #0284c7;
+      --personal: #059669;
+      --c0: #2a78d6; --c1: #eb6834; --c2: #1baf7a; --c3: #eda100;
+      --c4: #e87ba4; --c5: #008300; --c6: #4a3aa7; --c7: #e34948;
       --shadow: 0 8px 24px rgba(15, 20, 40, 0.12);
     }
   }
@@ -165,12 +175,12 @@
 
   /* the same dot on each row, and the only control needed to correct it */
   .lane-dot {
-    width: 18px; height: 24px;
+    width: 14px; height: 24px;
     display: grid; place-items: center;
     flex: none;
     margin-left: -4px;
   }
-  .lane-dot i { width: 7px; height: 7px; border-radius: 50%; display: block; transition: transform .12s; }
+  .lane-dot i { width: 6px; height: 6px; border-radius: 50%; display: block; transition: transform .12s; opacity: .55; }
   .lane-dot:hover i { transform: scale(1.5); }
   .lane-dot i.work { background: var(--work); }
   .lane-dot i.personal { background: var(--personal); }
@@ -199,6 +209,11 @@
   }
   .chip:hover { color: var(--text); }
   .chip.active { background: var(--accent); color: #fff; }
+  .chip[style*="--chip"] { color: var(--chip); background: color-mix(in srgb, var(--chip) 13%, transparent); }
+  .chip[style*="--chip"].active { background: var(--chip); color: #fff; }
+  .filing .opt[style*="--chip"] { color: var(--chip); border-color: color-mix(in srgb, var(--chip) 40%, transparent); }
+  .filing .opt[style*="--chip"].on { background: var(--chip); border-color: var(--chip); color: #fff; }
+  .bulk-acts button[style*="--chip"] { color: var(--chip); border-color: color-mix(in srgb, var(--chip) 40%, transparent); }
   .chip .n { opacity: .65; margin-left: 4px; font-weight: 500; }
 
   #search {
@@ -238,7 +253,12 @@
     gap: 9px;
     padding: 8px 12px 8px 14px;
     position: relative;
+    border-inline-start: 3px solid transparent;
   }
+  /* Work and personal read from the edge of the row — a different shape from
+     the chips entirely, so no amount of client colour can be mistaken for it. */
+  .task.lane-work { border-inline-start-color: var(--work); }
+  .task.lane-personal { border-inline-start-color: var(--personal); }
   .task:hover { background: var(--surface); cursor: pointer; }
   .task .title { cursor: text; }
   .task.flash { animation: flash 1.1s ease-out; }
@@ -292,6 +312,7 @@
   .due:hover { background: var(--surface-2); color: var(--text); }
   .due.soon { color: var(--accent); }
   .due.late { color: var(--danger); }
+  /* Deliberately colourless. If tags were coloured too, nothing would be. */
   .tag { color: var(--faint); }
   .tag:hover { color: var(--accent); }
   .rep { color: var(--faint); }
@@ -340,13 +361,16 @@
     display: inline-flex;
     align-items: center;
     border-radius: 5px;
-    background: var(--accent-soft);
+    /* A wash of the slot rather than the slot itself: eight saturated pills in
+       one list is noise, and the text still has to be read. */
+    background: color-mix(in srgb, var(--chip) 15%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip) 32%, transparent);
     overflow: hidden;
   }
   .client button {
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--chip);
     padding: 1px 5px;
     line-height: 1.5;
   }

@@ -76,6 +76,10 @@ Pick a few tasks and name a group on the spot — no setting anything up first, 
 
 The Done list is grouped by day, a week at a time, so "what did I actually finish" takes one glance. Anything can be put back with one click.
 
+**Colour you can scan**
+
+Every client or group gets its own colour and keeps it — the same one tomorrow, and the same one on your other computer. Work and personal are marked down the edge of the row, so a glance at the list is enough to see whose is whose. The palette is picked to stay distinguishable to colourblind readers, in both light and dark.
+
 **Reminders that don't quietly vanish**
 
 A notification at the due time with Done and Snooze on it. Repeating tasks roll to their next occurrence when you tick them off instead of disappearing.

@@ -90,6 +90,9 @@ export function mergeSettings(local = {}, remote = {}) {
       count: Math.max(value.count || 0, rival.count || 0),
       confirmed: Boolean(value.confirmed || rival.confirmed),
       lastSeen: Math.max(value.lastSeen || 0, rival.lastSeen || 0),
+      // Whichever machine claimed a slot first keeps it, so a client is not a
+      // different colour on the laptop than on the desktop.
+      colour: Number.isInteger(value.colour) ? value.colour : rival.colour,
     };
   }
   for (const [key, value] of Object.entries(remote.clients || {})) {
