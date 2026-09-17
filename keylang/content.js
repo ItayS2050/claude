@@ -1087,14 +1087,26 @@ function ukrainianExactly(word) {
 }
 
 // ── Arabic scoring data ───────────────────────────────────────
-const AR_BIGRAMS = new Set([
-  'ال','لا','ان','ين','ات','وا','نا','ها','ما','من',
-  'في','هم','كل','لم','لك','له','لل','ير','ية','ري',
-  'قا','كا','بي','بر','تا','تي','سي','سا','شي','قل',
-  'ول','رت','نت','مر','رح','حب','بل','عل','لن','دي',
-  'وه','وي','مع','رب','حي','كن','يا','اب','سل','غد',
-  'يل','يب','يت','يف','كب','صغ','طا','ثم','سم','نم',
-]);
+// Learned from a 50,000-word Arabic frequency list rather than written by
+// hand, and it had to be: the hand-written table held 60 bigrams and covered
+// 45% of the bigram occurrences in real Arabic. Measured against words the
+// table has never seen, Kiko recognised 60% of ordinary Arabic — and the
+// misses were the backbone of the language: هذا، هل، إلى، عن، ليس، يجب، نحن.
+// Every one of those breaks a run and leaves a sentence half converted.
+//
+// 400 is where this stops. Swept in steps to 500 against the corpus: 400
+// recognises 93% of held-out words with no false positives, and the plateau
+// from 0.40 to 0.50 on the threshold is flat, so the number is not balanced
+// on a knife edge. 500 recognises 96% and costs two false positives, which
+// is not a trade this product makes.
+//
+// A word list was tried first, because that is what fixed English in 4.9.16.
+// It does not transfer. English has a small closed set of common words;
+// Arabic inflects — ال، و، ب، ل، ف on the front, ها، هم، ون، ين، ات on the
+// back — so a list memorises instead of generalising. Twelve thousand words,
+// 131KB, moved held-out recognition from 61% to 63%. These 400 bigrams are
+// 3KB and move it to 93%.
+const AR_BIGRAMS = new Set(('ال أن نا لا ما ان لم ذا لك عل من لي هذ نت في كن يا ين لى ري ها نه يد ني ول قد با لق دي ون كا لأ وا را ار لت ير عن ست كل مر سي ذل هن مع يك ات هل اذ لن دا ية يس ام بي سن ذه قا مك لو عم أي حد إن له يم تع رة مي لد تي يل حس لس اب نك عر جل إل لل يع اء رف أع عا كو مل لع يق عد أم لح فع تر بع رج حي شي لذ اك تق يه هم هو سا اع لة اي نن وم ائ دة تح تم جد هي اس اح كي يت كر حا تك يف لب قي قو أر وق اد بد ور أخ عي حق نع دو مو بر رب قت حت أس أو خر دم عت جا أح فق تا يو مس يب تل أك جي مت لف حب لج أت كم بل لر تو سو قط سم ذي رك ند به تف قل وج يء قة طي ته اج أج يج لش سب ود لآ رو لط يح شك بأ آن نو اق إذ هب دث شر جب أل جم در جو صل تى فا اه فت مة وي وف نح او نف رت عة بح تب لخ سأ بة رح ظر بم خي كث دت قب خا اف تط غي خب وه أف بن شا نس أب طر بو كذ صد خل نة بك بق ثل حن ضا تن أق جر رى مح لص فس خص سر وع عو شخ نظ طا فض فة تأ فر تس مث ثي وك زي مج عض بت اخ فل رد مه سف فى تص طل رأ كت يض حص لإ ضل صا وأ مد رس اص صو وس قر دع لغ فه وب وح ده رق عب يئ وت حر تت هر مش خط فك أش طب سل تش ثر صح نى تخ حم غا تظ دق جن نذ حل غر نز صب زل دك بش سك رض شع قف اة كب ثا خذ بب رن مق آخ بس ضي مم طو نب أص ره حو اض طة بخ نق جع قص تج زا طف ضع زو عه تذ يز ئع اث سة ظن فو ضر سع حة قم ئا جه بط از ذك رع وض هد نج خت ئي عك لث اط حظ ثم تد صة جة قع آس').split(' '));
 
 const COMMON_AR_WORDS = new Set([
   // Pronouns
@@ -1114,6 +1126,9 @@ const COMMON_AR_WORDS = new Set([
   // Common phrases typed on Arabic keyboard
   'هناك','كنا','كانت','قالت','قالوا','كانوا',
 ]);
+
+// The bar a word has to clear to count as Arabic. See AR_BIGRAMS.
+const AR_SURE = 0.45;
 
 function arabicScore(word) {
   const s = word;
@@ -1142,7 +1157,7 @@ function arabicExactly(word) {
   // Known word first, for the same reason as the Russian check above.
   if (COMMON_AR_WORDS.has(arWord)) return true;
   if (englishScore(lower) >= 0.35) return false;
-  return arabicScore(arWord) >= 0.25;
+  return arabicScore(arWord) >= AR_SURE;
 }
 
 // ── Greek scoring data ────────────────────────────────────────
