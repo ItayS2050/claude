@@ -280,6 +280,54 @@ const noToast = `!document.getElementById('kld-toast')`;
       ok('and never a fourth time', !await noticeAfterLoad());
     }
 
+    // ── The three days owed to the people nobody told ─────────
+    //
+    // The granting runs in the background service worker on first wake, so it
+    // is only really testable here.
+    {
+      const stamp = { at: Date.now() - 60 * DAY, version: '4.9.0' };
+      const put = async (obj) => {
+        await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
+        await B.sleep(900);
+        await s.eval('chrome.storage.local.clear().then(function(){return "ok"})');
+        await s.eval('chrome.storage.local.set(' + JSON.stringify(obj)
+                     + ').then(function(){return "ok"})');
+        await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
+                   + '.then(function(e){return e})');
+        await B.sleep(600);
+        return JSON.parse(await s.eval(
+          'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'));
+      };
+
+      const owed = await put({ firstInstall: stamp, paywallStart: stamp });
+      ok('somebody expired and never told is given three days',
+         owed.entitled === true && owed.state === 'trial' && owed.daysLeft === 3,
+         JSON.stringify(owed));
+
+      // Asked once per install. A second wake must not top it up again.
+      await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
+                 + '.then(function(e){return e})');
+      await B.sleep(500);
+      const again = JSON.parse(await s.eval(
+        'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'));
+      ok('and not given them a second time', again.daysLeft === 3, JSON.stringify(again));
+
+      const told = await put({ firstInstall: stamp, paywallStart: stamp,
+                               trialNotices: { d7: true, d1: true, expiredShown: 3 } });
+      ok('somebody who was properly warned stays expired',
+         told.state === 'expired' && told.entitled === false, JSON.stringify(told));
+
+      // And the notice they were owed actually reaches them now. Put the owed
+      // state back first — the case above deliberately left an expired one.
+      const regranted = await put({ firstInstall: stamp, paywallStart: stamp });
+      ok('the owed state is restored for the next check', regranted.daysLeft === 3,
+         JSON.stringify(regranted));
+      await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/?owed=1` });
+      const seen = await B.until(s, OFFER, { timeout: 14000, step: 700 });
+      ok('and the three-day notice is shown, which is the whole point',
+         !!seen && /3 days left/.test(seen), String(seen).replace(/\n/g, ' | '));
+    }
+
     // ── The service worker is alive ───────────────────────────
     const all = await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`);
     ok('the background service worker is running',

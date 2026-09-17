@@ -123,6 +123,7 @@ const PAYWALL_VER  = '4.5.0';      // the first build that can withhold anything
 const DAY_MS       = 86400000;
 const RECHECK_MS   = DAY_MS;       // don't hit the API more than once a day
 const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
+const MAKEUP_DAYS  = 3;            // owed to anyone the trial notices never reached
 // ── Licence provider ──────────────────────────────────────────
 // Everything specific to whoever sells Kiko lives in this one object, because
 // it has already had to change once and will likely change again.
@@ -220,7 +221,8 @@ const LICENCE_HTTP_ERRORS = {
   410: 'This licence has expired or been cancelled.',
 };
 
-function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStart = null) {
+function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStart = null,
+                            makeup = null) {
   // Paywall off: everyone is entitled, and the popup shows no countdown and
   // no price. 'licensed' rather than a fake trial, because a trial implies a
   // deadline we cannot currently honour either way.
@@ -231,6 +233,27 @@ function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStar
   if (licence && licence.valid && now - (licence.checkedAt || 0) < RECHECK_MS + GRACE_MS) {
     return { entitled: true, state: 'licensed', daysLeft: null };
   }
+  // Three days owed, and being paid.
+  //
+  // Every trial notice in this product threw before 4.12.1 — a name collision
+  // in showTrialToast that a bare catch swallowed — so the warning at seven
+  // days, the one on the last day and the notice that the trial had ended were
+  // never shown to anybody. People's trials ran out and Kiko simply went quiet.
+  // Charging on the back of a deadline nobody was told about is not something
+  // to do, so anyone found already expired and never notified gets three more
+  // days, starting when a build that can actually tell them first runs.
+  //
+  // It reads as an ordinary trial from here on, because that is what it is: the
+  // countdown shows, the notices fire, and at the end of it they have had the
+  // warning they were promised the first time.
+  if (makeup && now < makeup.until) {
+    return {
+      entitled: true,
+      state: 'trial',
+      daysLeft: Math.max(1, Math.ceil((makeup.until - now) / DAY_MS)),
+    };
+  }
+
   const start    = trialStartedAt(firstInstall, paywallStart, now);
   const total    = trialLengthFor(firstInstall);
   // Clamped to the trial length. A machine whose clock is behind the install
@@ -259,6 +282,14 @@ function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStar
 // this user ran a build that can charge. A new user's two stamps are minutes
 // apart and the behaviour is unchanged; an existing user gets their full trial
 // beginning the day they are first told there is one.
+// Nothing at all in trialNotices is the fingerprint of the bug. Every path that
+// records a notice does so only after showTrialToast returns, and it never
+// returned — it threw. Somebody who really reached expiry with the notices
+// working would carry d7, d1 and an expired count by then.
+function wasNeverTold(trialNotices) {
+  return !trialNotices || Object.keys(trialNotices).length === 0;
+}
+
 function trialStartedAt(firstInstall, paywallStart, now = Date.now()) {
   const installed = (firstInstall && firstInstall.at) || now;
   const told      = (paywallStart && paywallStart.at)  || now;
@@ -310,6 +341,21 @@ async function refreshEntitlement({ force = false } = {}) {
     try { await chrome.storage.local.set({ paywallStart }); } catch {}
   }
 
+  // Granted once, the first time a build that can show a notice meets somebody
+  // the old one had already cut off in silence. `makeup` is written even when
+  // it is not owed, so this question is asked once per install and never again.
+  let makeup;
+  try { ({ makeup } = await chrome.storage.local.get('makeup')); } catch {}
+  if (PAYWALL_ENABLED && !makeup) {
+    let trialNotices;
+    try { ({ trialNotices } = await chrome.storage.local.get('trialNotices')); } catch {}
+    const asThingsStand = computeEntitlement(firstInstall, licence, Date.now(), paywallStart);
+    makeup = (asThingsStand.state === 'expired' && wasNeverTold(trialNotices))
+      ? { until: Date.now() + MAKEUP_DAYS * DAY_MS, why: 'the notices never worked' }
+      : { until: 0, why: 'not owed' };
+    try { await chrome.storage.local.set({ makeup }); } catch {}
+  }
+
   // Re-validate a stored key at most daily. A network failure leaves the
   // previous result untouched so the grace window in computeEntitlement can
   // carry a paying user through an outage.
@@ -349,7 +395,7 @@ async function refreshEntitlement({ force = false } = {}) {
   // someone they have a subscription they never bought and hides the trial and
   // the price from them entirely.
   const entitlement = {
-    ...computeEntitlement(firstInstall, licence, Date.now(), paywallStart),
+    ...computeEntitlement(firstInstall, licence, Date.now(), paywallStart, makeup),
     v: chrome.runtime.getManifest().version,
   };
   try { await chrome.storage.local.set({ entitlement }); } catch {}

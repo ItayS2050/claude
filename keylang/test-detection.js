@@ -111,12 +111,12 @@ function loadComputeEntitlement(paywallOn) {
   // one the rules exist for.
   block = block.replace(/const PAYWALL_ENABLED = \w+;/, `const PAYWALL_ENABLED = ${paywallOn};`);
   const ctx = vm.createContext({});
-  return vm.runInContext(block + ';computeEntitlement', ctx);
+  return vm.runInContext(block + ';({ computeEntitlement, wasNeverTold, MAKEUP_DAYS })', ctx);
 }
 
 const kiko = loadContentScript();
-const computeEntitlement = loadComputeEntitlement(true);
-const entitlementPaywallOff = loadComputeEntitlement(false);
+const { computeEntitlement, wasNeverTold, MAKEUP_DAYS } = loadComputeEntitlement(true);
+const entitlementPaywallOff = loadComputeEntitlement(false).computeEntitlement;
 const ALL = { he: true, ru: true, uk: true, ko: true, el: true, ar: true };
 const NONE = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
 
@@ -2088,6 +2088,60 @@ function okk(cond, label) {
     if (kiko.analyzeText(sentence)) spoke++;
   }
   okk(spoke === 0, `${spoke} real Arabic sentences were mistaken for a layout error`);
+}
+
+
+// ── Three days owed to the people nobody told
+//
+// Every trial notice threw before 4.12.1 — a name collision in showTrialToast
+// that a bare catch swallowed — so the warning at seven days, the one on the
+// last day and the notice that the trial had ended were never shown to anyone.
+// Trials ran out and Kiko went quiet. Charging on a deadline nobody was told
+// about is not a thing to do, so anyone found already expired and never
+// notified gets three more days from the moment a build that can tell them
+// first runs.
+{
+  console.log('The people nobody told get their three days');
+
+  const DAY = 86400000;
+  const now = Date.parse('2026-09-20T09:00:00Z');
+  const longAgo = { at: now - 60 * DAY, version: '4.9.0' };
+  const owed = { until: now + 3 * DAY, why: 'the notices never worked' };
+  const notOwed = { until: 0, why: 'not owed' };
+
+  const e = (makeup, at = now) =>
+    computeEntitlement(longAgo, null, at, longAgo, makeup);
+
+  okk(e(null).state === 'expired', 'expired is still expired with nothing granted');
+  okk(e(notOwed).state === 'expired', 'and for anyone who was told properly');
+
+  const inGrace = e(owed);
+  okk(inGrace.entitled === true, 'somebody owed the three days keeps working');
+  okk(inGrace.state === 'trial', 'and it reads as a trial, because that is what it is');
+  okk(inGrace.daysLeft === 3, `with three days on the clock, got ${inGrace.daysLeft}`);
+  okk(e(owed, now + 2 * DAY).daysLeft === 1, 'counting down');
+  okk(e(owed, now + 2 * DAY).state === 'trial', 'still a trial on the last day');
+  okk(e(owed, now + 3 * DAY + 1000).state === 'expired', 'and expired when it runs out');
+  // Never rounds to zero while it is still running, or the notice would say
+  // "0 days left" on the day they still have.
+  for (let h = 1; h < 72; h += 7) {
+    okk(e(owed, now + h * 3600e3).daysLeft >= 1, `never zero days while still inside it (${h}h)`);
+  }
+
+  // A licence still wins over all of it.
+  const licensed = computeEntitlement(longAgo, { valid: true, checkedAt: now }, now, longAgo, owed);
+  okk(licensed.state === 'licensed', 'a paying customer is licensed, not put on a grace trial');
+
+  // Who is owed it: the fingerprint is that nothing was ever recorded, because
+  // nothing was ever shown.
+  okk(wasNeverTold(undefined), 'no record at all means never told');
+  okk(wasNeverTold({}), 'an empty record means never told');
+  okk(!wasNeverTold({ d7: true }), 'a seven-day notice on file means they were told');
+  okk(!wasNeverTold({ expiredShown: 1 }), 'so does an expiry notice');
+
+  // Three, not two and not zero. The granting itself runs in the background and
+  // is tested in a real browser; this pins the promise.
+  okk(MAKEUP_DAYS === 3, `three days are owed, the constant says ${MAKEUP_DAYS}`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
