@@ -99,7 +99,13 @@ const noToast = `!document.getElementById('kld-toast')`;
   const browser = await B.launch({ extension: EXT });
   let s;
   try {
-    const targets = await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`);
+    let targets = [];
+    for (let i = 0; i < 30 && !targets.some(t => t.url.startsWith('chrome-extension://')); i++) {
+      await B.sleep(400);
+      targets = await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`);
+    }
+    const extId = (targets.find(t => t.url.startsWith('chrome-extension://')) || {}).url
+      .split('/')[2];
     const target = targets.find(t => t.type === 'page');
     s = await B.connect(target.webSocketDebuggerUrl);
     await s.send('Page.enable');
@@ -217,6 +223,61 @@ const noToast = `!document.getElementById('kld-toast')`;
         { timeout: 6000 });
       ok(`and follows the field in ${what}`, !!full,
          'stuck at: ' + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+    }
+
+    // ── The notices the whole business depends on ─────────────
+    //
+    // Asked plainly by the user: are people being told their trial is ending?
+    // They were not. showTrialToast calls t('notNow', …) near the top and
+    // declared `const t = setTimeout(…)` near the bottom, which puts that call
+    // in the temporal dead zone of its own scope — so it threw
+    // ReferenceError every time, and maybeShowTrialNotice wraps the call in a
+    // bare catch, so the error went nowhere. The warning at seven days, the one
+    // on the last day and the notice that the trial had ended had never been
+    // shown to anybody.
+    //
+    // Nothing short of a real browser finds that. The engine is fine, the
+    // entitlement maths is fine, every unit test passes, and the feature does
+    // not exist.
+    const DAY = 86400000;
+    const ageTo = async (daysAgo, notices = {}) => {
+      await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
+      await B.sleep(900);
+      const stamp = { at: Date.now() - daysAgo * DAY, version: '4.9.0' };
+      const stored = JSON.stringify({ firstInstall: stamp, paywallStart: stamp,
+                                      trialNotices: notices });
+      await s.eval('chrome.storage.local.set(' + stored + ').then(function(){return "ok"})');
+      await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
+                 + '.then(function(e){return e})');
+      await B.sleep(500);
+      return JSON.parse(await s.eval(
+        'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'));
+    };
+    const noticeAfterLoad = async () => {
+      await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/?n=` + Math.random() });
+      // The notice is raised five seconds after the content script settles.
+      return await B.until(s, OFFER, { timeout: 14000, step: 700 });
+    };
+
+    for (const [label, daysAgo, want] of [
+      ['seven days left', 23, '7 days left'],
+      ['the last day',    29, 'Last day'],
+      ['the trial ended', 31, 'has ended'],
+    ]) {
+      const ent = await ageTo(daysAgo);
+      const notice = await noticeAfterLoad();
+      ok(`the user is told at ${label}`, !!notice && notice.includes(want),
+         `entitlement ${JSON.stringify(ent)} — showed: ` + String(notice).replace(/\n/g, ' | '));
+    }
+
+    // And the expiry notice repeats, which is 4.11.2 — once a day, three times.
+    {
+      await ageTo(31, { expiredShown: 1, expiredAt: Date.now() - 3600e3 });
+      ok('but not twice in the same hour', !await noticeAfterLoad());
+      await ageTo(31, { expiredShown: 1, expiredAt: Date.now() - 25 * 3600e3 });
+      ok('and again the next day', !!await noticeAfterLoad());
+      await ageTo(31, { expiredShown: 3, expiredAt: Date.now() - 99 * 3600e3 });
+      ok('and never a fourth time', !await noticeAfterLoad());
     }
 
     // ── The service worker is alive ───────────────────────────

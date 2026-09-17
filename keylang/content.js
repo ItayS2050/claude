@@ -3496,8 +3496,16 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
   activeToast = toast;
   // Longer than a detection toast. This one is worth reading, and unlike a fix
   // suggestion there is nothing the user is mid-way through typing.
-  const t = setTimeout(() => { if (activeToast === toast) close(); }, 14000);
-  toast.addEventListener('mouseenter', () => clearTimeout(t));
+  // Not `t`. This function calls t('notNow', …) forty lines above, and a
+  // `const t` anywhere in the scope puts that call in the temporal dead zone:
+  // it threw ReferenceError every single time, and maybeShowTrialNotice wraps
+  // the whole thing in a bare catch, so nobody ever saw the error either.
+  //
+  // The cost of that was every trial notice this product has: the warning at
+  // seven days, the one on the last day, and the notice that the trial has
+  // ended. None of them had ever been shown to anyone.
+  const dismissTimer = setTimeout(() => { if (activeToast === toast) close(); }, 14000);
+  toast.addEventListener('mouseenter', () => clearTimeout(dismissTimer));
   return true;
 }
 
