@@ -354,6 +354,85 @@ const noToast = `!document.getElementById('kld-toast')`;
          !!seen && /3 days left/.test(seen), String(seen).replace(/\n/g, ' | '));
     }
 
+    // ── Right-click after the trial ends ──────────────────────
+    //
+    // The user asked a plain question — will Kiko stop working when the trial
+    // runs out — and the answer was "mostly". Automatic detection stopped;
+    // the context menu did not. Its listener checked only that the content
+    // script was the current version, and convertSelection never asked about
+    // entitlement at all, so "🦜 Fix with Kiko" kept converting text for
+    // people who had stopped paying for it.
+    //
+    // Driven the way Chrome drives it: the service worker sends the same
+    // message the real onClicked handler sends. A test that called
+    // convertSelection directly would have passed before the fix.
+    {
+      const targets = await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`);
+      const worker  = targets.find(t => t.type === 'service_worker'
+                                     && t.url.endsWith('background.js'));
+      if (!worker) {
+        ok('the service worker can be reached to drive the context menu', false);
+      } else {
+        const w = await B.connect(worker.webSocketDebuggerUrl);
+        const rightClick = async (text) => w.eval(
+          `chrome.tabs.query({url:"http://127.0.0.1:${port}/*"}).then(function(ts){`
+          + `  if(!ts.length) return "no tab";`
+          + `  chrome.tabs.sendMessage(ts[0].id, {type:"kiko-fix-selection",text:${JSON.stringify(text)}});`
+          + `  return "sent";`
+          + `})`);
+
+        // makeup is passed explicitly and never left to whatever an earlier
+        // block wrote. ageTo does not clear storage, so the three-day grant
+        // from the section above survived into here and quietly put this user
+        // back inside a trial — the first version of this test failed for that
+        // reason and not for the one it was written to catch.
+        const NOT_OWED = { until: 0, why: 'not owed' };
+        const armed = async (daysAgo, notices, makeup) => {
+          const ent = await ageTo(daysAgo, notices);
+          await s.eval('chrome.storage.local.set({makeup:' + JSON.stringify(makeup) + '})'
+                     + '.then(function(){return "ok"})');
+          await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
+                     + '.then(function(e){return e})');
+          await B.sleep(400);
+          return JSON.parse(await s.eval(
+            'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'))
+            || ent;
+        };
+        const armPage = async (tag) => {
+          await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/?rc=${tag}` });
+          await B.sleep(1500);
+          await s.eval('document.getElementById("f").focus();'
+                     + 'document.getElementById("f").value="akuo nvhs ekhu";"ok"');
+        };
+
+        // Expired: the menu must not offer a conversion, and must say why.
+        const gone = await armed(31, { expiredShown: 3, expiredAt: Date.now() }, NOT_OWED);
+        ok('the expired state is armed', gone.state === 'expired', JSON.stringify(gone));
+        await armPage(1);
+        ok('the service worker reached the page', await rightClick('akuo nvhs ekhu') === 'sent');
+        const told = await B.until(s, OFFER, { timeout: 8000, step: 500 });
+        ok('right-click after the trial offers no conversion',
+           !!told && !told.includes('Convert'), String(told).replace(/\n/g, ' | '));
+        ok('and says the trial has ended instead of doing nothing',
+           !!told && told.includes('has ended'), String(told).replace(/\n/g, ' | '));
+        ok('and leaves the text alone',
+           await s.eval('document.getElementById("f").value') === 'akuo nvhs ekhu');
+
+        // …and still offers the conversion inside the trial, which is the half
+        // of this that must not break. convertSelection only ever offers — the
+        // text changes when the button is clicked, not when the menu is used.
+        const live = await armed(1, { d30: true }, NOT_OWED);
+        ok('the trial state is armed', live.state === 'trial', JSON.stringify(live));
+        await armPage(2);
+        await rightClick('akuo nvhs ekhu');
+        const offered = await B.until(s, OFFER, { timeout: 8000, step: 500 });
+        ok('but still offers it inside the trial',
+           !!offered && offered.includes('שלום מהיד קליו'),
+           String(offered).replace(/\n/g, ' | '));
+        w.close();
+      }
+    }
+
     // ── The service worker is alive ───────────────────────────
     const all = await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`);
     ok('the background service worker is running',

@@ -3526,6 +3526,23 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
   return true;
 }
 
+// The trial-ended notice, on its own, so the two callers cannot drift apart.
+// maybeShowTrialNotice spends one of the three from the budget; the
+// right-click path does not, because that one is not an interruption — the
+// user asked for a fix by hand and is owed the reason there isn't one.
+// Stacking is impossible either way: showTrialToast refuses while a toast is
+// already up.
+function showExpiredToast() {
+  return showTrialToast({
+    title:  t('trialEndedTitle', null, 'Your free trial has ended'),
+    body:   t('trialEndedBody', null,
+              'Kiko has stopped correcting layout mistakes. Your learned words are '
+              + 'safe — subscribing switches detection straight back on.'),
+    cta:    t('trialEndedCta', null, 'Keep Kiko'),
+    accent: '#f87171',
+  });
+}
+
 async function maybeShowTrialNotice() {
   try {
     const d = await chrome.storage.local.get(['entitlement', 'trialNotices', 'stats']);
@@ -3535,14 +3552,7 @@ async function maybeShowTrialNotice() {
 
     if (ent.state === 'expired') {
       if (!expiryNoticeDue(seen)) return;
-      const shown = showTrialToast({
-        title:  t('trialEndedTitle', null, 'Your free trial has ended'),
-        body:   t('trialEndedBody', null,
-                  'Kiko has stopped correcting layout mistakes. Your learned words are '
-                  + 'safe — subscribing switches detection straight back on.'),
-        cta:    t('trialEndedCta', null, 'Keep Kiko'),
-        accent: '#f87171',
-      });
+      const shown = showExpiredToast();
       if (shown) {
         await chrome.storage.local.set({ trialNotices: spendExpiryNotice(seen) });
       }
@@ -4048,6 +4058,17 @@ setInterval(() => {
 chrome.runtime.onMessage.addListener(msg => {
   if (!isLive()) return;
   if (msg.type !== 'kiko-fix-selection' || !msg.text) return;
+  // Expired means expired. Automatic detection has stopped since 4.8.0, but
+  // this path never asked — it checked only that the script was the current
+  // version — so "🦜 Fix with Kiko" kept converting text for people whose
+  // trial had run out. Found by tracing what actually still works after the
+  // thirty days, rather than by assuming one gate covered everything.
+  //
+  // Answering with the notice rather than doing nothing: a right-click that
+  // silently does nothing is the broken-software reading all over again, and
+  // this is the best conversion moment there is — they wanted a fix badly
+  // enough to go to the menu for it.
+  if (!entitled) { showExpiredToast(); return; }
   const sel     = window.getSelection();
   const selText = sel && sel.toString().trim();
   convertSelection(msg.text, selText === msg.text.trim() ? sel : null);
