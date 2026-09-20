@@ -240,12 +240,12 @@ const noToast = `!document.getElementById('kld-toast')`;
     // entitlement maths is fine, every unit test passes, and the feature does
     // not exist.
     const DAY = 86400000;
-    const ageTo = async (daysAgo, notices = {}) => {
+    const ageTo = async (daysAgo, notices = {}, stats = { converted: 5 }) => {
       await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
       await B.sleep(900);
       const stamp = { at: Date.now() - daysAgo * DAY, version: '4.9.0' };
       const stored = JSON.stringify({ firstInstall: stamp, paywallStart: stamp,
-                                      trialNotices: notices });
+                                      trialNotices: notices, stats });
       await s.eval('chrome.storage.local.set(' + stored + ').then(function(){return "ok"})');
       await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
                  + '.then(function(e){return e})');
@@ -259,15 +259,41 @@ const noToast = `!document.getElementById('kld-toast')`;
       return await B.until(s, OFFER, { timeout: 14000, step: 700 });
     };
 
-    for (const [label, daysAgo, want] of [
-      ['seven days left', 23, '7 days left'],
-      ['the last day',    29, 'Last day'],
-      ['the trial ended', 31, 'has ended'],
+    for (const [label, daysAgo, seen, want] of [
+      ['day one',         0,  {},            '30 days left'],
+      ['seven days left', 23, { d30: true, d14: true }, '7 days left'],
+      ['the last day',    29, { d30: true, d14: true }, 'Last day'],
+      ['the trial ended', 31, {},            'has ended'],
     ]) {
-      const ent = await ageTo(daysAgo);
+      const ent = await ageTo(daysAgo, seen);
       const notice = await noticeAfterLoad();
       ok(`the user is told at ${label}`, !!notice && notice.includes(want),
          `entitlement ${JSON.stringify(ent)} — showed: ` + String(notice).replace(/\n/g, ' | '));
+    }
+
+    // …but not before Kiko has done anything. Quoting a price to somebody who
+    // has never seen a correction accepted is a bill for nothing.
+    {
+      await ageTo(0, {}, { converted: 0 });
+      ok('a brand new install is not billed before it is used',
+         !await noticeAfterLoad());
+    }
+
+    // ── The badge, which is the only thing visible with no page open ──
+    //
+    // It used to appear in the last seven days only, so for twenty-three of
+    // the thirty a paid product looked like a free one. Read it back from the
+    // browser rather than trusting updateBadge: the point of the badge is
+    // that Chrome is actually showing it.
+    {
+      const badgeAt = async (daysAgo) => {
+        await ageTo(daysAgo, { d30: true, d14: true, d7: true, d1: true });
+        return await s.eval('chrome.action.getBadgeText({})');
+      };
+      for (const [daysAgo, want] of [[0, '30'], [10, '20'], [23, '7'], [29, '1'], [31, '!']]) {
+        const got = await badgeAt(daysAgo);
+        ok(`the badge reads "${want}" ${daysAgo} days in`, got === want, `got "${got}"`);
+      }
     }
 
     // And the expiry notice repeats, which is 4.11.2 — once a day, three times.

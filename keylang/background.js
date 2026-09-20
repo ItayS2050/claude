@@ -404,25 +404,32 @@ async function refreshEntitlement({ force = false } = {}) {
 }
 
 // ── Toolbar badge ─────────────────────────────────────────────
-// Until now the trial existed only inside the popup, which hardly anyone
-// opens. A number on the icon costs nothing, needs no permission, and means
-// the last week can't pass unnoticed.
+// The trial used to be visible in two places: the popup, which hardly anyone
+// opens, and the badge — but only in its last seven days. That left
+// twenty-three days in which a paid product looked like a free one, and the
+// first news of the price arrived a week before the bill. A number on the
+// icon costs nothing and needs no permission, so it now runs the whole trial:
+// grey while there is time, amber in the last week, red once it has ended.
 const BADGE_WARN_DAYS = 7;
+const BADGE_CALM      = '#64748b';
+const BADGE_WARN      = '#f59e0b';
+const BADGE_OVER      = '#dc2626';
+
+function badgeFor(ent) {
+  if (ent && ent.state === 'expired') return { text: '!', color: BADGE_OVER };
+  if (ent && ent.state === 'trial' && ent.daysLeft != null) {
+    return { text: String(ent.daysLeft),
+             color: ent.daysLeft <= BADGE_WARN_DAYS ? BADGE_WARN : BADGE_CALM };
+  }
+  // Licensed, or no entitlement computed yet: no badge at all.
+  return { text: '', color: BADGE_CALM };
+}
 
 function updateBadge(ent) {
   try {
-    if (ent && ent.state === 'expired') {
-      chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
-      chrome.action.setBadgeText({ text: '!' });
-      return;
-    }
-    if (ent && ent.state === 'trial' && ent.daysLeft != null && ent.daysLeft <= BADGE_WARN_DAYS) {
-      chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
-      chrome.action.setBadgeText({ text: String(ent.daysLeft) });
-      return;
-    }
-    // Licensed, or plenty of time left: no badge at all.
-    chrome.action.setBadgeText({ text: '' });
+    const { text, color } = badgeFor(ent);
+    chrome.action.setBadgeBackgroundColor({ color });
+    chrome.action.setBadgeText({ text });
   } catch {}
 }
 

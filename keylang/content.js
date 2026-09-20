@@ -3402,7 +3402,24 @@ function showReviewToast(nudge) {
 // TRIAL_NAG_DAYS is the whole of the "we warned you" behaviour: empty it and
 // only the expiry notice remains, which is the one that has to exist — silence
 // reads as broken software, and people uninstall broken software.
-const TRIAL_NAG_DAYS  = [7, 1];
+//
+// It used to be [7, 1]. That meant someone could install Kiko, use it every
+// day for three weeks, and hear nothing about a price until seven days before
+// it applied — the popup was the only other place the trial existed, and
+// people do not open the popup. Being told on day one is not a nag, it is the
+// honest version: this is a paid product, here is a month of it.
+const TRIAL_NAG_DAYS  = [30, 14, 7, 1];
+
+// The day-30 notice is the odd one out: every other milestone says "time is
+// running out", this one says "there is a price at all". It has to arrive
+// after Kiko has visibly worked, not before — told to someone who has never
+// seen a correction accepted, it is a bill for nothing. So it waits for the
+// first accepted fix, however many days that takes.
+const TRIAL_WELCOME_DAY = 30;
+
+function welcomeHeld(due, converted = 0) {
+  return due === TRIAL_WELCOME_DAY && converted < 1;
+}
 const KIKO_CHECKOUT   = 'https://getkiko.lemonsqueezy.com/checkout/buy/572c829f-1e66-46bf-86d1-fd4441b5d3dc';
 
 // The expiry notice used to show once, ever. That is the wrong number.
@@ -3511,7 +3528,7 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
 
 async function maybeShowTrialNotice() {
   try {
-    const d = await chrome.storage.local.get(['entitlement', 'trialNotices']);
+    const d = await chrome.storage.local.get(['entitlement', 'trialNotices', 'stats']);
     const ent = d.entitlement;
     if (!ent || ent.state === 'licensed') return;
     const seen = d.trialNotices || {};
@@ -3535,6 +3552,8 @@ async function maybeShowTrialNotice() {
     if (ent.state !== 'trial' || typeof ent.daysLeft !== 'number') return;
     const due = dueTrialMilestone(ent.daysLeft, seen);
     if (due === undefined) return;
+    // Not spent, only withheld: it comes back the moment a fix is accepted.
+    if (welcomeHeld(due, (d.stats || {}).converted || 0)) return;
 
     const shown = showTrialToast({
       title:  ent.daysLeft === 1

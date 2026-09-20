@@ -60,6 +60,7 @@ function loadContentScript() {
   return vm.runInContext(
     '(function () {\n' + src +
     '\nreturn { analyzeText: analyzeByLines, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
+    '         welcomeHeld, TRIAL_NAG_DAYS, TRIAL_WELCOME_DAY,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
@@ -732,25 +733,52 @@ console.log('Trial notice milestones');
     console.log(`        actual   ${JSON.stringify(got)}`);
   };
 
-  is('day 20 — too early, say nothing', due(20, {}), undefined);
-  is('day 8 — still early',             due(8,  {}), undefined);
-  is('day 7 — the first warning',       due(7,  {}), 7);
-  is('day 4 — still the 7-day one',     due(4,  {}), 7);
-  is('day 1 — the last-day warning',    due(1,  {}), 1);
-  is('day 7 already given',             due(4,  { d7: true }), undefined);
+  // Day one. The whole point of the 30 milestone: a brand new install is told
+  // there is a price, instead of finding out three weeks later.
+  const ALL = { d30: true, d14: true, d7: true, d1: true };
+
+  is('fresh install — told on day one', due(30, {}), 30);
+  is('day 20 — the fortnight mark not yet reached',
+                                        due(20, { d30: true }), undefined);
+  is('day 14 — the fortnight warning',  due(14, { d30: true }), 14);
+  is('day 8 — still the 14-day one',    due(8,  { d30: true }), 14);
+  is('day 7 — the week warning',        due(7,  { d30: true, d14: true }), 7);
+  is('day 4 — still the 7-day one',     due(4,  { d30: true, d14: true }), 7);
+  is('day 1 — the last-day warning',    due(1,  { d30: true, d14: true }), 1);
+  is('day 7 already given',             due(4,  { d30: true, d14: true, d7: true }), undefined);
   // Away for a week: the urgent one wins, not the stale one.
   is('day 1, nothing given yet',        due(1,  {}), 1);
-  is('both already given',              due(1,  { d7: true, d1: true }), undefined);
+  is('everything already given',        due(1,  ALL), undefined);
+  // Someone mid-trial when this version lands has never been told anything.
+  // They get the welcome once, then rejoin the schedule.
+  is('upgrader mid-trial is told once', due(22, {}), 30);
 
-  is('showing day 7 spends only day 7', spend(7, {}), { d7: true });
-  // Showing the last-day notice retires the 7-day one too, so a user who was
-  // away does not get a second, now-pointless warning afterwards.
-  is('showing day 1 spends both',       spend(1, {}), { d7: true, d1: true });
-  is('spending keeps what was there',   spend(1, { d7: true }), { d7: true, d1: true });
+  is('showing day 30 spends only it',   spend(30, {}), { d30: true });
+  is('showing day 14 spends 30 too',    spend(14, {}), { d30: true, d14: true });
+  // Showing the last-day notice retires the earlier ones too, so a user who
+  // was away does not get a second, now-pointless warning afterwards.
+  is('showing day 1 spends all',        spend(1, {}), ALL);
+  is('spending keeps what was there',   spend(1, { d7: true }),
+                                        { d7: true, d30: true, d14: true, d1: true });
 
   // The whole nag behaviour must be switchable off without touching anything
   // else — the expiry notice is separate and stays.
-  is('no milestone is ever due at 0',   due(0, { d7: true, d1: true }), undefined);
+  is('no milestone is ever due at 0',   due(0, ALL), undefined);
+
+  // The welcome is the only one held back, and only until Kiko has visibly
+  // worked: a price quoted before the first accepted fix is a bill for nothing.
+  const held = kiko.welcomeHeld;
+  is('welcome waits for the first fix', held(30, 0), true);
+  is('welcome lands once one lands',    held(30, 1), false);
+  is('welcome not held by a missing count', held(30, undefined), true);
+  is('the running-out notices never wait', held(14, 0), false);
+  is('nor the week one',                held(7,  0), false);
+  is('nor the last day',                held(1,  0), false);
+
+  // The welcome day has to be a real milestone and the largest one, or it is
+  // held back for a moment that never arrives.
+  is('welcome day is the first milestone',
+     kiko.TRIAL_WELCOME_DAY, Math.max(...kiko.TRIAL_NAG_DAYS));
 }
 
 console.log('An expired trial stops detection');
