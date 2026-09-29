@@ -122,6 +122,55 @@ const noToast = `!document.getElementById('kld-toast')`;
     ok('and offers the whole sentence', !!offer && offer.includes('שלום מהיד קליו'),
        offer && offer.replace(/\n/g, ' | '));
 
+    // ── The fix marked in place, and Alt+Enter ────────────────
+    //
+    // Both asked for together: see which words will change, and accept
+    // without reaching for the mouse. The marking is checked in a real
+    // browser because that is the only place the CSS exists — <mark> is
+    // yellow-on-black by default in every engine, and a unit test on
+    // spanContext would pass with the override missing.
+    {
+      await freshPage(s, port);
+      await type(s, 'Hi team akuo nvhs ekhu');
+      const shown = await B.until(s, OFFER, { timeout: 8000, step: 500 });
+      ok('a fix inside a longer line still raises a toast', !!shown,
+         String(shown).replace(/\n/g, ' | '));
+
+      const marks = await s.eval(
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return null;`
+        + `var m=t.querySelectorAll('.kld-mark');`
+        + `return JSON.stringify({n:m.length,`
+        + `  texts:[].map.call(m,function(e){return e.innerText}),`
+        + `  bg:[].map.call(m,function(e){return getComputedStyle(e).backgroundColor}),`
+        + `  orig:(t.querySelector('.kld-preview-orig')||{}).innerText})})()`);
+      const M = marks ? JSON.parse(marks) : null;
+      ok('the words being changed are marked, before and after',
+         !!M && M.n === 2, marks);
+      ok('and the mark is only the span, not the whole line',
+         !!M && M.texts[0] === 'akuo nvhs ekhu' && M.texts[1] === 'שלום מהיד קליו', marks);
+      ok('the untouched words stay in view around it',
+         !!M && /Hi team/.test(M.orig || ''), marks);
+      // The browser default for <mark> is yellow. If the reset is missing
+      // this is rgb(255, 255, 0) and the toast looks broken.
+      ok('and the browser default yellow is overridden',
+         !!M && M.bg.every(c => !/255,\s*255,\s*0/.test(c)), marks);
+
+      // Alt+Enter — the shorter accept. Plain Enter is deliberately not bound:
+      // in Gmail and Slack it sends, and the toast appears right when someone
+      // is about to press it.
+      await s.send('Input.dispatchKeyEvent', { type: 'keyDown', code: 'Enter',
+        key: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, modifiers: 1 });
+      await s.send('Input.dispatchKeyEvent', { type: 'keyUp', code: 'Enter',
+        key: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, modifiers: 1 });
+      const after = await B.until(s,
+        `(function(){var v=document.getElementById('f').value;`
+        + `return /[\\u0590-\\u05FF]/.test(v)?v:null})()`, { timeout: 6000, step: 400 });
+      ok('Alt+Enter accepts the fix', !!after && /שלום מהיד קליו/.test(after),
+         String(after));
+      ok('and leaves the English around it alone', !!after && /^Hi team /.test(after),
+         String(after));
+    }
+
     // ── The bug that got here twice ───────────────────────────
     // Type half, let the toast appear, then keep going. The toast has to
     // follow. Both screenshots showed one that did not — one of them cutting

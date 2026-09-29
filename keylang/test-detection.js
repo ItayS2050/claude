@@ -60,7 +60,7 @@ function loadContentScript() {
   return vm.runInContext(
     '(function () {\n' + src +
     '\nreturn { analyzeText: analyzeByLines, dueTrialMilestone, spendTrialMilestones, ownsTheToast,' +
-    '         welcomeHeld, TRIAL_NAG_DAYS, TRIAL_WELCOME_DAY,' +
+    '         welcomeHeld, TRIAL_NAG_DAYS, TRIAL_WELCOME_DAY, spanContext,' +
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
@@ -956,7 +956,20 @@ console.log('The fix can be accepted without touching the mouse');
   // would fire the fix at the moment the text is already gone.
   is('bare enter does not accept',      kiko.isAcceptShortcut(key({})), false);
   is('shift+enter does not accept',     kiko.isAcceptShortcut(key({ shiftKey: true })), false);
-  is('alt+enter does not accept',       kiko.isAcceptShortcut(key({ altKey: true })), false);
+  // Alt+Enter is the shorter form, added because reaching for Alt+Shift+Enter
+  // mid-sentence is most of the reason people go back to the mouse. Alt alone
+  // is enough to keep it clear of anything a text field wants.
+  is('alt+enter accepts',               kiko.isAcceptShortcut(key({ altKey: true })), true);
+  is('alt+numpad enter accepts',
+     kiko.isAcceptShortcut(key({ altKey: true, code: 'NumpadEnter' })), true);
+  is('and the old alt+shift+enter still works',
+     kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true })), true);
+  is('ctrl+alt+enter does not',
+     kiko.isAcceptShortcut(key({ altKey: true, ctrlKey: true })), false);
+  is('cmd+alt+enter does not',
+     kiko.isAcceptShortcut(key({ altKey: true, metaKey: true })), false);
+  is('alt+K is not accept',
+     kiko.isAcceptShortcut(key({ altKey: true, code: 'KeyK' })), false);
   is('ctrl+alt+shift+enter does not',
      kiko.isAcceptShortcut(key({ altKey: true, shiftKey: true, ctrlKey: true })), false);
   is('cmd+alt+shift+enter does not',
@@ -1750,6 +1763,86 @@ console.log('Kiko keeps working in the seconds after a fix');
         'akuo nvhs ekhu ASAP', 'english_as_hebrew',
         { converted: 'שלום מהיד קליו' });
   check('a list of initials is not a sentence', 's, i, n,', null);
+
+  // ── The fix, shown where it lands ─────────────────────────
+  // The toast used to show the span alone, which says what will change but
+  // not where. Marking it inside the line — the rest dim and untouched —
+  // is the safe half of "highlight the words": no overlay over the input, no
+  // span wrapped around the user's own DOM.
+  {
+    const sc = kiko.spanContext;
+    const is = (label, got, want) => {
+      if (JSON.stringify(got) === JSON.stringify(want)) { pass++; return; }
+      fail++;
+      console.log(`  FAIL  ${label}`);
+      console.log(`        expected ${JSON.stringify(want)}`);
+      console.log(`        actual   ${JSON.stringify(got)}`);
+    };
+    is('the line around the span',
+       sc('Hi team akuo nvhs ekhu about it', 'akuo nvhs ekhu'),
+       { before: 'Hi team ', after: ' about it' });
+    is('nothing before it',
+       sc('akuo nvhs ekhu about it', 'akuo nvhs ekhu'),
+       { before: '', after: ' about it' });
+    is('nothing after it',
+       sc('Hi team akuo nvhs ekhu', 'akuo nvhs ekhu'),
+       { before: 'Hi team ', after: '' });
+    // The span is the whole line: there is nothing to mark it against, so the
+    // toast keeps its old shape rather than drawing a box around everything.
+    is('the span is the whole line', sc('akuo nvhs ekhu', 'akuo nvhs ekhu'), null);
+    // Every way the lookup can fail has to land on the same fallback, because
+    // the alternative is a toast that renders half a sentence.
+    is('no line at all (a selection fix)', sc(undefined, 'akuo'), null);
+    is('a span that is not in the line',   sc('hello there', 'akuo'), null);
+    is('an empty span',                    sc('hello there', ''), null);
+    // Long context is trimmed from the outside in, so the marked words stay
+    // in view rather than being pushed off the end of a paragraph.
+    {
+      const long = 'x'.repeat(60) + ' akuo nvhs ekhu ' + 'y'.repeat(60);
+      const got  = sc(long, 'akuo nvhs ekhu');
+      const okB  = got.before.startsWith('… ') && got.before.length <= 28;
+      const okA  = got.after.endsWith(' …')    && got.after.length  <= 28;
+      if (okB && okA) { pass++; }
+      else { fail++; console.log(`  FAIL  long context is trimmed: ${JSON.stringify(got)}`); }
+    }
+  }
+
+  // An English word wearing a comma is still an English word.
+  //
+  // , . and ; are letters on the Hebrew layout — ת ץ ף — so "team," maps to
+  // אקשצת, a perfectly ordinary five-letter Hebrew word, and every English
+  // lookup missed it because the key still had the punctuation on it. The
+  // extension pass then pulled it into the run and the toast offered to
+  // rewrite a word the user had typed on purpose. Found while looking at
+  // something else entirely; the corpus has no sentence shaped like this.
+  {
+    const spanIs = (label, text, want) => {
+      const d = kiko.analyzeText(text);
+      const got = d ? d.original : null;
+      if (got === want) { pass++; return; }
+      fail++;
+      console.log(`  FAIL  ${label}`);
+      console.log(`        expected ${JSON.stringify(want)}`);
+      console.log(`        actual   ${JSON.stringify(got)}`);
+    };
+    kiko.setLangs({ ...ALL });
+    spanIs('a comma does not hide an English word',
+           'Hi team, akuo nvhs ekhu', 'akuo nvhs ekhu');
+    spanIs('nor at the start of the line',
+           'team, akuo nvhs ekhu', 'akuo nvhs ekhu');
+    spanIs('nor a full stop',
+           'Hello team. akuo nvhs ekhu', 'akuo nvhs ekhu');
+    spanIs('nor a semicolon',
+           'Thanks; akuo nvhs ekhu', 'akuo nvhs ekhu');
+    spanIs('and the same after the run',
+           'akuo nvhs ekhu report, ok', 'akuo nvhs ekhu');
+    // The other half: punctuation on real wrong-layout text still converts,
+    // because "מילה," is a word plus a comma.
+    spanIs('but Hebrew keeps its own commas',
+           'akuo, nvhs ekhu', 'akuo, nvhs ekhu');
+    spanIs('and a burst is not broken by one',
+           'tueh cut brtv nv eurv gfahu', 'tueh cut brtv nv eurv gfahu');
+  }
 
   // The list-of-initials rule is about the run, not the word: one short token
   // beside a real one is fine, a run of nothing but short tokens is not.

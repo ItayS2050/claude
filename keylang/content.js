@@ -1419,6 +1419,23 @@ function convertFromArabic(t)  { return [...t].map(c => AR_TO_EN[c] || c).join('
 // asked them to approve the part they could not see. The toast wraps, so a
 // longer preview costs height, not legibility. The cap stays only to stop a
 // pasted paragraph from filling the screen.
+// Where the span sits inside its line, so the toast can mark what changes and
+// leave the rest visible around it. Returns null whenever the span cannot be
+// located exactly — a selection fix has no line, and `original` sometimes
+// carries trailing punctuation the line does not — and the toast then falls
+// back to showing the span alone, which is what it always did.
+function spanContext(line, span, pad = 24) {
+  if (typeof line !== 'string' || typeof span !== 'string' || !span) return null;
+  const idx = line.lastIndexOf(span);
+  if (idx < 0) return null;
+  let before = line.slice(0, idx);
+  let after  = line.slice(idx + span.length);
+  if (!before && !after) return null;   // the span is the whole line: nothing to mark
+  if (before.length > pad) before = '… ' + before.slice(-pad);
+  if (after.length  > pad) after  = after.slice(0, pad) + ' …';
+  return { before, after };
+}
+
 function truncatePreview(text, maxWords = 30) {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
@@ -1470,6 +1487,19 @@ function wordCouldBeHebrew(word) {
 function couldBeHebrewExactly(word) {
   const lower = word.toLowerCase();
   if (lower.length < 2) return false;
+  // , . and ; are letters on the Hebrew layout — ת ץ ף — so an ordinary
+  // English word carrying one of them maps to a longer, entirely plausible
+  // Hebrew word, and every English gate below misses it because the lookup
+  // key still has the punctuation on it. "team," maps to אקשצת, EN_WORDS does
+  // not contain "team," and englishScore is diluted by the extra character,
+  // so "Hi team, akuo nvhs ekhu" absorbed "team," into the run and offered to
+  // replace a word the user had typed on purpose with gibberish. The trimming
+  // branch in wordCouldBeHebrew was meant to cover this and cannot: it only
+  // runs when the untrimmed word is rejected, and this one is accepted.
+  //
+  // The English checks run on the bare word. The Hebrew mapping below still
+  // runs on the whole thing, punctuation included, because "מילה," really is
+  // a word plus a comma and has to keep converting.
   if (learnedEnglish.has(lower)) return false;
   if (learnedHebrew.has(lower))  return true;
   if (EN_WORDS.has(lower))       return false;
@@ -1514,6 +1544,20 @@ function couldBeHebrewExactly(word) {
 // vowels — and tightening it all the way would make the pass pointless. What
 // it must never do is swallow a word from the common English list.
 function unmistakablyEnglish(lower) {
+  // Trailing , . and ; are letters on the Hebrew layout — ת ץ ף — so every
+  // lookup below misses on a word that carries one, and the word sails
+  // through as wrong-layout text. "Hi team, akuo nvhs ekhu" absorbed "team,"
+  // into the Hebrew run and offered to replace it with אקשצת: a word the user
+  // typed on purpose, rewritten as gibberish, in the middle of an otherwise
+  // correct fix. Every caller passed the raw token, so the guard that exists
+  // precisely to stop this was answering a question about "team," when the
+  // word in front of it was "team".
+  //
+  // Only the lookups are bared. The callers still map the full token,
+  // punctuation included, because "מילה," is a word plus a comma and has to
+  // keep converting.
+  const bare = lower.replace(/[,.;]+$/, '');
+  if (bare !== lower && bare.length >= 2 && unmistakablyEnglish(bare)) return true;
   if (EN_WORDS.has(lower)) return true;
   // englishScore divides by length - 1, so a short token has almost no
   // denominator: two letters with one common bigram score a flat 1.00, three
@@ -2648,7 +2692,11 @@ function analyzeByLines(text, scanAll = false, midBurst = false) {
     if (judged.trim().length < 3) continue;
     if (!bestOfLanguages(judged, scanAll)) continue;
     const result = bestOfLanguages(line, scanAll) || bestOfLanguages(judged, scanAll);
-    if (result) return result;
+    // The line the span came out of, carried along so the toast can show the
+    // fix in place — which words change and which are being left alone. This
+    // is the only spot that knows it: every detection is built per line, in a
+    // dozen different branches, none of which can see the whole field.
+    if (result) { result.line = line; return result; }
   }
   return null;
 }
@@ -2898,13 +2946,26 @@ const STYLES = `
     color: #7dd3fc; word-break: break-word; line-height: 1.5;
     cursor: text; user-select: text;
   }
+  /* The words being changed carry the colour and the strike; the rest of the
+     line sits around them, dim and untouched, so it is obvious at a glance
+     what Kiko is about to rewrite and what it is leaving alone. <mark> is
+     yellow-on-black by default in every browser, so both rules reset it. */
   .kld-preview-orig {
-    color: #f87171; text-decoration: line-through; font-size: 12px;
+    color: #64748b; font-size: 12px;
     margin-bottom: 2px; word-break: break-word;
     unicode-bidi: plaintext; direction: auto;
   }
+  .kld-preview-orig .kld-mark {
+    color: #f87171; background: rgba(248,113,113,.14);
+    text-decoration: line-through;
+    border-radius: 3px; padding: 0 2px;
+  }
   .kld-preview-arrow { color: #475569; font-size: 11px; margin: 0 2px; }
-  .kld-preview-new { direction: auto; }
+  .kld-preview-new { direction: auto; color: #64748b; }
+  .kld-preview-new .kld-mark {
+    color: #7dd3fc; background: rgba(125,211,252,.14);
+    border-radius: 3px; padding: 0 2px;
+  }
   .kld-actions { display: flex; gap: 6px; align-items: center; }
   .kld-btn {
     border: none; border-radius: 7px; padding: 7px 11px;
@@ -3064,10 +3125,19 @@ function playDetectionSound() {
 // app Kiko runs in, Enter sends the message — so accept carries the same
 // modifiers as Alt+Shift+K rather than inventing a second convention.
 const IS_MAC      = /mac/i.test(navigator.userAgent);
-const ACCEPT_KEYS = IS_MAC ? '⌥⇧⏎' : 'Alt+Shift+↵';
+// Alt+Enter, with Alt+Shift+Enter still accepted for anyone who learned it.
+//
+// Plain Enter was asked for and is not on offer at any price: in Gmail,
+// Slack, WhatsApp Web, LinkedIn and every search box, Enter sends. The toast
+// appears 350ms after typing stops, and pressing Enter to send is the thing
+// people do immediately after typing stops — so the collision would not be an
+// edge case, it would be the normal case, and the failure mode is Kiko
+// rewriting a message instead of sending it. Dropping Shift is the part of
+// that request that can be honoured safely.
+const ACCEPT_KEYS = IS_MAC ? '⌥⏎' : 'Alt+↵';
 
 function isAcceptShortcut(e) {
-  return !!(e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey &&
+  return !!(e.altKey && !e.ctrlKey && !e.metaKey &&
             (e.code === 'Enter' || e.code === 'NumpadEnter'));
 }
 
@@ -3168,6 +3238,21 @@ function showToast(element, detection, forceShow = false) {
   try { chrome.storage.local.set({ stats }).catch(() => {}); } catch {}
   playDetectionSound();
 
+  // Show the fix where it lands: the rest of the line stays visible and dim,
+  // the part being rewritten is marked. Asked for as "highlight the words",
+  // and this is the half of it that touches nobody's text — marking inside
+  // the field itself means either an overlay mirroring the input's metrics or
+  // wrapping the user's own DOM in a span, and in an editor that rebuilds
+  // itself every keystroke that is how text gets corrupted.
+  const ctx = spanContext(detection.line, detection.original);
+  // The mark is always emitted, context or not: it carries the colour and the
+  // strike-through, so dropping it when there is nothing around the span
+  // would quietly un-style the most common toast there is.
+  const inContext = (mid) => {
+    const marked = `<mark class="kld-mark">${escapeHtml(truncatePreview(mid))}</mark>`;
+    return ctx ? escapeHtml(ctx.before) + marked + escapeHtml(ctx.after) : marked;
+  };
+
   const toast = document.createElement('div');
   toast.id = 'kld-toast';
   if (UI_RTL) toast.dir = 'rtl';
@@ -3183,8 +3268,8 @@ function showToast(element, detection, forceShow = false) {
       <button class="kld-btn kld-dismiss" title="${escapeHtml(t('toastDismiss', null, 'Dismiss (Esc)'))}">✕</button>
     </div>
     <div class="kld-preview">
-      <div class="kld-preview-orig">${escapeHtml(truncatePreview(detection.original))}</div>
-      <span class="kld-preview-arrow">→</span><span class="kld-preview-new">${escapeHtml(truncatePreview(detection.converted))}</span>
+      <div class="kld-preview-orig">${inContext(detection.original)}</div>
+      <span class="kld-preview-arrow">→</span><span class="kld-preview-new">${inContext(detection.converted)}</span>
     </div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary">${escapeHtml(detection.btnLabel)}<span class="kld-kbd">${ACCEPT_KEYS}</span></button>
