@@ -907,6 +907,35 @@ const PASSTHROUGH = new Set([
   'he','me','we','us','it','to','on','am','is','do','go','of','my'
 ]);
 
+// ── Hebrew scoring data ───────────────────────────────────────
+// The 240 commonest letter pairs in Hebrew, by frequency mass over a 50k
+// word list, covering about 88% of all bigrams in ordinary text.
+//
+// Every other gate in this file asks whether a word looks English. None of
+// them ask whether it looks Hebrew, and that asymmetry is what made Kiko read
+// a whole sentence perfectly and go silent on "מה קורה": a four-letter word
+// has three bigrams, so one incidental English pair scores 0.33 and vetoes
+// it. The same fix took Arabic from 60% to 93% — see AR_BIGRAMS — and Hebrew,
+// the language this started as, never got it.
+//
+// 240 rather than Arabic's 400 on purpose: Hebrew has 27 letters including
+// the final forms, so 400 pairs would cover 98.5% of the bigram mass and
+// score almost any letter sequence as Hebrew, which is precision thrown away
+// for nothing. 240 is where the measurements below were taken.
+const HE_BIGRAMS = new Set('את ני ות אנ ים לא או לי הי זה יו יי של לה מה תי ול נו הו וא אי רי תה ור רו ית וד שה לו שי מו בי בר כו וב מי די שו יש כל על יה לך בו חו שא תו יל עו מש רא מר יכ נה בל אל ון טו חי כן ין יר קו אמ אח יא דר רה הא ונ מת וש יד המ שב ינ אב למ דע הב ום הר כי דו אה סי ומ רת וו יק יך וק תר בא זו יב וצ מא לע קר גי עם אם לכ וכ הם מע אז עש עי פי בה בת הת נח וח וה שמ מצ חר בס שר רג חד הז סו קי וי צה פר דה עת חנ ימ שת לנ כמ הש שנ צר דב פו אר הח יפ בע סד צי רק בד קש כא יח מד הכ לח פה תך וע לד חת לב בח טי מנ צו רב אן כש פש תח ופ לת מס לש יע ער עב נש הג מק לפ אש מח לק וט במ יס ספ לל זא עד כנ מכ וס טר נס הע תק חש ממ הנ בכ גע בש צא וג נת בט הס לם כה זר אד מן חל תם פנ בק הפ עז כב הד גו הל חב תמ תנ וז חז כת שם מב עצ בנ נכ זמ פע תכ בב'.split(' '));
+
+// The bar a Hebrew reading has to clear to overrule the English veto.
+const HE_SURE = 0.60;
+
+function hebrewScore(word) {
+  if (word.length < 2) return 0;
+  let hits = 0;
+  for (let i = 0; i < word.length - 1; i++) {
+    if (HE_BIGRAMS.has(word.slice(i, i + 2))) hits++;
+  }
+  return hits / (word.length - 1);
+}
+
 // ── Russian scoring data ──────────────────────────────────────
 const RU_BIGRAMS = new Set([
   'ст','то','но','ен','ко','от','ро','ни','ра','во',
@@ -1477,6 +1506,31 @@ function looksLikeAcronym(word) {
          word === word.toUpperCase() && /[A-Z]/.test(word);
 }
 
+// A single word has never been enough, and for good reason: one Latin token
+// that happens to map onto Hebrew letters is exactly how a false positive
+// starts, so a run has always needed two. The cost of that rule is that
+// שלום, תודה, בסדר and סבבה — whole messages, the commonest things anyone
+// sends — were invisible. Nought out of five on single words is most of what
+// "it didn't detect my keyboard mistakes" means.
+//
+// So one word may speak, at a bar set far above the one a word inside a run
+// has to clear: every single bigram has to be one Hebrew actually uses, the
+// word has to be long enough for that to be worth anything, and the English
+// dictionary has to have never heard of it. Three letters is not enough
+// evidence at any threshold — two bigrams both landing is luck, not proof.
+const HE_SOLO_SURE    = 1.0;
+const HE_SOLO_MIN_LEN = 4;
+
+function soloHebrewWord(word) {
+  const lower = word.toLowerCase().replace(/[,.;]+$/, '');
+  if (lower.length < HE_SOLO_MIN_LEN) return false;
+  if (unmistakablyEnglish(lower)) return false;
+  if (!wordCouldBeHebrew(lower)) return false;
+  const mapped = [...lower].map(c => EN_TO_HE[c]);
+  if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
+  return hebrewScore(mapped.join('')) >= HE_SOLO_SURE;
+}
+
 function wordCouldBeHebrew(word) {
   if (looksLikeAcronym(word)) return false;
   if (couldBeHebrewExactly(word)) return true;
@@ -1518,13 +1572,30 @@ function couldBeHebrewExactly(word) {
   //
   // A length floor was tried too, as in unmistakablyEnglish, and made it worse
   // here — on this gate the low threshold is doing useful work on short words.
-  if (englishScore(lower) >= 0.30) return false;
+  //
+  // What that threshold could never do on its own is tell a four-letter Hebrew
+  // word from a four-letter English one. Three bigrams means a single common
+  // English pair scores 0.33 and vetoes the word, and קורה, נראה, תודה and
+  // בסדר all die that way — which is why Kiko read whole sentences perfectly
+  // and went silent on "מה קורה".
+  //
+  // The veto now takes a second opinion, in two steps, and the order is the
+  // whole point. First the English dictionary, which this gate never
+  // consulted: EN_WORDS is a few hundred words, EN_LEXICON is 8,625, and
+  // letting a bigram score overrule the big list put "you can pay by card or
+  // in cash" and "perfect, thanks" on screen as Hebrew. Only a word the
+  // dictionary has never heard of gets to argue, and then it argues with its
+  // Hebrew reading. See HE_BIGRAMS.
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
   // Final-form letters (ך ם ן ף ץ) only appear at word-end in valid Hebrew.
   // Finding one in a non-final position is an unambiguous wrong-keyboard signal.
   for (let i = 0; i < mapped.length - 1; i++) {
     if (FINAL_FORMS.has(mapped[i])) return false;
+  }
+  if (englishScore(lower) >= 0.30) {
+    if (unmistakablyEnglish(lower)) return false;
+    if (hebrewScore(mapped.join('')) < HE_SURE) return false;
   }
   return true;
 }
@@ -2346,9 +2417,14 @@ function analyzeText(rawText, scanAll = false) {
 
   // Use the last (most recent) run that meets the minimum threshold
   const runEntry = [...allRuns].reverse().find(r =>
-    isRealRun(r) && r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun);
+    isRealRun(r) && (r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun ||
+                     (r.words.length === 1 && soloHebrewWord(r.words[0]))));
   let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
+  // One word, clearing the much higher solo bar, counts as a run on its own.
+  const soloOk = !!runEntry && runEntry.words.length === 1 &&
+                 soloHebrewWord(runEntry.words[0]);
+  const enoughRun = hebrewCount >= minRun || soloOk;
 
   // Context extension: scan backwards AND forwards from the confirmed run.
   // In pure-English text (textHasHebrew=false) use mapsToHebrew (strict: valid Hebrew mapping
@@ -2358,7 +2434,7 @@ function analyzeText(rawText, scanAll = false) {
   // in a sentence that already contains real Hebrew.
   const extCheck = textHasHebrew ? physicallyMapsToHebrew : mapsToHebrew;
 
-  if (hebrewCount >= minRun && runEntry) {
+  if (enoughRun && runEntry) {
     // Backwards — words before the run start
     if (runEntry.startIdx > 0) {
       const ext = [];
@@ -2380,7 +2456,7 @@ function analyzeText(rawText, scanAll = false) {
     }
   }
 
-  if (enabledLangs.he && hebrewCount >= minRun) {
+  if (enabledLangs.he && enoughRun) {
     // Use the actual text span from first→last run word so intermediate single-char
     // words (e.g. 'w' → Hebrew apostrophe/geresh) are preserved in original/converted.
     const spanText = findRunSpan(text, run[0], run[run.length - 1]) || run.join(' ');

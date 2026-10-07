@@ -10,8 +10,13 @@
  *   - привет and как were discarded before COMMON_RU_WORDS was consulted
  *   - 안녕 was discarded the same way, by the Hebrew guard and the English score
  *   - Russian claimed привіт, starving Ukrainian of the words it exists for
- *   - single words never fire; detection needs a run of two. Easy to "fix"
- *     by accident and flood users with false positives.
+ *   - single words never fired; detection needed a run of two. That rule
+ *     cost more than it saved — שלום, תודה and בסדר are whole messages and
+ *     were invisible — and it is lifted for Hebrew only, behind a much
+ *     higher bar. It is still exactly as easy to "fix" by accident and
+ *     flood users with false positives, so the bar is measured, not argued:
+ *     every word in EN_LEXICON, alone, and 20,000 random English word pairs,
+ *     both at the same false-positive count as before the change.
  */
 'use strict';
 const fs = require('fs');
@@ -149,9 +154,110 @@ check('привет not blocked by the Hebrew guard', 'ghbdtn rfr', 'english_as_
 check('как not blocked by the English score',   'rfr ghbdtn', 'english_as_russian');
 check('안녕 not blocked by either',              'dkssud gksrnr', 'english_as_korean');
 
-console.log('A single word never fires — two consecutive are required');
-for (const w of ['dkssud', 'ghbdsn', 'ghbdtn', 'geia', 'akuo']) {
+console.log('A single word fires only where the evidence is strong enough');
+// Still true for the languages with no word-level model of their own: one
+// Latin token that maps onto Cyrillic or Greek letters is not evidence.
+for (const w of ['dkssud', 'ghbdsn', 'ghbdtn', 'geia']) {
   check(`single "${w}"`, w, null);
+}
+// Hebrew has one now. A word whose Hebrew reading uses nothing but bigrams
+// Hebrew actually uses, that the English dictionary has never heard of, and
+// that is long enough for either fact to mean anything, speaks on its own.
+// These five are the commonest messages there are and every one of them was
+// silent: "it didn't detect my keyboard mistakes", in an uninstall note.
+check('single "akuo" — שלום',  'akuo',  'english_as_hebrew', { converted: 'שלום' });
+check('single ",usv" — תודה',  ',usv',  'english_as_hebrew', { converted: 'תודה' });
+check('single "cxsr" — בסדר',  'cxsr',  'english_as_hebrew', { converted: 'בסדר' });
+// Not everything clears it, and that is the bar doing its job rather than a
+// gap: שלומך ends in מך, which is rare enough to miss the top 240, so it
+// scores 0.75 against a solo bar of 1.00. It still fires the moment it has
+// any company — see the run tests below.
+check('but "akunl" alone does not clear the solo bar', 'akunl', null);
+check('and fires the moment it has company', 'akuo akunl', 'english_as_hebrew');
+// …and three letters is still not enough, at any score. Two bigrams both
+// landing is luck.
+check('but "jcr" alone is still silent', 'jcr', null);
+check('and "nv" alone is still silent',  'nv',  null);
+
+// ── The price of letting one word speak ───────────────────────
+// Lifting the two-word rule is the change in this file most likely to be
+// quietly wrong, and no hand-written case would catch it: the risk is not a
+// sentence somebody thought of, it is the long tail of ordinary English.
+//
+// So the tail is the test. Every word the extension knows, alone, and a
+// fixed pseudo-random sample of pairs of them — adversarial by construction,
+// since only words whose letters all exist on the Hebrew layout can possibly
+// fire. Both numbers were taken before the change and have to stay there.
+console.log('Single words and pairs of them, across the whole English lexicon');
+{
+  const HEKEYS = /^[a-z,.;'\/\[\]`]+$/;
+  const all    = [...kiko.EN_LEXICON];
+  const usable = all.filter(w => HEKEYS.test(w));
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+
+  // Six, every one of them Korean, every one of them there before Hebrew
+  // got a bigram model. Hebrew adds none.
+  const soloFired = usable.filter(w => kiko.analyzeText(w));
+  const soloHe    = soloFired.filter(w => {
+    const d = kiko.analyzeText(w); return (d.lang || 'he') === 'he';
+  });
+  if (soloFired.length <= 6) pass++;
+  else { fail++; console.log(`  FAIL  ${soloFired.length} single English words fire, ceiling is 6`);
+         soloFired.slice(0, 12).forEach(w => console.log(`        ${w}`)); }
+  if (soloHe.length === 0) pass++;
+  else { fail++; console.log(`  FAIL  Hebrew claims ${soloHe.length} single English words: ${soloHe.slice(0,8).join(', ')}`); }
+
+  // Pairs. Deterministic sample so the number is reproducible run to run.
+  let seed = 12345;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const pool = usable.filter(w => w.length >= 3 && w.length <= 6);
+  let fired = 0, firedHe = 0;
+  for (let i = 0; i < 20000; i++) {
+    const a = pool[Math.floor(rnd() * pool.length)];
+    const b = pool[Math.floor(rnd() * pool.length)];
+    const d = kiko.analyzeText(a + ' ' + b);
+    if (d) { fired++; if ((d.lang || 'he') === 'he') firedHe++; }
+  }
+  if (fired <= 71) pass++;
+  else { fail++; console.log(`  FAIL  ${fired} of 20000 English word pairs fire, ceiling is 71`); }
+  // Broken down by language the sample is byte-identical before and after the
+  // bigram model — ar 31, he 12, uk 6, el 8, ru 11, ko 3 — so Hebrew adds
+  // none of its own and takes none from anybody else. That is the whole claim
+  // being made for the model, and it is the number to watch: the total alone
+  // would hide twelve new Hebrew false positives paid for by twelve fewer
+  // Greek ones. This assertion was written expecting zero and caught its own
+  // author instead; twelve is what Hebrew already claimed.
+  if (firedHe <= 12) pass++;
+  else { fail++; console.log(`  FAIL  Hebrew claims ${firedHe} of 20000 English word pairs, ceiling is 12`); }
+}
+
+// ── Everyday phrases, not written for the test ────────────────
+// The corpus is full sentences, and Kiko scored 100% on it while scoring 30%
+// on the things people actually send. These are converted to Latin by Kiko's
+// own table, so the input is exactly what the browser would receive, and the
+// floor is what the bigram model bought.
+console.log('Everyday short phrases, converted by the keyboard table itself');
+{
+  const HE = ['שלום','תודה','בסדר','מה קורה','מה נשמע','אני בדרך','כן בטח','לא נורא',
+              'מתי נפגשים','אין בעיה','סבבה','בוקר טוב','ערב טוב','להתראות','אני אאחר',
+              'תודה רבה','מה המצב','איפה אתה','בסדר גמור','נדבר אחר כך'];
+  kiko.setLangs({ ...ALL });
+  const hit = HE.filter(p => kiko.analyzeText(kiko.down.he(p))).length;
+  // 6 of 20 before the model, 17 after. The floor is set below what was
+  // measured so an unrelated tuning change does not fail the suite, and well
+  // above what it replaced.
+  if (hit >= 16) pass++;
+  else { fail++; console.log(`  FAIL  only ${hit} of ${HE.length} everyday Hebrew phrases fire, floor is 16`);
+         HE.filter(p => !kiko.analyzeText(kiko.down.he(p)))
+           .forEach(p => console.log(`        ${p}   (${kiko.down.he(p)})`)); }
+  // The single-word half of it specifically, since that is the rule that moved.
+  const solo = ['שלום','תודה','בסדר','סבבה'];
+  const soloHit = solo.filter(p => kiko.analyzeText(kiko.down.he(p))).length;
+  if (soloHit >= 3) pass++;
+  else { fail++; console.log(`  FAIL  only ${soloHit} of 4 one-word Hebrew messages fire, floor is 3`); }
 }
 
 console.log('Natural English stays silent');
@@ -1130,17 +1236,29 @@ console.log('A run is not cut short by a word that only scores as English');
        'I said vhh nv akunl jcr to him', 'vhh nv akunl jcr');
 
   // A three-letter word joins as a bridge, not as a run of its own — so it can
-  // extend a run but never create one. Two of them are still not a detection.
-  span('a bridge word cannot start a run on its own', 'vhh jcr', null);
-  check('and a lone Hebrew-looking word still never fires', 'jcr', null);
+  // extend a run but never create one. On its own it is still nothing.
+  check('a lone Hebrew-looking short word still never fires', 'jcr', null);
+  // Two of them together used to be nothing either, and that was a sacrifice
+  // rather than a rule: היי חבר is real Hebrew, and so are ערב טוב and
+  // כן בטח, which are the same shape. With a Hebrew bigram model the pair is
+  // evidence. Bought at no measured cost — 20,000 random English word pairs
+  // drawn from EN_LEXICON produce exactly the 71 false positives they
+  // produced before the change, none of them Hebrew.
+  span('two short Hebrew words together are now a detection', 'vhh jcr', 'vhh jcr');
+  check('and convert to the right thing', 'vhh jcr', 'english_as_hebrew',
+        { converted: 'היי חבר' });
 
   // The 4.9.0 guard still has to do its job. This is the case it was added
   // for, and relaxing the score must not hand it back: "meeting" is a real
   // English word and stops the run dead, even with Hebrew on both sides.
   span('a real English word still stops a run',
        'vhh nv meeting jcr', 'vhh nv');
-  span('and still does with more Hebrew behind it',
-       'vhh nv meeting akunl jcr', 'vhh nv');
+  // The English word still stops the run. What has changed is that a new run
+  // starts on the far side of it, and Kiko has always offered the most recent
+  // one — so the span moves from the opening greeting to the words just typed,
+  // which is the half of the sentence the cursor is actually in.
+  span('and a new run starts on the far side of it',
+       'vhh nv meeting akunl jcr', 'akunl jcr');
   check('genuine English is still silent',
         'i think the meeting was useful', null);
 
@@ -1316,6 +1434,28 @@ console.log('The language that explains the sentence wins, not the one asked fir
   // to 93% — measured on words the table has never seen — and Fβ from 99.7% to
   // 99.9% with false positives still at zero.
   //
+  // 20 since Hebrew learned its own language in 4.17.0, and here is the
+  // accounting. Three sentences moved, and they are not all the same thing:
+  //
+  //   paid back  one Hebrew sentence — החשבון עדיין לא שולם — that Arabic
+  //              took in 4.12.0. The note above calls that "a real
+  //              regression and the price of the change"; this returns it.
+  //   cost       one Korean sentence now goes to Russian. Korean and Russian
+  //              explain it identically, 31 to 31, and bestOfLanguages keeps
+  //              the incumbent on an exact tie — so an extra Hebrew candidate
+  //              that loses to both still changes which of them was asked
+  //              first. The tie-break being order-dependent is older than
+  //              this change and is the thing to fix, not the Hebrew model.
+  //   cost       one Ukrainian sentence that used to fire nothing now fires
+  //              as Russian, which is the twelfth of its kind here.
+  //
+  // Bought with: everyday Hebrew phrases going from 30% to 85% — measured on
+  // phrases converted by Kiko's own tables, not written for the test — single
+  // words from 0 of 5 to 4 of 5, and corpus recall from 98.7% to 99.4%. False
+  // positives unchanged everywhere they were counted: 0 of 624 here, 71 of
+  // 20,000 random English word pairs both before and after, and 6 of 8,614
+  // single dictionary words both before and after.
+  //
   // It may not go up again without that kind of accounting.
   const LANGS = ['he','ru','uk','ko','el','ar'];
   let usable = 0, wrong = 0;
@@ -1328,8 +1468,8 @@ console.log('The language that explains the sentence wins, not the one asked fir
       if (d && (d.lang || 'he') !== code) wrong++;
     }
   }
-  if (wrong <= 19) pass++;
-  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 24`); }
+  if (wrong <= 20) pass++;
+  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 20`); }
   if (usable >= 159) pass++;
   else { fail++; console.log(`  FAIL  only ${usable} sentences are measurable, expected 159`); }
 }
