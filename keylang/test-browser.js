@@ -328,6 +328,48 @@ const noToast = `!document.getElementById('kld-toast')`;
          !await noticeAfterLoad());
     }
 
+    // ── The frozen toast ──────────────────────────────────────
+    //
+    // Three screenshots of this, each showing a toast stuck on a fragment
+    // while the field held a whole sentence. findRunSpan matched substrings,
+    // so a one-letter last word was found inside the first word and the span
+    // collapsed; showToast then refused to regress to a smaller detection and
+    // the stunted offer stayed put. The engine half is covered in
+    // test-detection; this is the half that needs a real field.
+    {
+      await ageTo(1, { d30: true });
+      await freshPage(s, port);
+      // Hebrew typed meaning English, the direction in every report.
+      await type(s, "אםה ן גםמא למם' 'ישא אם אקךך טםו");
+      const whole = await B.until(s,
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return null;`
+        + `return /tell you/.test(t.innerText)?t.innerText:null})()`,
+        { timeout: 12000, step: 600 });
+      ok('the toast follows the sentence to its end',
+         !!whole, String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+
+      // Now take half of it back. The offer on screen is for text that no
+      // longer exists, and the regress guard used to protect exactly that —
+      // pressing Fix would have hunted for words that were gone.
+      for (let i = 0; i < 17; i++) {
+        await s.send('Input.dispatchKeyEvent', { type: 'keyDown', code: 'Backspace',
+          key: 'Backspace', windowsVirtualKeyCode: 8, nativeVirtualKeyCode: 8 });
+        await s.send('Input.dispatchKeyEvent', { type: 'keyUp', code: 'Backspace',
+          key: 'Backspace', windowsVirtualKeyCode: 8, nativeVirtualKeyCode: 8 });
+        await B.sleep(45);
+      }
+      const after = await B.until(s,
+        `(function(){var t=document.getElementById('kld-toast');`
+        + `if(!t) return 'gone';`
+        + `return /tell you/.test(t.innerText) ? null : t.innerText})()`,
+        { timeout: 10000, step: 600 });
+      ok('and does not keep offering text that has been deleted',
+         !!after, 'the toast still offers "tell you" after it was deleted: '
+                  + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+      const field = await s.eval('document.getElementById("f").value');
+      ok('the field really did shrink', field.length < 32, JSON.stringify(field));
+    }
+
     // ── The notice at the moment it matters ───────────────────
     //
     // Asked directly: how does an expired user find out? Before this they

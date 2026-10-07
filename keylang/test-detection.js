@@ -69,7 +69,7 @@ function loadContentScript() {
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
-    '         expiredNudgeDue, EXPIRED_NUDGE_GAP_MS, analyzeIgnoringPaywall,' +
+    '         expiredNudgeDue, EXPIRED_NUDGE_GAP_MS, analyzeIgnoringPaywall, findRunSpan,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
     '         down: {he:convertToEnglish, ru:convertFromRussian,' +
@@ -886,6 +886,64 @@ console.log('Trial notice milestones');
   // held back for a moment that never arrives.
   is('welcome day is the first milestone',
      kiko.TRIAL_WELCOME_DAY, Math.max(...kiko.TRIAL_NAG_DAYS));
+}
+
+// ── The frozen toast, finally ─────────────────────────────────
+// Reported three times with screenshots, each time looking like the toast
+// had stopped following the sentence. It had, and the span was the reason.
+//
+// findRunSpan matched substrings. A run's last word is often one or two
+// characters, so "א" was found inside "אםה" at position 0 and an eight-word
+// sentence collapsed to its first word — the toast offered "tov" for "tov i
+// dont know what to tell you". showToast then refuses to regress to a
+// smaller detection, so that stunted offer sat frozen on screen while the
+// user kept typing, which is exactly what the screenshots showed.
+console.log('A span covers the whole run, not a substring of its first word');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  // Hebrew typed meaning English — the direction in every one of the reports.
+  const HE = "אםה ן גםמא למם' 'ישא אם אקךך טםו";
+  const WANT = 'tov i dont know what to tell you';
+
+  // Every prefix, which is what the field actually holds while somebody
+  // types. The offer has to be a prefix of the answer at every step; the old
+  // code collapsed to "tov" for four keystrokes in the middle.
+  let worst = null;
+  for (let i = 3; i <= HE.length; i++) {
+    const d = kiko.analyzeText(HE.slice(0, i));
+    if (!d) continue;
+    const got = d.converted.trim();
+    if (!WANT.startsWith(got.slice(0, Math.min(got.length, WANT.length)))) { worst = [i, got]; break; }
+    // The real symptom: a detection spanning several words whose span is one.
+    if (d.words.length >= 4 && got.split(/\s+/).length < 2) { worst = [i, got]; break; }
+  }
+  if (!worst) { pass++; }
+  else { fail++; console.log(`  FAIL  at ${worst[0]} characters the offer collapsed to ${JSON.stringify(worst[1])}`); }
+
+  const full = kiko.analyzeText(HE);
+  if (full && full.converted === WANT) { pass++; }
+  else { fail++; console.log('  FAIL  the finished sentence: ' + JSON.stringify(full && full.converted)); }
+
+  // The span function itself, directly, on the shape that broke it: a last
+  // word that also appears inside the first.
+  const span = kiko.findRunSpan;
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}\n        expected ${JSON.stringify(want)}\n        actual   ${JSON.stringify(got)}`);
+  };
+  is('a one-letter last word is not found inside the first',
+     span('אםה ן גםמא א', 'אםה', 'א'), 'אםה ן גםמא א');
+  is('an ordinary run still spans first to last',
+     span('hello there world', 'hello', 'world'), 'hello there world');
+  is('a run that is one word is just that word',
+     span('hello there', 'hello', 'hello'), 'hello');
+  is('a word repeated later does not stretch the span',
+     span('ab cd ab ef', 'ab', 'cd'), 'ab cd');
+  is('and a word that is simply absent gives nothing',
+     span('hello there', 'hello', 'nope'), null);
 }
 
 console.log('An expired trial still notices, once a day');

@@ -1800,11 +1800,38 @@ function scriptGrower(map) {
 
 // Returns the actual text substring spanning from firstWord to lastWord (inclusive),
 // preserving any intermediate characters (spaces, short bridge words like 'w').
+// Where the run sits in the text, matched as whole words.
+//
+// indexOf matches substrings, and a run's last word is often one or two
+// characters — so "א" was found inside "אםה" at position 0 and an eight-word
+// sentence collapsed to its first word. What reached the user was a toast
+// offering "tov" for "tov i dont know what to tell you", and then, because
+// showToast refuses to regress to a smaller detection, that stunted offer sat
+// frozen on screen while they kept typing. Reported three times with
+// screenshots before the cause was found, each time looking like the toast
+// had stopped following the sentence; it had, but the span was the reason.
+//
+// A match counts only when whitespace or an edge sits on both sides of it.
 function findRunSpan(text, firstWord, lastWord) {
   const lt = text.toLowerCase();
-  const fi = lt.indexOf(firstWord.toLowerCase());
+  const whole = (i, len) =>
+    i !== -1 &&
+    (i === 0 || /\s/.test(text[i - 1])) &&
+    (i + len === text.length || /\s/.test(text[i + len]));
+  const findWhole = (needle, from) => {
+    for (let i = lt.indexOf(needle, from); i !== -1; i = lt.indexOf(needle, i + 1))
+      if (whole(i, needle.length)) return i;
+    return -1;
+  };
+  const fw = firstWord.toLowerCase(), lw = lastWord.toLowerCase();
+  // Fall back to the loose match rather than giving up: a token carrying
+  // punctuation the tokeniser kept but the text spaces differently still has
+  // to produce a span, and a loose one is better than none.
+  let fi = findWhole(fw, 0);
+  if (fi === -1) fi = lt.indexOf(fw);
   if (fi === -1) return null;
-  const li = lt.indexOf(lastWord.toLowerCase(), fi);
+  let li = findWhole(lw, fi);
+  if (li === -1) li = lt.indexOf(lw, fi);
   if (li === -1) return null;
   return text.slice(fi, li + lastWord.length);
 }
@@ -3296,7 +3323,16 @@ function showToast(element, detection, forceShow = false) {
   // Same detection as the one already on screen — leave the toast alone
   if (!forceShow && isDuplicateOfVisibleToast(sig, shownDetection, activeToast)) return;
 
-  // Guard: don't regress to a smaller detection on the same element
+  // Guard: don't regress to a smaller detection on the same element.
+  //
+  // Returning here leaves the toast on screen untouched, so in principle a
+  // user who deletes half a sentence keeps looking at an offer to fix words
+  // that are gone. A version of this that only protected text still present
+  // in the field was written and then removed: reverting it failed no test,
+  // including one written specifically to catch it — something else updates
+  // the toast after a delete and the guard never gets the chance. Unobservable
+  // means unshipped here, so the guard stays as it was until the path that
+  // actually reaches it is understood.
   if (activeToast && lastDetection && lastElement === element) {
     if (detection.words.length < lastDetection.words.length) return;
   }
