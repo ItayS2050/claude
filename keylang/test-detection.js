@@ -69,6 +69,7 @@ function loadContentScript() {
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
+    '         expiredNudgeDue, EXPIRED_NUDGE_GAP_MS, analyzeIgnoringPaywall,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
     '         down: {he:convertToEnglish, ru:convertFromRussian,' +
@@ -885,6 +886,53 @@ console.log('Trial notice milestones');
   // held back for a moment that never arrives.
   is('welcome day is the first milestone',
      kiko.TRIAL_WELCOME_DAY, Math.max(...kiko.TRIAL_NAG_DAYS));
+}
+
+console.log('An expired trial still notices, once a day');
+{
+  const due = kiko.expiredNudgeDue;
+  const DAY = kiko.EXPIRED_NUDGE_GAP_MS;
+  const now = 1000 * DAY;
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
+  };
+  // Never nudged before. The commonest case on the day a trial runs out.
+  is('never nudged before',        due(undefined, now), true);
+  is('nor zero',                   due(0, now), true);
+  is('an hour ago is too soon',    due(now - 3600e3, now), false);
+  is('and so is 23 hours',         due(now - 23 * 3600e3, now), false);
+  is('a day later is due again',   due(now - DAY, now), true);
+  is('and it keeps coming back',   due(now - 40 * DAY, now), true);
+  // The old expiry notice stopped after three, for ever. This one does not,
+  // and that is the point: it only ever fires on a real mistake, so it is a
+  // reminder at the moment of need rather than a timer.
+  is('a clock from the future does not unlock it', due(now + DAY, now), false);
+}
+
+// The engine has to keep running for an expired user or there is nothing to
+// notice. What is withheld is the fix, not the detection.
+console.log('The paywall withholds the fix, not the engine');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(false);
+  const blocked = kiko.analyzeText('akuo nvhs ekhu');
+  if (blocked === null) { pass++; }
+  else { fail++; console.log('  FAIL  an expired user was offered a fix'); }
+
+  const seen = kiko.analyzeIgnoringPaywall(() => kiko.analyzeText('akuo nvhs ekhu'));
+  if (seen && seen.converted === 'שלום מהיד קליו') { pass++; }
+  else { fail++; console.log('  FAIL  the engine did not run for an expired user: '
+                             + JSON.stringify(seen)); }
+
+  // And it puts the paywall back, including when the callback throws —
+  // leaving `entitled` true would hand the whole product away.
+  if (kiko.analyzeText('akuo nvhs ekhu') === null) { pass++; }
+  else { fail++; console.log('  FAIL  the paywall did not come back'); }
+  try { kiko.analyzeIgnoringPaywall(() => { throw new Error('boom'); }); } catch {}
+  if (kiko.analyzeText('akuo nvhs ekhu') === null) { pass++; }
+  else { fail++; console.log('  FAIL  a throw left the paywall open'); }
+  kiko.setEntitled(true);
 }
 
 console.log('An expired trial stops detection');

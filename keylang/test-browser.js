@@ -328,6 +328,63 @@ const noToast = `!document.getElementById('kld-toast')`;
          !await noticeAfterLoad());
     }
 
+    // ── The notice at the moment it matters ───────────────────
+    //
+    // Asked directly: how does an expired user find out? Before this they
+    // got the ended notice three times and then silence for ever, and at the
+    // one moment that counts — typing a mistake — nothing at all, because
+    // analyzeText returned null before any detection ran. "It didn't detect
+    // my keyboard mistakes", in an uninstall note, is what that feels like.
+    {
+      await ageTo(31, { expiredShown: 3, expiredAt: Date.now() });
+      await s.eval('chrome.storage.local.remove("expiredNudgeAt").then(function(){return "ok"})');
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu');
+      const caught = await B.until(s, OFFER, { timeout: 10000, step: 600 });
+      ok('typing a mistake after the trial says so',
+         !!caught && /layout mistake/.test(caught), String(caught).replace(/\n/g, ' | '));
+      ok('and does not hand over the correction',
+         !!caught && !caught.includes('שלום'), String(caught).replace(/\n/g, ' | '));
+      ok('and does not touch the text',
+         await s.eval('document.getElementById("f").value') === 'akuo nvhs ekhu');
+
+      // Once a day, not once a sentence. Without the gap this is a toast on
+      // every mistake an expired user makes, which is an uninstall.
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu');
+      await B.sleep(3500);
+      ok('but not again on the next mistake the same day',
+         await s.eval(noToast), 'a second nudge appeared within the day');
+
+      // A day later it comes back — this one never stops, because it only
+      // ever fires on a real mistake.
+      //
+      // Back to an extension page to touch storage. Runtime.evaluate runs in
+      // the page's main world, which has no chrome.storage at all — the
+      // earlier calls here only worked because ageTo had just left us on
+      // welcome.html, and moving one line past freshPage turned the whole
+      // suite into "the harness itself failed".
+      await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
+      await B.sleep(900);
+      await s.eval('chrome.storage.local.set({expiredNudgeAt: Date.now() - 25*3600e3})'
+                 + '.then(function(){return "ok"})');
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu');
+      const again = await B.until(s, OFFER, { timeout: 10000, step: 600 });
+      ok('and returns the next day', !!again && /layout mistake/.test(again),
+         String(again).replace(/\n/g, ' | '));
+
+      // And none of it happens for somebody inside the trial, who gets the
+      // actual fix instead.
+      await ageTo(1, { d30: true });
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu');
+      const paid = await B.until(s, OFFER, { timeout: 10000, step: 600 });
+      ok('while a paying user still just gets the fix',
+         !!paid && paid.includes('שלום מהיד קליו') && !/layout mistake/.test(paid),
+         String(paid).replace(/\n/g, ' | '));
+    }
+
     // ── The badge, which is the only thing visible with no page open ──
     //
     // It used to appear in the last seven days only, so for twenty-three of

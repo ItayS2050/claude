@@ -3743,6 +3743,65 @@ async function maybeShowTrialNotice() {
   } catch {}
 }
 
+// ── The moment they actually need it ──────────────────────────
+// What an expired user saw before this: the ended notice three times, a day
+// apart, and then silence for ever. Silence is indistinguishable from broken,
+// and an uninstall note said so in as many words — "it didn't detect my
+// keyboard mistakes". By then detection had been off for weeks and they had
+// no way to know it was ever on.
+//
+// Worse, the one moment that matters was the quietest. analyzeText returns
+// null before any detection runs when the trial is over, so the instant
+// somebody types akuo meaning שלום — the exact second Kiko is worth paying
+// for — nothing happens at all.
+//
+// So the engine keeps running and the fix is what is withheld. Once a day,
+// when a real mistake is found, Kiko says it found one.
+const EXPIRED_NUDGE_GAP_MS = 24 * 60 * 60 * 1000;
+
+// Run the engine with the paywall lifted, exactly as bestOfLanguages lifts
+// and restores enabledLangs. Nothing is shown from this — the caller decides
+// — and nothing leaves the page, same as every other analysis here.
+function analyzeIgnoringPaywall(fn) {
+  const saved = entitled;
+  entitled = true;
+  try { return fn(); } finally { entitled = saved; }
+}
+
+// What the notice says, and does not say. It reports that a mistake was
+// found and how many words it covers; it does not show the correction.
+// Handing over the fix once a day is handing over the product to exactly the
+// people who are deciding whether to buy it, and they have already watched it
+// work for thirty days — the question in their mind is not whether it works,
+// it is whether they want it back. One line to change if that reads wrong:
+// pass detection.converted into the body instead of the count.
+async function maybeNudgeExpired(detection) {
+  try {
+    if (entitled || !detection) return false;
+    if (activeToast) return false;
+    const d = await chrome.storage.local.get('expiredNudgeAt');
+    if (!expiredNudgeDue(d.expiredNudgeAt)) return false;
+    const n = detection.words.length;
+    const shown = showTrialToast({
+      title:  t('expiredCaughtTitle', null, 'Kiko just caught a layout mistake'),
+      body:   t('expiredCaughtBody', [String(n)],
+                `${n} words you just typed are in the wrong keyboard layout. `
+                + `Kiko can put them right in one keystroke — your free trial has `
+                + `ended, so it is holding back.`),
+      cta:    t('trialEndedCta', null, 'Keep Kiko'),
+      accent: '#f87171',
+    });
+    if (shown) await chrome.storage.local.set({ expiredNudgeAt: Date.now() });
+    return shown;
+  } catch { return false; }
+}
+
+// Separate from the storage and the DOM so the schedule can be tested without
+// either, the same way expiryNoticeDue is.
+function expiredNudgeDue(lastAt, now = Date.now()) {
+  return now - (lastAt || 0) >= EXPIRED_NUDGE_GAP_MS;
+}
+
 async function maybeShowReviewToast() {
   try {
     const d = await chrome.storage.local.get(['stats', 'reviewNudge']);
@@ -4092,6 +4151,14 @@ function attachTo(el) {
     // Analyze the full field so long sentences aren't split when the debounce
     // fires mid-typing. Fall back to cursor-position analysis if full-field
     // returns nothing (catches the word currently being typed).
+    if (!entitled) {
+      // The engine still runs; only the fix is withheld. Once a day, and only
+      // on a real detection, so it lands on a mistake rather than on a timer.
+      const found = analyzeIgnoringPaywall(
+        () => analyzeFullField(el, midBurst) || analyze(el, midBurst));
+      if (found) maybeNudgeExpired(found);
+      return;
+    }
     const detection = analyzeFullField(el, midBurst) || analyze(el, midBurst);
     if (detection) {
       showToast(el, detection);

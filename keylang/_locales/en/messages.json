@@ -100,6 +100,17 @@
   "trialBody": {
     "message": "After that Kiko stops correcting layout mistakes. $$5/month, or $$40 for the year. Nothing has been charged so far."
   },
+  "expiredCaughtTitle": {
+    "message": "Kiko just caught a layout mistake"
+  },
+  "expiredCaughtBody": {
+    "message": "$COUNT$ words you just typed are in the wrong keyboard layout. Kiko can put them right in one keystroke — your free trial has ended, so it is holding back.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
   "trialCta": {
     "message": "See the plans"
   },
