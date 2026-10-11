@@ -70,6 +70,7 @@ function loadContentScript() {
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
     '         expiredNudgeDue, EXPIRED_NUDGE_GAP_MS, analyzeIgnoringPaywall, findRunSpan,' +
+    '         wordCouldBeRussian,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
     '         down: {he:convertToEnglish, ru:convertFromRussian,' +
@@ -156,11 +157,20 @@ check('как not blocked by the English score',   'rfr ghbdtn', 'english_as_rus
 check('안녕 not blocked by either',              'dkssud gksrnr', 'english_as_korean');
 
 console.log('A single word fires only where the evidence is strong enough');
-// Still true for the languages with no word-level model of their own: one
-// Latin token that maps onto Cyrillic or Greek letters is not evidence.
-for (const w of ['dkssud', 'ghbdsn', 'ghbdtn', 'geia']) {
+// Still true where the only evidence would be that the letters map: Greek
+// has no word list of its own here, and 안녕 is two syllables.
+for (const w of ['dkssud', 'geia']) {
   check(`single "${w}"`, w, null);
 }
+// Russian and Arabic speak alone too, as of 4.21.0, but only for a word
+// their own frequency list knows — a bigram score was tried and cost 170
+// single-word false positives, so the list is the whole gate.
+check('single "ghbdtn" — привет', 'ghbdtn', 'english_as_russian', { converted: 'привет' });
+check('single "lvpfh" — مرحبا',  'lvpfh',  'english_as_arabic',  { converted: 'مرحبا' });
+// And an English word whose keystrokes spell a real foreign one still does
+// not: "herb" is руки, "high" is اهلا. The dictionary has the final say.
+check('but "herb" is an English word', 'herb', null);
+check('and so is "high"',              'high', null);
 // Hebrew has one now. A word whose Hebrew reading uses nothing but bigrams
 // Hebrew actually uses, that the English dictionary has never heard of, and
 // that is long enough for either fact to mean anything, speaks on its own.
@@ -1013,6 +1023,64 @@ console.log('Everyday and business Korean, converted by the keyboard table');
   }
 }
 
+// ── Russian and Arabic, as they are actually typed ────────────
+// The same hole Hebrew had in 4.17 and Korean in 4.20: the corpus is full
+// sentences, and both scored 100% on it while scoring 36% and 50% on what
+// people send. One-word phrases were 0 of 8 and 0 of 7.
+//
+// Two causes. The Hebrew guard in russianExactly ran before Russian's own
+// evidence, so конечно, ответа, встретимся and отправь were handed to Hebrew
+// on a weak match; it now yields to a strong Russian reading, as the word
+// list above it already did. And a single word could not speak at all.
+//
+// The solo rule is a word list and nothing else. A bigram score was tried
+// first, the obvious thing, and cost 170 single-word false positives against
+// a baseline of 6 and fourteen on the corpus — Cyrillic and Arabic bigrams
+// are far weaker discriminators than Hebrew's or Korean's syllables.
+console.log('Everyday Russian and Arabic, converted by the keyboard table');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const fires = (p, code, down) => {
+    const d = kiko.analyzeText(down(p));
+    return !!d && (d.lang || 'he') === code;
+  };
+  const floor = (label, list, code, down, min) => {
+    const hit = list.filter(p => fires(p, code, down)).length;
+    if (hit >= min) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}: ${hit} of ${list.length}, floor is ${min}`);
+    list.filter(p => !fires(p, code, down))
+        .forEach(p => console.log(`        ${p}   (${down(p)})`));
+  };
+  // 9 of 25 before, 22 after. The floor sits below what was measured so an
+  // unrelated tuning change does not fail the suite.
+  floor('everyday Russian', [
+    'привет','спасибо','пожалуйста','хорошо','конечно','извини','понятно',
+    'как дела','я уже еду','всё хорошо','доброе утро','добрый вечер',
+    'до свидания','что случилось','где ты','когда встретимся','я опаздываю',
+    'без проблем','договорились','жду ответа','отправь файл',
+    'созвонимся завтра','спасибо большое','хорошего дня','не вопрос'],
+    'ru', kiko.down.ru, 20);
+  // 10 of 20 before, 16 after.
+  floor('everyday Arabic', [
+    'مرحبا','شكرا','تمام','نعم','طبعا','اهلا','كيف حالك','صباح الخير',
+    'مساء الخير','ان شاء الله','اراك لاحقا','الى اللقاء','ما شاء الله',
+    'شكرا جزيلا','لا مشكلة','متى الاجتماع','ارسل الملف','بالتوفيق',
+    'تحت امرك','كل عام وانت بخير'],
+    'ar', kiko.down.ar, 15);
+
+  // The guard that was costing Russian its inflected forms. No word list of
+  // a few hundred stems contains these.
+  for (const [w, want] of [['rjytxyj','конечно'], ['jndtnf','ответа'],
+                           ['dcnhtnbvcz','встретимся'], ['jnghfdm','отправь']]) {
+    if (kiko.wordCouldBeRussian(w)) { pass++; }
+    else { fail++; console.log(`  FAIL  ${want} (${w}) is still vetoed by the Hebrew guard`); }
+  }
+}
+
 console.log('An expired trial still notices, once a day');
 {
   const due = kiko.expiredNudgeDue;
@@ -1644,8 +1712,8 @@ console.log('The language that explains the sentence wins, not the one asked fir
       if (d && (d.lang || 'he') !== code) wrong++;
     }
   }
-  if (wrong <= 19) pass++;
-  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 19`); }
+  if (wrong <= 17) pass++;
+  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 17`); }
   if (usable >= 159) pass++;
   else { fail++; console.log(`  FAIL  only ${usable} sentences are measurable, expected 159`); }
 }
