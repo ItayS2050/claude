@@ -3,10 +3,11 @@
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const CAT = window.CATALOG;
+  const CAT = window.CATALOG, EX = window.EXTRAS;
   const ALL = [...CAT.interior, ...CAT.entry];
   const byId = Object.fromEntries(ALL.map(m => [m.id, m]));
   const fmt = n => '₪' + Math.round(n).toLocaleString('he-IL');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* ---------- storage (best effort) ---------- */
   const store = {
@@ -14,32 +15,72 @@
     set(k, v) { try { localStorage.setItem('dlatot:' + k, JSON.stringify(v)); return true; } catch { return false; } },
   };
 
-  /* ---------- options & settings ---------- */
-  const OPTIONS = {
-    interior: {
-      width: [['60', '60 ס״מ', 0], ['70', '70 ס״מ', 0], ['80', '80 ס״מ', 0], ['90', '90 ס״מ', 150]],
-      handle: [['std', 'ידית ניקל סטנדרטית', 0], ['black', 'ידית שחור מט', 120], ['gold', 'ידית זהב מוברש', 180], ['rosette', 'ידית רוזטה מגנטית', 260]],
-      lock: [['std', 'מנעול רגיל', 0], ['wc', 'מנעול תפוס/פנוי (שירותים)', 90], ['magnet', 'מנעול מגנטי שקט', 160]],
-      defaults: { width: '80', handle: 'std', lock: 'std' },
-    },
-    entry: {
-      width: [['90', '90 ס״מ (סטנדרט)', 0], ['100', '100 ס״מ', 600]],
-      handle: [['lever', 'ידית מנוף', 0], ['bar60', 'ידית מוט 60 ס״מ', 350], ['bar120', 'ידית מוט 120 ס״מ', 650]],
-      lock: [['std', 'צילינדר רב-בריח', 0], ['secure', 'צילינדר מוגן העתקה', 380], ['smart', 'מנעול חכם (קוד וטביעת אצבע)', 1450]],
-      defaults: { width: '90', handle: 'lever', lock: 'std' },
-    },
-  };
+  /* ---------- settings ---------- */
   const DEFAULT_SETTINGS = { name: 'דלתות במקום', phone: '03-0000000', line: 'אולם תצוגה · רחוב התעשייה 1', vat: 18, valid: 30,
-    instI: 350, instE: 650, remI: 150, remE: 350, deposit: 30, prices: {} };
+    instI: 350, instE: 650, remI: 150, remE: 350, deposit: 30, prices: {}, opt: {} };
   let settings = { ...DEFAULT_SETTINGS, ...store.get('settings', {}) };
+  settings.opt = settings.opt || {};
   const priceOf = m => settings.prices[m.id] ?? m.price;
   const saveSettings = () => store.set('settings', settings);
+
+  /* ---------- option catalogs (prices are defaults; the price list tab overrides them) ---------- */
+  // גווני RAL נפוצים במניפת הצבעים. הגוון על המסך בקירוב בלבד.
+  const RAL = [['9016', 'לבן', '#F1F0EA'], ['9010', 'לבן שמנת', '#F1ECE1'], ['1013', 'לבן פנינה', '#E3D9C6'], ['1015', 'שנהב', '#E6D2B5'],
+    ['7035', 'אפור בהיר', '#CBD0CC'], ['7040', 'אפור חלון', '#9DA3A6'], ['7039', 'אפור קוורץ', '#6C6960'], ['7016', 'אנתרציט', '#383E42'],
+    ['7021', 'אפור-שחור', '#2F3234'], ['9005', 'שחור', '#111214'], ['8019', 'חום-אפור', '#3D3635'], ['8017', 'שוקולד', '#45322E'],
+    ['5003', 'כחול ספיר', '#1F3855'], ['5010', 'כחול', '#0E4C92'], ['5024', 'כחול פסטל', '#5D9BBF'], ['6034', 'טורקיז פסטל', '#7FB0B2'],
+    ['6021', 'ירוק חיוור', '#89AC76'], ['6005', 'ירוק אזוב', '#114232'], ['1023', 'צהוב', '#F7B500'], ['3020', 'אדום', '#C1121C'], ['3004', 'בורדו', '#6B1C23']];
+  const G = {
+    // דלתות פנים
+    iHandle: EX.interiorHandles,
+    iCyl: EX.cylinders,
+    iHinge: EX.hinges,
+    iMez: [{ v: 'none', l: 'ללא מזוזה', p: 0 }, ...EX.mezuzot],
+    iFrame: [{ v: 'std', l: 'משקוף רגיל', p: 0 }, { v: 'zero', l: 'משקוף נסתר ZERO', p: 900 }],
+    iWidth: [60, 70, 80, 90].map(w => ({ v: String(w), l: `${w} ס״מ`, p: w === 90 ? 150 : 0 })),
+    iHeight: [{ v: '204', l: '2.04 מ׳', p: 0 }, { v: '220', l: '2.20 מ׳', p: 350 }, { v: '240', l: '2.40 מ׳', p: 650 }],
+    iMamad: [{ v: 'on', l: 'התאמה לפתח ממ״ד', p: 450 }],
+    // דלתות כניסה
+    eRal: [{ v: 'all', l: 'צביעה בגוון מהמניפה', p: 450 }],
+    eGrille: [{ v: '__std', l: 'סורג רגיל', p: 0 }, { v: '__special', l: 'סורג מיוחד', p: 650 }],
+    eGColor: [{ v: 'black', l: 'שחור', sw: '#1A1A1A', p: 0 }, { v: 'white', l: 'לבן', sw: '#F4F4F2', p: 0 }, { v: 'door', l: 'בגוון הדלת', p: 0 },
+      { v: 'gold', l: 'זהב', sw: '#C2A05A', p: 250 }, { v: 'steel', l: 'נירוסטה', sw: '#B9BEC2', p: 300 }],
+    eGlass: [{ v: 'frost', l: 'חלבית', p: 0 }, { v: 'clear', l: 'שקופה', p: 0 }, { v: 'reed', l: 'מחורצת', p: 120 }, { v: 'tinted', l: 'מעושנת', p: 180 }],
+    eBelgian: [{ v: 'on', l: 'חלון בלגי נפתח עם רשת', p: 1200 }],
+    eSide: [{ v: 'none', l: 'ללא', p: 0 }, { v: 'right', l: 'מימין', p: 2900 }, { v: 'left', l: 'משמאל', p: 2900 }, { v: 'both', l: 'משני הצדדים', p: 5800 }],
+    eSideGrille: EX.sideGrilles.map(g => ({ v: g.num, l: g.num, img: g.src, p: 0 })),
+    eHandle: EX.entryHandles,
+    eHandleLen: [{ v: 'step', l: 'תוספת לכל מידת אורך', p: 120 }],
+    eCyl: [{ v: 'std', l: 'צילינדר רב-בריח סטנדרטי', p: 0 }, { v: 'mts', l: 'צילינדר MTS', p: 380 },
+      { v: 'interactive', l: 'צילינדר אינטראקטיב', p: 520 }, { v: 'smart', l: 'מנעול חכם: קוד, טביעת אצבע ואפליקציה', p: 1450 }],
+    eWidth: [{ v: '90', l: '90 ס״מ', p: 0 }, { v: '100', l: '100 ס״מ', p: 600 }],
+    eMez: [{ v: 'none', l: 'ללא מזוזה', p: 0 }, { v: 'silver', l: 'מזוזה כסף', sw: '#C9CCCF', p: 200 }, { v: 'black', l: 'מזוזה שחורה', sw: '#1E1F21', p: 200 }, { v: 'gold', l: 'מזוזה זהב', sw: '#C9A45A', p: 200 }],
+    eExtra: [{ v: 'peephole', l: 'עינית דיגיטלית עם מסך', p: 450 }, { v: 'closer', l: 'מחזיר שמן (סגירה עצמית)', p: 380 },
+      { v: 'elecCab', l: 'ארון חשמל מעוצב בגוון הדלת', p: 2400 }],
+  };
+  const GROUP_TITLES = { iHandle: 'ידיות לדלתות פנים', iCyl: 'צילינדר ונעילה', iHinge: 'צירים', iMez: 'מזוזה שקועה', iFrame: 'משקוף', iWidth: 'רוחב (פנים)',
+    iHeight: 'גובה (פנים)', iMamad: 'ממ״ד', eRal: 'צבע מהמניפה', eGrille: 'סורגים', eGColor: 'צבע הסורג', eGlass: 'זכוכית', eBelgian: 'חלון בלגי',
+    eSide: 'יחידת צד', eSideGrille: 'סורג ליחידת צד', eHandle: 'ידיות לדלתות כניסה', eHandleLen: 'אורך ידית מוט', eCyl: 'מנעול וצילינדר',
+    eWidth: 'רוחב (כניסה)', eMez: 'מזוזה דקורטיבית', eExtra: 'אביזרים לדלת כניסה' };
+  const P = (g, it) => settings.opt[g + ':' + it.v] ?? it.p;
+  const find = (g, v) => G[g].find(x => x.v === v) || G[g][0];
+  const grilleOf = num => EX.grilles.find(g => g.num === num);
+  const grillePrice = num => { const g = grilleOf(num); return g ? P('eGrille', find('eGrille', g.special ? '__special' : '__std')) : 0; };
+  const handleLenPrice = (h, len) => h.lens ? Math.max(0, h.lens.indexOf(len)) * P('eHandleLen', G.eHandleLen[0]) : 0;
+
+  const DEFAULTS = {
+    interior: { handle: 'grande-nickel', cyl: 'keykey', hinge: 'nickel', mez: 'none', frame: 'std', width: '80', height: '204', mamad: false },
+    entry: { ral: null, grille: '', grilleColor: 'black', glass: 'frost', belgian: false, sideUnit: 'none', sideGrille: '7500', handle: 'lever', handleLen: null,
+      cyl: 'std', width: '90', mez: 'none', peephole: false, closer: false, elecCab: false },
+  };
+  const COMMON = () => ({ side: 'right', install: true, remove: false, qty: 1, room: '' });
 
   /* ---------- state ---------- */
   const st = {
     kind: 'interior', series: 'all', q: '',
     model: CAT.interior.find(m => m.name === 'יובל') || CAT.interior[0], vi: 0,
-    opts: { ...OPTIONS.interior.defaults, side: 'right', install: true, remove: false, qty: 1, room: '' },
+    opts: { ...DEFAULTS.interior, ...COMMON() },
+    open: new Set(['color', 'handle']),
     bg: null, bgIsSample: true, quad: null, marking: true, light: -6, depth: 10,
     compare: [],
   };
@@ -55,9 +96,10 @@
   const imgCache = new Map();
   function loadImg(src) {
     if (imgCache.has(src)) return imgCache.get(src);
-    const p = new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const p = new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => { imgCache.delete(src); rej(new Error(src)); }; i.src = src; });
     imgCache.set(src, p); return p;
   }
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
   /* ---------- sample scenes (drawn, so the demo works with no photo) ---------- */
   function sampleScene(kind) {
@@ -191,7 +233,7 @@
     const sx = w / st.bg.width, sy = h / st.bg.height;
     const q = st.quad.map(([x, y]) => [x * sx, y * sy]);
     const mirror = st.opts.side === 'left';
-    warp(g, doorImg, q, mirror);
+    warp(g, doorImg, q, false);
     const path = () => { g.beginPath(); g.moveTo(q[0][0], q[0][1]); q.slice(1).forEach(p => g.lineTo(p[0], p[1])); g.closePath(); };
     // lighting match
     if (st.light) { g.save(); path(); g.clip(); g.fillStyle = st.light < 0 ? `rgba(0,0,0,${-st.light / 100})` : `rgba(255,255,255,${st.light / 100})`; g.fillRect(0, 0, w, h); g.restore(); }
@@ -279,59 +321,255 @@
   $('#light').addEventListener('input', e => { st.light = +e.target.value; render(); });
   $('#depth').addEventListener('input', e => { st.depth = +e.target.value; render(); });
 
+
+  /* ---------- door composition: color, glass and grille, handle, side panels ---------- */
+  const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const ralHex = code => (RAL.find(r => r[0] === code) || [])[2];
+  const leafColor = (v, o) => (o.ral && ralHex(o.ral)) || v.swatch;
+  function grilleColor(o, leaf) { return o.grilleColor === 'door' ? leaf : (find('eGColor', o.grilleColor).sw || '#1A1A1A'); }
+
+  function recolor(g, W, H, from, to) {
+    const d = g.getImageData(0, 0, W, H), p = d.data, src = hex2rgb(from), dst = hex2rgb(to);
+    const sl = Math.max(20, .3 * src[0] + .59 * src[1] + .11 * src[2]);
+    for (let i = 0; i < p.length; i += 4) {
+      if (p[i + 3] < 10) continue;
+      const dr = p[i] - src[0], dg = p[i + 1] - src[1], db = p[i + 2] - src[2], dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      const w = dist < 40 ? 1 : dist > 85 ? 0 : 1 - (dist - 40) / 45;
+      if (!w) continue;
+      const r = Math.max(.45, Math.min(1.6, (.3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]) / sl));
+      for (let k = 0; k < 3; k++) p[i + k] = p[i + k] * (1 - w) + Math.min(255, dst[k] * r) * w;
+    }
+    g.putImageData(d, 0, 0);
+  }
+  const tintCache = new Map();
+  async function tinted(src, color) {
+    const key = src + color;
+    if (tintCache.has(key)) return tintCache.get(key);
+    const im = await loadImg(src), c = mk(im.naturalWidth, im.naturalHeight), g = c.getContext('2d');
+    g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+    tintCache.set(key, c); return c;
+  }
+  function paintGlass(g, X, Y, w, h, kind) {
+    const tones = { frost: ['#E6EBEC', '#C7D0D2'], clear: ['#55646A', '#9AAEB4'], reed: ['#E1E7E8', '#C2CCCE'], tinted: ['#30363A', '#5A6266'] }[kind] || ['#E6EBEC', '#C7D0D2'];
+    let gr = g.createLinearGradient(X, Y, X, Y + h); gr.addColorStop(0, tones[0]); gr.addColorStop(1, tones[1]);
+    g.fillStyle = gr; g.fillRect(X, Y, w, h);
+    if (kind === 'reed') { g.fillStyle = 'rgba(255,255,255,.45)'; for (let x = X; x < X + w; x += 4) g.fillRect(x, Y, 1.6, h); }
+    gr = g.createLinearGradient(X, Y, X + w, Y + h);
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.42, 'rgba(255,255,255,.28)'); gr.addColorStop(.5, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(X, Y, w, h);
+  }
+  async function paintWindow(g, W, H, win, o, leaf) {
+    let X = win[0] * W, Y = win[1] * H, w = (win[2] - win[0]) * W, h = (win[3] - win[1]) * H;
+    X += w * .05; Y += h * .025; w *= .9; h *= .95;
+    paintGlass(g, X, Y, w, h, o.glass);
+    const gr = grilleOf(o.grille);
+    if (gr) g.drawImage(await tinted(gr.src, grilleColor(o, leaf)), X, Y, w, h);
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = Math.max(1.5, W * .008); g.strokeRect(X, Y, w, h);
+    if (o.belgian) { g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = Math.max(1, W * .004); g.strokeRect(X + w * .04, Y + h * .02, w * .92, h * .96); }
+  }
+  async function paintHandle(g, W, H, v, o) {
+    const h = find('iHandle', o.handle), im = await loadImg(h.cut);
+    const hw = W * .23, hh = hw * h.ar, cx = (v.hx + .045) * W, cy = v.hy * H;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.28)'; g.shadowBlur = W * .012; g.shadowOffsetY = W * .005;
+    g.drawImage(im, cx - hw * h.rx, cy - hh * h.ry, hw, hh); g.restore();
+    // רוזטה תחתונה: חור מנעול או סיבוב פנוי/תפוס
+    const r = W * .028, ky = cy + H * .055;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.22)'; g.shadowBlur = W * .008;
+    g.beginPath(); g.arc(cx, ky, r, 0, Math.PI * 2); g.fillStyle = h.fin; g.fill(); g.restore();
+    g.fillStyle = 'rgba(0,0,0,.6)';
+    if (o.cyl === 'privacy') g.fillRect(cx - r * .55, ky - r * .13, r * 1.1, r * .26);
+    else { g.beginPath(); g.arc(cx, ky - r * .22, r * .22, 0, Math.PI * 2); g.fill(); g.fillRect(cx - r * .1, ky - r * .22, r * .2, r * .6); }
+  }
+  function flip(c) { const o = mk(c.width, c.height), g = o.getContext('2d'); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(c, 0, 0); return o; }
+  const SIDE_RATIO = .36;
+  const sideUnits = u => ({ l: u === 'left' || u === 'both' ? 1 : 0, r: u === 'right' || u === 'both' ? 1 : 0 });
+  async function addSidePanels(door, o, leaf) {
+    const W = door.width, H = door.height, sw = Math.round(W * SIDE_RATIO), u = sideUnits(o.sideUnit);
+    const c = mk(W + sw * (u.l + u.r), H), g = c.getContext('2d');
+    g.drawImage(door, u.l * sw, 0);
+    const sg = find('eSideGrille', o.sideGrille), gi = await tinted(sg.img, grilleColor(o, leaf));
+    const panel = x => {
+      g.fillStyle = leaf; g.fillRect(x, 0, sw, H);
+      let gr = g.createLinearGradient(x, 0, x + sw, 0); gr.addColorStop(0, 'rgba(0,0,0,.12)'); gr.addColorStop(.5, 'rgba(255,255,255,.04)'); gr.addColorStop(1, 'rgba(0,0,0,.12)');
+      g.fillStyle = gr; g.fillRect(x, 0, sw, H);
+      const fx = sw * .2, fy = H * .05, X = x + fx, Y = fy, w = sw - 2 * fx, h = H - 2 * fy;
+      paintGlass(g, X, Y, w, h, o.glass);
+      g.drawImage(gi, X, Y, w, h);
+      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = Math.max(1.5, W * .008); g.strokeRect(X, Y, w, h);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x + (x === 0 ? sw - 3 : 0), 0, 3, H);
+    };
+    if (u.l) panel(0);
+    if (u.r) panel(u.l * sw + W);
+    return c;
+  }
+  async function buildDoor(m, v, o) {
+    const useClean = m.kind === 'interior' && v.clean;
+    const img = await loadImg(useClean ? v.clean : v.src);
+    const W = img.naturalWidth, H = img.naturalHeight, c = mk(W, H), g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const leaf = leafColor(v, o);
+    if (m.kind === 'entry') {
+      if (o.ral) recolor(g, W, H, v.swatch, leaf);
+      if (v.win && o.grille) await paintWindow(g, W, H, v.win, o, leaf);
+    } else if (useClean) await paintHandle(g, W, H, v, o);
+    let out = o.side === 'left' ? flip(c) : c;
+    if (m.kind === 'entry' && o.sideUnit !== 'none') out = await addSidePanels(out, o, leaf);
+    return out;
+  }
+  let doorSeq = 0;
+  async function updateDoor() {
+    const seq = ++doorSeq;
+    try { const c = await buildDoor(st.model, st.model.variants[st.vi], st.opts); if (seq === doorSeq) { doorImg = c; render(); } }
+    catch (e) { console.error(e); toast('תמונת הדלת לא נטענה'); }
+  }
+  // כשמוסיפים או מורידים יחידת צד, הפתח המסומן מתרחב או מצטמצם, והדלת עצמה נשארת במקומה
+  function refitQuad(prevUnit, nextUnit) {
+    const a = sideUnits(prevUnit), b = sideUnits(nextUnit);
+    const Wo = 1 + SIDE_RATIO * (a.l + a.r);
+    const uL = (SIDE_RATIO * (a.l - b.l)) / Wo, uR = (SIDE_RATIO * a.l + 1 + SIDE_RATIO * b.r) / Wo;
+    const map = squareToQuad(st.quad);
+    st.quad = [map(uL, 0), map(uR, 0), map(uR, 1), map(uL, 1)];
+  }
+
   /* ---------- catalog panel ---------- */
   const list = () => CAT[st.kind];
+  const hasWin = m => m.variants.some(v => v.win);
   function renderChips() {
     const series = [...new Set(list().map(m => m.series))];
-    const chips = [['all', 'הכל'], ...series.map(s => [s, s.replace('סדרת ', '')])];
+    const chips = [['all', 'הכל'], ...(st.kind === 'entry' ? [['win', 'עם חלון לסורג']] : []), ...series.map(s => [s, s.replace('סדרת ', '')])];
     $('#chips').innerHTML = series.length > 1 ? chips.map(([v, l]) => `<button class="chip" data-s="${v}" aria-pressed="${st.series === v}">${l}</button>`).join('') : '';
   }
   function renderGrid() {
     const q = st.q.trim();
-    const items = list().filter(m => (st.series === 'all' || m.series === st.series) && (!q || m.name.includes(q) || m.series.includes(q)));
+    const items = list().filter(m => (st.series === 'all' || (st.series === 'win' ? hasWin(m) : m.series === st.series)) && (!q || m.name.includes(q) || m.series.includes(q)));
     $('#grid').innerHTML = items.length ? items.map(m => `<button class="tile" data-id="${m.id}" aria-pressed="${m === st.model}">
         <img src="${m.variants[0].src}" alt="" loading="lazy"><span>${st.kind === 'entry' ? 'דגם ' : ''}${m.name}</span><small>${fmt(priceOf(m))}</small></button>`).join('')
-      : `<p style="grid-column:1/-1;color:var(--muted);margin:8px">לא נמצאו דגמים בשם "${q.replace(/[<>&"]/g, '')}".</p>`;
+      : `<p style="grid-column:1/-1;color:var(--muted);margin:8px">לא נמצאו דגמים בשם "${esc(q)}".</p>`;
   }
-  function optSelect(id, label, arr, val) {
-    return `<label class="field"><span>${label}</span><select id="${id}">${arr.map(([v, l, p]) => `<option value="${v}" ${v === val ? 'selected' : ''}>${l}${p ? ` (+${fmt(p)})` : ''}</option>`).join('')}</select></label>`;
+
+  // רכיבי בחירה חזותיים
+  const priceTag = p => p ? `<small>+${fmt(p)}</small>` : '<small class="incl">כלול</small>';
+  const picks = (key, items, cur, { group, cls = '', price } = {}) => `<div class="picks ${cls}">${items.map(it => {
+    const p = price ? price(it) : P(group, it);
+    return `<button class="pick" data-k="${key}" data-v="${it.v}" aria-pressed="${it.v === cur}" title="${esc(it.l)}">
+      ${it.img ? `<span class="pi"><img src="${it.img}" alt="" loading="lazy"></span>` : `<span class="pi none">${it.icon || ''}</span>`}
+      <span class="pl">${it.l}</span>${priceTag(p)}${it.badge ? `<em>${it.badge}</em>` : ''}</button>`; }).join('')}</div>`;
+  const chipRow = (key, items, cur, group) => `<div class="chips-row">${items.map(it => `<button class="chip" data-k="${key}" data-v="${it.v}" aria-pressed="${it.v === cur}">${it.sw ? `<i style="background:${it.sw}"></i>` : ''}${it.l}${group && P(group, it) ? ` <small>+${fmt(P(group, it))}</small>` : ''}</button>`).join('')}</div>`;
+  const check = (key, label, p, on) => `<label class="ck"><input type="checkbox" data-ck="${key}" ${on ? 'checked' : ''}><span>${label}</span>${p ? `<small>+${fmt(p)}</small>` : ''}</label>`;
+  const sec = (id, title, value, price, body, note = '') => `<details class="sec" data-sec="${id}" ${st.open.has(id) ? 'open' : ''}>
+    <summary><span class="st">${title}</span><span class="sv">${value}</span>${price ? `<span class="sp">+${fmt(price)}</span>` : ''}</summary>
+    <div class="sb">${note ? `<p class="note">${note}</p>` : ''}${body}</div></details>`;
+
+  function calc(m = st.model, vi = st.vi, o = st.opts) {
+    const v = m.variants[vi], L = [[`דלת ${m.brand} ${m.kind === 'entry' ? 'דגם ' : ''}${m.name}, כולל משקוף`, priceOf(m)]], D = [];
+    const add = (label, price, desc = label) => { if (price) L.push([label, price]); if (desc) D.push(desc); };
+    if (m.kind === 'interior') {
+      add(`גוון ${v.color}`, v.extra);
+      const fr = find('iFrame', o.frame); add(fr.l, P('iFrame', fr), o.frame === 'std' ? '' : fr.l);
+      const w = find('iWidth', o.width), h = find('iHeight', o.height);
+      add(`רוחב ${w.l}`, P('iWidth', w)); add(`גובה ${h.l}`, P('iHeight', h));
+      D.push(`פתיחה ל${o.side === 'left' ? 'שמאל' : 'ימין'}`);
+      const hd = find('iHandle', o.handle); add(hd.l, P('iHandle', hd));
+      const cy = find('iCyl', o.cyl); add(cy.l, P('iCyl', cy));
+      if (o.frame !== 'zero') { const hg = find('iHinge', o.hinge); add(hg.l, P('iHinge', hg)); } else D.push('צירים נסתרים');
+      if (o.mez !== 'none') { const mz = find('iMez', o.mez); add(mz.l, P('iMez', mz)); }
+      if (o.mamad) add(G.iMamad[0].l, P('iMamad', G.iMamad[0]));
+    } else {
+      if (o.ral) { const r = RAL.find(x => x[0] === o.ral); add(`צביעה ב-RAL ${r[0]} ${r[1]}`, P('eRal', G.eRal[0])); }
+      else add(`גוון ${v.color}`, 0);
+      if (v.win) {
+        if (o.grille) { const gr = grilleOf(o.grille); add(`סורג ${gr.num}${gr.special ? ' (מיוחד)' : ''}`, grillePrice(o.grille)); }
+        else D.push('סורג כמו בתמונה');
+        const gc = find('eGColor', o.grilleColor); add(`סורג ב${gc.v === 'door' ? 'גוון הדלת' : 'צבע ' + gc.l}`, P('eGColor', gc));
+        const gl = find('eGlass', o.glass); add(`זכוכית ${gl.l}`, P('eGlass', gl));
+        if (o.belgian) add(G.eBelgian[0].l, P('eBelgian', G.eBelgian[0]));
+      }
+      if (o.sideUnit !== 'none') { const s = find('eSide', o.sideUnit); add(`יחידת צד ${s.l} עם סורג ${o.sideGrille}`, P('eSide', s)); }
+      const w = find('eWidth', o.width); add(`רוחב ${w.l}`, P('eWidth', w));
+      D.push(`פתיחה ל${o.side === 'left' ? 'שמאל' : 'ימין'}`);
+      const hd = find('eHandle', o.handle); add(hd.l + (o.handleLen ? ` ${o.handleLen} ס״מ` : ''), P('eHandle', hd) + handleLenPrice(hd, o.handleLen));
+      const cy = find('eCyl', o.cyl); add(cy.l, P('eCyl', cy));
+      if (o.mez !== 'none') { const mz = find('eMez', o.mez); add(mz.l, P('eMez', mz)); }
+      G.eExtra.forEach(x => { if (o[x.v]) add(x.l, P('eExtra', x)); });
+    }
+    if (o.install) add('התקנה', m.kind === 'entry' ? settings.instE : settings.instI);
+    else D.push('ללא התקנה');
+    if (o.remove) add('פירוק ופינוי דלת קיימת', m.kind === 'entry' ? settings.remE : settings.remI);
+    const unit = L.reduce((s, x) => s + (+x[1] || 0), 0);
+    return { lines: L, unit, total: unit * (o.qty || 1), desc: D.filter(Boolean).join(' · ') };
   }
-  function calc(model = st.model, vi = st.vi, o = st.opts, kind = model.kind) {
-    const O = OPTIONS[kind], v = model.variants[vi];
-    const pick = (arr, val) => arr.find(a => a[0] === val) || arr[0];
-    const w = pick(O.width, o.width), h = pick(O.handle, o.handle), l = pick(O.lock, o.lock);
-    const lines = [[`דלת ${model.brand} ${kind === 'entry' ? 'דגם ' : ''}${model.name}, כולל משקוף`, priceOf(model)]];
-    if (v.extra) lines.push([`גוון ${v.color}`, v.extra]);
-    if (w[2]) lines.push([`רוחב ${w[1]}`, w[2]]);
-    if (h[2]) lines.push([h[1], h[2]]);
-    if (l[2]) lines.push([l[1], l[2]]);
-    if (o.install) lines.push(['התקנה', kind === 'entry' ? settings.instE : settings.instI]);
-    if (o.remove) lines.push(['פירוק ופינוי דלת קיימת', kind === 'entry' ? settings.remE : settings.remI]);
-    const unit = lines.reduce((s, x) => s + (+x[1] || 0), 0);
-    const desc = [`גוון ${v.color}`, `רוחב ${w[1].replace(' (סטנדרט)', '')}`, `פתיחה ל${o.side === 'left' ? 'שמאל' : 'ימין'}`, h[1], l[1],
-      o.install ? 'כולל התקנה' : 'ללא התקנה', o.remove ? 'כולל פירוק דלת קיימת' : ''].filter(Boolean).join(' · ');
-    return { lines, unit, total: unit * (o.qty || 1), desc };
+
+  function sectionsInterior(m, v, o) {
+    const hd = find('iHandle', o.handle), cy = find('iCyl', o.cyl), hg = find('iHinge', o.hinge), fr = find('iFrame', o.frame);
+    const w = find('iWidth', o.width), h = find('iHeight', o.height), mz = find('iMez', o.mez);
+    const extrasPrice = (o.mez !== 'none' ? P('iMez', mz) : 0) + (o.mamad ? P('iMamad', G.iMamad[0]) : 0);
+    return [
+      sec('color', 'גוון', v.color, v.extra, `<div class="swatches">${m.variants.map((x, i) =>
+        `<button class="sw" data-vi="${i}" aria-pressed="${i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}${x.extra ? ` +${fmt(x.extra)}` : ''}</button>`).join('')}</div>`),
+      sec('handle', 'ידית', hd.l.replace('ידית ', ''), P('iHandle', hd), picks('handle', G.iHandle, o.handle, { group: 'iHandle', cls: 'hw' }),
+        v.clean ? 'הידית שבוחרים מופיעה על הדלת בהדמיה.' : 'בדגם הזה הידית לא מוחלפת בהדמיה, אבל נכנסת להצעת המחיר.'),
+      sec('lock', 'נעילה', cy.l, P('iCyl', cy), picks('cyl', G.iCyl, o.cyl, { group: 'iCyl', cls: 'hw' })),
+      o.frame === 'zero' ? '' : sec('hinge', 'צירים', hg.l.replace('צירים ', ''), P('iHinge', hg), picks('hinge', G.iHinge, o.hinge, { group: 'iHinge', cls: 'hw' })),
+      sec('size', 'משקוף, מידות ופתיחה', `${fr.v === 'zero' ? 'ZERO · ' : ''}${w.l} · ${h.l} · ${o.side === 'left' ? 'שמאל' : 'ימין'}`,
+        P('iFrame', fr) + P('iWidth', w) + P('iHeight', h),
+        `<div class="row-l"><span>משקוף</span>${chipRow('frame', G.iFrame, o.frame, 'iFrame')}</div>
+         <div class="row-l"><span>רוחב</span>${chipRow('width', G.iWidth, o.width, 'iWidth')}</div>
+         <div class="row-l"><span>גובה</span>${chipRow('height', G.iHeight, o.height, 'iHeight')}</div>
+         <div class="row-l"><span>כיוון פתיחה</span>${chipRow('side', [{ v: 'right', l: 'ימין' }, { v: 'left', l: 'שמאל' }], o.side)}</div>`,
+        o.frame === 'zero' ? 'משקוף ZERO מגיע עם צירים נסתרים, והדלת נראית חלק מהקיר.' : ''),
+      sec('extras', 'מזוזה וממ״ד', [o.mez !== 'none' ? mz.l : '', o.mamad ? 'ממ״ד' : ''].filter(Boolean).join(' · ') || 'ללא', extrasPrice,
+        picks('mez', G.iMez, o.mez, { group: 'iMez', cls: 'hw' }) + check('mamad', G.iMamad[0].l, P('iMamad', G.iMamad[0]), o.mamad)),
+    ];
+  }
+  function sectionsEntry(m, v, o) {
+    const leaf = leafColor(v, o), ral = o.ral && RAL.find(r => r[0] === o.ral);
+    const hd = find('eHandle', o.handle), cy = find('eCyl', o.cyl), w = find('eWidth', o.width), mz = find('eMez', o.mez), side = find('eSide', o.sideUnit);
+    const gr = grilleOf(o.grille), gc = find('eGColor', o.grilleColor), gl = find('eGlass', o.glass);
+    const winPrice = v.win ? (o.grille ? grillePrice(o.grille) : 0) + P('eGColor', gc) + P('eGlass', gl) + (o.belgian ? P('eBelgian', G.eBelgian[0]) : 0) : 0;
+    const extrasOn = G.eExtra.filter(x => o[x.v]);
+    const grilleItems = [{ v: '', l: 'כמו בתמונה', p: 0, icon: '↺' }, ...EX.grilles.map(g => ({ v: g.num, l: g.num, img: g.src, badge: g.special ? 'מיוחד' : '' }))];
+    return [
+      sec('color', 'גוון', ral ? `RAL ${ral[0]} ${ral[1]}` : v.color, o.ral ? P('eRal', G.eRal[0]) : 0,
+        `<div class="row-l"><span>גוונים מהקטלוג</span><div class="swatches">${m.variants.map((x, i) =>
+          `<button class="sw" data-vi="${i}" aria-pressed="${!o.ral && i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}</button>`).join('')}</div></div>
+         <div class="row-l"><span>מניפת גוונים (RAL) · +${fmt(P('eRal', G.eRal[0]))}</span><div class="ral">${RAL.map(r =>
+          `<button class="ralb" data-k="ral" data-v="${r[0]}" aria-pressed="${o.ral === r[0]}" title="RAL ${r[0]} ${r[1]}"><i style="background:${r[2]}"></i><small>${r[0]}</small></button>`).join('')}</div></div>`,
+        'כל דלת אפשר להזמין בכל גוון מהמניפה. הגוון על המסך בקירוב.'),
+      sec('grille', 'סורג וזכוכית', v.win ? `${gr ? 'סורג ' + gr.num : 'סורג כמו בתמונה'} · ${gc.l} · ${gl.l}` : 'אין חלון בדגם', winPrice,
+        v.win ? `${picks('grille', grilleItems, o.grille, { cls: 'gr', price: it => it.v ? grillePrice(it.v) : 0 })}
+          <div class="row-l"><span>צבע הסורג</span>${chipRow('grilleColor', G.eGColor.map(x => x.v === 'door' ? { ...x, sw: leaf } : x), o.grilleColor, 'eGColor')}</div>
+          <div class="row-l"><span>זכוכית</span>${chipRow('glass', G.eGlass, o.glass, 'eGlass')}</div>
+          ${check('belgian', G.eBelgian[0].l, P('eBelgian', G.eBelgian[0]), o.belgian)}`
+          : `<button class="btn small" data-act="winFilter">הצגת דגמים עם חלון</button>`,
+        v.win ? `${EX.grilles.length} סורגים מקטלוג אלידור. ייתכנו שינויים בפרופורציות לפי מידות החלון.` : 'לדגם הזה אין חלון זכוכית, ולכן אי אפשר להרכיב בו סורג.'),
+      sec('sideunit', 'יחידת צד', o.sideUnit === 'none' ? 'ללא' : `${side.l} · סורג ${o.sideGrille}`, P('eSide', side),
+        `${chipRow('sideUnit', G.eSide, o.sideUnit, 'eSide')}${o.sideUnit === 'none' ? '' : `<div class="row-l"><span>סורג ליחידת הצד</span>${picks('sideGrille', G.eSideGrille, o.sideGrille, { group: 'eSideGrille', cls: 'gr side' })}</div>`}`,
+        'חלון קבוע עם סורג לצד הדלת. הפתח המסומן בתמונה מתרחב אוטומטית.'),
+      sec('handle', 'ידית', hd.l + (o.handleLen ? ` · ${o.handleLen} ס״מ` : ''), P('eHandle', hd) + handleLenPrice(hd, o.handleLen),
+        picks('handle', G.eHandle, o.handle, { group: 'eHandle', cls: 'hw eh' }) +
+        (hd.lens ? `<div class="row-l"><span>אורך</span>${chipRow('handleLen', hd.lens.map((x, i) => ({ v: String(x), l: `${x} ס״מ`, p: i * P('eHandleLen', G.eHandleLen[0]) })), String(o.handleLen))}</div>` : ''),
+        'ידיות ופרזול מקטלוג אלידור. ההדמיה מציגה את הידית שבתמונת הדגם.'),
+      sec('lock', 'מנעול וצילינדר', cy.l, P('eCyl', cy), chipRow('cyl', G.eCyl, o.cyl, 'eCyl')),
+      sec('size', 'מידות ופתיחה', `${w.l} · ${o.side === 'left' ? 'שמאל' : 'ימין'}`, P('eWidth', w),
+        `<div class="row-l"><span>רוחב</span>${chipRow('width', G.eWidth, o.width, 'eWidth')}</div>
+         <div class="row-l"><span>כיוון פתיחה</span>${chipRow('side', [{ v: 'right', l: 'ימין' }, { v: 'left', l: 'שמאל' }], o.side)}</div>`),
+      sec('extras', 'אביזרים', [o.mez !== 'none' ? mz.l : '', ...extrasOn.map(x => x.l.split(' (')[0])].filter(Boolean).join(' · ') || 'ללא',
+        (o.mez !== 'none' ? P('eMez', mz) : 0) + extrasOn.reduce((s, x) => s + P('eExtra', x), 0),
+        `${G.eExtra.map(x => check(x.v, x.l, P('eExtra', x), o[x.v])).join('')}<div class="row-l"><span>מזוזה</span>${chipRow('mez', G.eMez, o.mez, 'eMez')}</div>`),
+    ];
   }
   function renderDetail() {
-    const m = st.model, v = m.variants[st.vi], o = st.opts, O = OPTIONS[m.kind];
-    const c = calc();
+    const m = st.model, v = m.variants[st.vi], o = st.opts, c = calc();
+    const secs = (m.kind === 'entry' ? sectionsEntry : sectionsInterior)(m, v, o).join('');
     $('#detail').innerHTML = `
       <div><h2>${m.kind === 'entry' ? 'דגם ' : ''}${m.name}</h2><div class="sub">${m.brand} · ${m.series} · ${m.desc}</div></div>
-      <div class="field"><span>גוון${m.variants.length > 1 ? ` (${m.variants.length} אפשרויות)` : ''}</span><div class="swatches">${m.variants.map((x, i) =>
-        `<button class="sw" data-vi="${i}" aria-pressed="${i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}${x.extra ? ` +${fmt(x.extra)}` : ''}</button>`).join('')}</div></div>
-      <div class="opts">
-        ${optSelect('oWidth', 'רוחב', O.width, o.width)}
-        <div class="field"><span>כיוון פתיחה</span><div class="side-toggle">
-          <button class="btn small" data-side="right" aria-pressed="${o.side === 'right'}">ימין</button>
-          <button class="btn small" data-side="left" aria-pressed="${o.side === 'left'}">שמאל</button></div></div>
-        ${optSelect('oHandle', 'ידית', O.handle, o.handle)}
-        ${optSelect('oLock', 'מנעול', O.lock, o.lock)}
-        <label class="field"><span>חדר / מיקום</span><input type="text" id="oRoom" value="${(o.room || '').replace(/"/g, '&quot;')}" placeholder="${m.kind === 'entry' ? 'כניסה ראשית' : 'חדר שינה הורים'}"></label>
-        <label class="field"><span>כמות</span><input type="number" id="oQty" min="1" value="${o.qty}"></label>
+      <div class="secs">${secs}
+        <details class="sec" data-sec="install" ${st.open.has('install') ? 'open' : ''}><summary><span class="st">התקנה</span><span class="sv">${o.install ? 'כולל התקנה' : 'ללא התקנה'}${o.remove ? ' · פירוק' : ''}</span></summary>
+          <div class="sb">${check('install', 'התקנה', m.kind === 'entry' ? settings.instE : settings.instI, o.install)}${check('remove', 'פירוק ופינוי דלת קיימת', m.kind === 'entry' ? settings.remE : settings.remI, o.remove)}</div></details>
       </div>
-      <div class="checks">
-        <label><input type="checkbox" id="oInstall" ${o.install ? 'checked' : ''}> התקנה (${fmt(m.kind === 'entry' ? settings.instE : settings.instI)})</label>
-        <label><input type="checkbox" id="oRemove" ${o.remove ? 'checked' : ''}> פירוק דלת קיימת (${fmt(m.kind === 'entry' ? settings.remE : settings.remI)})</label>
+      <div class="opts">
+        <label class="field"><span>חדר / מיקום</span><input type="text" id="oRoom" value="${esc(o.room || '')}" placeholder="${m.kind === 'entry' ? 'כניסה ראשית' : 'חדר שינה הורים'}"></label>
+        <label class="field"><span>כמות</span><input type="number" id="oQty" min="1" value="${o.qty}"></label>
       </div>
       <div class="price">
         ${c.lines.map(([l, p]) => `<div class="ln"><span>${l}</span><b>${fmt(p)}</b></div>`).join('')}
@@ -341,23 +579,18 @@
       </div>
       <div class="actions"><button class="btn primary" id="addBtn">הוספה להצעת המחיר</button></div>`;
   }
-  async function selectDoor() {
-    const src = st.model.variants[st.vi].src;
-    try { doorImg = await loadImg(src); } catch { doorImg = null; toast('תמונת הדלת לא נטענה'); }
-    if (st.model.variants[st.vi].src === src) render();
-  }
   function refreshPanel() { renderChips(); renderGrid(); renderDetail(); }
 
   function setKind(kind) {
     if (st.kind === kind) return;
     st.kind = kind; st.series = 'all'; st.q = ''; $('#search').value = '';
     $$('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === kind));
-    st.model = kind === 'entry' ? (CAT.entry.find(m => m.name === '7014') || CAT.entry[0]) : (CAT.interior.find(m => m.name === 'יובל') || CAT.interior[0]);
+    st.model = kind === 'entry' ? (CAT.entry.find(m => m.name === '3014') || CAT.entry[0]) : (CAT.interior.find(m => m.name === 'יובל') || CAT.interior[0]);
     st.vi = 0;
-    const keep = { side: st.opts.side, install: st.opts.install, remove: st.opts.remove, qty: 1, room: '' };
-    st.opts = { ...OPTIONS[kind].defaults, ...keep };
+    st.opts = { ...DEFAULTS[kind], side: st.opts.side, install: st.opts.install, remove: st.opts.remove, qty: 1, room: '' };
+    st.open = new Set(kind === 'entry' ? ['color', 'grille'] : ['color', 'handle']);
     if (st.bgIsSample) useSample();
-    refreshPanel(); selectDoor();
+    refreshPanel(); updateDoor();
   }
   $$('.seg button').forEach(b => b.addEventListener('click', () => setKind(b.dataset.kind)));
   $('#search').addEventListener('input', e => { st.q = e.target.value; renderGrid(); });
@@ -365,30 +598,34 @@
   $('#grid').addEventListener('click', e => {
     const t = e.target.closest('.tile'); if (!t) return;
     st.model = byId[t.dataset.id]; st.vi = 0;
+    if (st.kind === 'entry') st.opts.ral = null;
     $$('.tile', $('#grid')).forEach(x => x.setAttribute('aria-pressed', x === t));
-    renderDetail(); selectDoor();
+    renderDetail(); updateDoor();
   });
   const detail = $('#detail');
+  detail.addEventListener('toggle', e => { const d = e.target.closest('.sec'); if (!d) return; d.open ? st.open.add(d.dataset.sec) : st.open.delete(d.dataset.sec); }, true);
   detail.addEventListener('click', e => {
     const sw = e.target.closest('.sw');
-    if (sw) { st.vi = +sw.dataset.vi; renderDetail(); selectDoor(); return; }
-    const sd = e.target.closest('[data-side]');
-    if (sd) { st.opts.side = sd.dataset.side; renderDetail(); render(); return; }
+    if (sw) { st.vi = +sw.dataset.vi; st.opts.ral = null; renderDetail(); updateDoor(); return; }
+    if (e.target.closest('[data-act="winFilter"]')) { st.series = 'win'; renderChips(); renderGrid(); $('#grid').scrollTop = 0; toast('מוצגים דגמים עם חלון לסורג'); return; }
+    const b = e.target.closest('[data-k]');
+    if (b) {
+      const k = b.dataset.k, o = st.opts; let v = b.dataset.v;
+      if (k === 'ral') v = o.ral === v ? null : v;
+      if (k === 'handleLen') v = +v;
+      if (k === 'sideUnit' && v !== o.sideUnit) refitQuad(o.sideUnit, v);
+      o[k] = v;
+      if (k === 'handle') { const h = find('eHandle', v); o.handleLen = st.kind === 'entry' && h.lens ? h.lens[0] : null; }
+      renderDetail(); updateDoor(); return;
+    }
     if (e.target.closest('#addBtn')) addToQuote();
   });
   detail.addEventListener('change', e => {
-    const id = e.target.id, o = st.opts;
-    if (id === 'oWidth') o.width = e.target.value;
-    else if (id === 'oHandle') o.handle = e.target.value;
-    else if (id === 'oLock') o.lock = e.target.value;
-    else if (id === 'oInstall') o.install = e.target.checked;
-    else if (id === 'oRemove') o.remove = e.target.checked;
-    else if (id === 'oQty') o.qty = Math.max(1, Math.round(+e.target.value || 1));
-    else return;
-    renderDetail();
+    const o = st.opts, ck = e.target.dataset.ck;
+    if (ck) { o[ck] = e.target.checked; renderDetail(); if (ck === 'belgian') updateDoor(); return; }
+    if (e.target.id === 'oQty') { o.qty = Math.max(1, Math.round(+e.target.value || 1)); renderDetail(); }
   });
   detail.addEventListener('input', e => { if (e.target.id === 'oRoom') st.opts.room = e.target.value; });
-
   /* ---------- compare ---------- */
   function renderCompare() {
     const cells = st.compare.map((c, i) => `<div class="cmp"><img src="${c.img}" alt="הדמיית ${c.title}">
@@ -400,7 +637,7 @@
   $('#snapBtn').addEventListener('click', () => {
     const m = st.model, v = m.variants[st.vi];
     const snap = { img: snapshot(700), title: `${m.kind === 'entry' ? 'דגם ' : ''}${m.name} · ${v.color}`, sub: m.series, total: calc().total,
-      cfg: { kind: st.kind, id: m.id, vi: st.vi, opts: { ...st.opts } } };
+      cfg: { kind: st.kind, id: m.id, vi: st.vi, opts: { ...st.opts }, quad: st.quad.map(q => q.slice()) } };
     st.compare = [snap, ...st.compare].slice(0, 3); renderCompare(); toast('נשמר להשוואה');
   });
   $('#compareRow').addEventListener('click', e => {
@@ -410,7 +647,8 @@
       const c = st.compare[+l.dataset.load].cfg;
       if (st.kind !== c.kind) setKind(c.kind);
       st.model = byId[c.id]; st.vi = c.vi; st.opts = { ...c.opts };
-      refreshPanel(); selectDoor();
+      if (c.quad && st.bg) st.quad = c.quad.map(q => q.slice());
+      refreshPanel(); updateDoor();
     }
   });
 
@@ -418,7 +656,7 @@
   function addToQuote() {
     const m = st.model, v = m.variants[st.vi], c = calc();
     quote.items.push({ id: m.id, kind: m.kind, title: `${m.kind === 'entry' ? 'דלת כניסה' : 'דלת פנים'} ${m.brand} · ${m.kind === 'entry' ? 'דגם ' : ''}${m.name}`,
-      room: st.opts.room.trim(), desc: c.desc, unit: c.unit, qty: st.opts.qty, img: snapshot(640), vi: st.vi, opts: { ...st.opts } });
+      room: st.opts.room.trim(), desc: c.desc, lines: c.lines, unit: c.unit, qty: st.opts.qty, img: snapshot(640), vi: st.vi, opts: { ...st.opts } });
     quote.approved = null; saveQuote(); updateCount();
     st.opts.room = ''; st.opts.qty = 1; renderDetail();
     toast(`נוספה להצעה (${quote.items.length} פריטים)`);
@@ -434,7 +672,7 @@
     $('#pNum').innerHTML = `מס׳ ${quote.num}<br>${new Date(quote.created).toLocaleDateString('he-IL')}`;
     $('#cName').value = quote.customer.name; $('#cPhone').value = quote.customer.phone; $('#cAddr').value = quote.customer.addr;
     $('#itemsBody').innerHTML = quote.items.length ? quote.items.map((it, i) => `<tr>
-      <td><div class="item-main">${it.img ? `<img src="${it.img}" alt="">` : ''}<div style="min-width:0">${it.room ? `<span class="room">${esc(it.room)}</span><br>` : ''}<b>${it.title}</b><p>${it.desc}</p>
+      <td><div class="item-main">${it.img ? `<img src="${it.img}" alt="">` : ''}<div style="min-width:0">${it.room ? `<span class="room">${esc(it.room)}</span><br>` : ''}<b>${it.title}</b><p>${it.desc}</p>${it.lines ? `<details class="brk"><summary>פירוט מחיר</summary>${it.lines.map(([l, p]) => `<div><span>${l}</span><span>${fmt(p)}</span></div>`).join('')}</details>` : ''}
         <button class="rm" data-rm="${i}">הסרת פריט</button></div></div></td>
       <td class="n"><input class="qty" type="number" min="1" value="${it.qty}" data-qty="${i}" aria-label="כמות"></td>
       <td class="n">${fmt(it.unit)}</td><td class="n">${fmt(it.unit * it.qty)}</td></tr>`).join('')
@@ -455,7 +693,6 @@
       <div><span>מע״מ ${settings.vat}%</span><b>${fmt(t.vat)}</b></div>
       <div class="grand"><span>סה״כ לתשלום</span><b>${fmt(t.grand)}</b></div>`;
   }
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function quoteText() {
     const t = totals();
     const rows = quote.items.map((it, i) => `${i + 1}. ${it.room ? it.room + ' – ' : ''}${it.title}\n   ${it.desc}\n   ${it.qty} × ${fmt(it.unit)} = ${fmt(it.unit * it.qty)}`);
@@ -518,13 +755,17 @@
       <td>${m.kind === 'entry' ? 'דגם ' : ''}${m.name}</td><td>${m.series}</td><td>${m.variants.length}</td>
       <td><input type="number" min="0" step="50" data-price="${m.id}" value="${priceOf(m)}" aria-label="מחיר ${m.name}"></td></tr>`).join('');
     $('#ptBody').innerHTML = group('דלתות פנים · טלדור', CAT.interior) + group('דלתות כניסה · אלידור', CAT.entry);
+    $('#optBody').innerHTML = Object.entries(GROUP_TITLES).map(([g, title]) => `<tr class="grp"><td colspan="3">${title}</td></tr>` +
+      G[g].map(it => `<tr><td>${it.img ? `<img src="${it.img}" alt="" loading="lazy">` : (it.sw ? `<i class="dot" style="background:${it.sw}"></i>` : '')}</td><td>${it.l}</td>
+        <td><input type="number" min="0" step="10" data-opt="${g}:${it.v}" value="${P(g, it)}" aria-label="מחיר ${esc(it.l)}"></td></tr>`).join('')).join('');
   }
   S_FIELDS.forEach(([id, k, num]) => $('#' + id).addEventListener('input', e => {
     settings[k] = num ? (+e.target.value || 0) : e.target.value; saveSettings(); applyBrand();
   }));
   $('#ptBody').addEventListener('input', e => { const i = e.target.closest('[data-price]'); if (!i) return; settings.prices[i.dataset.price] = +i.value || 0; saveSettings(); });
+  $('#optBody').addEventListener('input', e => { const i = e.target.closest('[data-opt]'); if (!i) return; settings.opt[i.dataset.opt] = +i.value || 0; saveSettings(); });
   $('#resetPrices').addEventListener('click', () => { $('#resetPrices').hidden = true; $('#resetConfirm').hidden = false; setTimeout(() => { $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; }, 4000); });
-  $('#resetConfirm').addEventListener('click', () => { settings = { ...DEFAULT_SETTINGS, prices: {} }; saveSettings(); renderSettings(); applyBrand(); $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; toast('המחירים חזרו לערכי הדוגמה'); });
+  $('#resetConfirm').addEventListener('click', () => { settings = { ...DEFAULT_SETTINGS, prices: {}, opt: {} }; saveSettings(); renderSettings(); applyBrand(); $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; toast('המחירים חזרו לערכי הדוגמה'); });
   function applyBrand() { $('#bizName').textContent = settings.name || 'דלתות במקום'; }
 
   /* ---------- views & toast ---------- */
@@ -541,7 +782,7 @@
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => { t.hidden = true; }, 2600); }
 
   /* ---------- boot ---------- */
-  applyBrand(); updateCount(); renderCompare(); useSample(); refreshPanel(); selectDoor();
+  applyBrand(); updateCount(); renderCompare(); useSample(); refreshPanel(); updateDoor();
   const start = (location.hash || '').slice(1);
   if (['quote', 'settings'].includes(start)) show(start);
 })();
