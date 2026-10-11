@@ -946,6 +946,73 @@ console.log('A span covers the whole run, not a substring of its first word');
      span('hello there', 'hello', 'nope'), null);
 }
 
+// ── Korean, as it is actually typed ───────────────────────────
+// The corpus is full sentences and Korean scored 100% on it while scoring
+// 50% on chat. Two causes, both measured:
+//
+//   a single word needed four syllables to speak, and Korean chat is built
+//   out of three — 뭐해요, 고마워, 아니요, 했어요, 알았어 were all silent;
+//
+//   COMMON_KO_WORDS held 94 words, which is also the list realWordsProduced
+//   uses to decide which language explains a sentence, so "좋은 하루 되세요"
+//   scored zero real Korean words and lost a 17-to-17 tie to Russian.
+//
+// Phrases are converted to Latin by Kiko's own table, so the input is exactly
+// what the browser receives.
+console.log('Everyday and business Korean, converted by the keyboard table');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const fires = p => {
+    const typed = kiko.down.ko(p);
+    const d = kiko.analyzeText(typed);
+    return !!d && (d.lang || 'he') === 'ko';
+  };
+  const floor = (label, list, min) => {
+    const hit = list.filter(fires).length;
+    if (hit >= min) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${label}: ${hit} of ${list.length}, floor is ${min}`);
+    list.filter(p => !fires(p)).forEach(p =>
+      console.log(`        ${p}   (${kiko.down.ko(p)})`));
+  };
+  // What a founder or CEO types. 14 of 15 before, all 15 now.
+  floor('business Korean', [
+    '확인했습니다','회의 일정','계약서 검토','내일 뵙겠습니다','자료 보내주세요',
+    '검토 부탁드립니다','좋은 하루 되세요','연락드리겠습니다','가능합니다',
+    '일정 조율','미팅 잡아주세요','보고서 첨부합니다','빠른 답변 감사합니다',
+    '투자 검토','사업 계획서'], 15);
+  // Chat. 5 of 10 before.
+  floor('conversational Korean', [
+    '어디세요','뭐해요','지금 가요','알았어','고마워','괜찮아요','잘 지내세요',
+    '언제 만날까요','좀 늦어요','다 했어요'], 10);
+  // Greetings. 네 is one syllable and two keystrokes and stays out: there is
+  // no amount of evidence in "sp" to justify speaking.
+  floor('greetings', [
+    '안녕하세요','감사합니다','아니요','죄송합니다','수고하셨습니다',
+    '알겠습니다','잠시만요','반갑습니다','안녕히 계세요'], 9);
+
+  // The three-syllable rule itself, since that is what moved.
+  const soloFires = w => fires(w);
+  if (['뭐해요','고마워','아니요','했어요'].every(soloFires)) { pass++; }
+  else { fail++; console.log('  FAIL  a three-syllable word no longer speaks on its own'); }
+  // Two syllables still needs a neighbour — the cliff is between two and
+  // three, measured: at two, 28 single English words and 229 of 20,000 pairs
+  // start firing, 173 of the pairs claimed by Korean.
+  if (!fires('안녕')) { pass++; }
+  else { fail++; console.log('  FAIL  a two-syllable word spoke on its own'); }
+
+  // The tie that sent a Korean sign-off to Russian.
+  {
+    const d = kiko.analyzeText(kiko.down.ko('좋은 하루 되세요'));
+    if (d && (d.lang || 'he') === 'ko' && d.converted === '좋은 하루 되세요') { pass++; }
+    else { fail++; console.log('  FAIL  좋은 하루 되세요 went to '
+                               + (d ? (d.lang || 'he') + ': ' + d.converted : 'nothing')); }
+  }
+}
+
 console.log('An expired trial still notices, once a day');
 {
   const due = kiko.expiredNudgeDue;
@@ -1546,12 +1613,15 @@ console.log('The language that explains the sentence wins, not the one asked fir
   //   paid back  one Hebrew sentence — החשבון עדיין לא שולם — that Arabic
   //              took in 4.12.0. The note above calls that "a real
   //              regression and the price of the change"; this returns it.
-  //   cost       one Korean sentence now goes to Russian. Korean and Russian
-  //              explain it identically, 31 to 31, and bestOfLanguages keeps
+  //   cost       one Korean sentence went to Russian. Korean and Russian
+  //              explained it identically, 31 to 31, and bestOfLanguages keeps
   //              the incumbent on an exact tie — so an extra Hebrew candidate
-  //              that loses to both still changes which of them was asked
-  //              first. The tie-break being order-dependent is older than
-  //              this change and is the thing to fix, not the Hebrew model.
+  //              that loses to both still changed which of them was asked
+  //              first. PAID BACK in 4.20.0, and by fixing the cause rather
+  //              than the symptom: the tie existed because COMMON_KO_WORDS
+  //              held 94 words, so realWordsProduced scored a real Korean
+  //              sentence at zero. With a 500-word list Korean wins on
+  //              evidence and never reaches the tie-break. Back to 19.
   //   cost       one Ukrainian sentence that used to fire nothing now fires
   //              as Russian, which is the twelfth of its kind here.
   //
@@ -1574,8 +1644,8 @@ console.log('The language that explains the sentence wins, not the one asked fir
       if (d && (d.lang || 'he') !== code) wrong++;
     }
   }
-  if (wrong <= 20) pass++;
-  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 20`); }
+  if (wrong <= 19) pass++;
+  else { fail++; console.log(`  FAIL  ${wrong} of ${usable} sentences go to the wrong language, ceiling is 19`); }
   if (usable >= 159) pass++;
   else { fail++; console.log(`  FAIL  only ${usable} sentences are measurable, expected 159`); }
 }

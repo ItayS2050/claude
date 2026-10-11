@@ -1284,6 +1284,71 @@ const COMMON_KO_WORDS = new Set([
   '진짜','정말','조금','많이','너무','아주','다시','아직','벌써',
   '이거','저거','그거','여기','거기','저기','이것','그것',
   '한국','한국어','서울','부산','영화','노래','게임','사진',
+,
+  // The 500 commonest Korean words, by frequency over a 50k list.
+  //
+  // This set does two jobs and was far too small for either. koreanExactly
+  // consults it to overrule the English-likeness heuristic, and
+  // realWordsProduced uses it to decide which language best explains a
+  // sentence — so at 94 words "좋은 하루 되세요" scored zero real Korean
+  // words, tied Russian 17 to 17 on length alone, and lost the tie to
+  // iteration order. Russian offered "црпвьы плат урдезвн" for a perfectly
+  // ordinary Korean sign-off.
+  //
+  // Business and chat phrases both go from 93% and 90% to 100%. Measured for
+  // cost the same way as everything else here: every word in EN_LEXICON
+  // alone and 20,000 random English pairs give the identical counts before
+  // and after — 6 singles and 53 pairs, none of the pairs Korean. Going to
+  // 1500, 3000 or 6000 words moved no measurement at all, so this is the
+  // smallest list that buys the whole gain.
+  //
+  // EN_WORDS is still checked first in koreanExactly, so an ordinary English
+  // word whose romanisation collides with Korean keeps winning.
+  '내가', '거야', '그래', '있어', '그리고', '우리', '무슨', '하지만', '어떻게', '그냥', '정말', '그럼',
+  '있어요', '있는', '여기', '제가', '우리가', '이제', '지금', '그게', '아니', '네가', '없어', '우린',
+  '좋아', '당신이', '다른', '그런', '그건', '너무', '그래서', '그렇게', '다시', '이건', '이런', '나도',
+  '모든', '당신', '거예요', '당신은', '좋은', '하는', '하고', '아냐', '나는', '아니야', '알아', '같이',
+  '이게', '없어요', '괜찮아', '오늘', '말이야', '누가', '어떤', '아주', '아직', '안돼', '진짜', '모두',
+  '같은', '여기서', '어서', '그는', '위해', '해요', '일이', '하지', '엄마', '바로', '근데', '알고',
+  '이렇게', '빨리', '있습니다', '이거', '전에', '아뇨', '계속', '닥터', '얼마나', '알았어', '않아',
+  '제발', '있지', '겁니다', '어디', '사람이', '그가', '안녕', '좋아요', '같아', '우리는', '그래요',
+  '당신을', '그걸', '아니에요', '있을', '때문에', '대해', '아빠', '사람', '했어', '뭐야', '수도',
+  '많이', '집에', '거지', '일을', '저는', '그렇지', '함께', '만약', '하나', '저기', '고마워요', '항상',
+  '나한테', '잠깐', '가서', '가장', '돼요', '거죠', '가자', '맞아', '보고', '그거', '말을', '괜찮아요',
+  '아무도', '없는', '안녕하세요', '몰라', '많은', '당신의', '아무것도', '그러니까', '알아요', '그의',
+  '뭐가', '고마워', '그만', '했어요', '젠장', '사람들이', '거에요', '이걸', '그럴', '것도', '말이',
+  '이미', '그를', '뭔가', '이봐', '아니면', '같아요', '그런데', '아니라', '세상에', '있다고', '있고',
+  '뭐라고', '절대', '말야', '당장', '그래도', '대한', '말은', '거기', '전부', '그녀는', '니가',
+  '않아요', '자기', '있죠', '하면', '가지고', '그들이', '너도', '됐어', '미안해', '것을', '여긴',
+  '아무', '사람은', '감사합니다', '다들', '어때', '엄마가', '나를', '이젠', '아마', '그들은', '얘기',
+  '있잖아', '저도', '지금은', '그녀가', '있다', '시간', '먼저', '우릴', '말고', '사람을', '수가',
+  '봐요', '있는데', '알았어요', '해야', '있었어', '우리의', '않을', '방금', '완전', '동안', '시간이',
+  '싶어', '일은', '친구', '들어', '안에', '자네', '합니다', '사실', '한번', '대체', '같은데', '생각해',
+  '맞아요', '혼자', '자네가', '그러니', '선생님', '사람들은', '문제가', '다음', '물론', '거의', '일이야',
+  '없습니다', '아빠가', '되는', '그러면', '가는', '말도', '이리', '있었어요', '맙소사', '내일', '있으면',
+  '잠깐만', '싫어', '중요한', '내게', '말해', '이상', '거라고', '아는', '너는', '전혀', '여자',
+  '새로운', '너희', '왔어', '아직도', '가지', '나와', '싶지', '여기에', '원하는', '필요', '도움이',
+  '그녀를', '몰라요', '작은', '혹시', '미안해요', '나쁜', '죄송해요', '모르겠어', '가요', '알지', '밖에',
+  '직접', '있나', '해도', '하죠', '했는데', '필요해', '아니요', '적이', '있나요', '갖고', '돈을',
+  '주세요', '어디서', '것이', '거요', '위한', '것은', '없이', '나중에', '아버지', '나랑', '됐어요',
+  '마세요', '언제', '그저', '생각', '했지', '봤어', '해서', '시간을', '마지막', '알겠어', '왜냐면',
+  '위해서', '엄청', '알겠습니다', '오래', '기다려', '아닙니다', '있는지', '알겠어요', '제일', '지난',
+  '그렇죠', '죽은', '제대로', '아니지', '있다면', '보면', '우리를', '짓을', '남자', '너가', '있다는',
+  '누구', '보여', '왔어요', '너한테', '여러분', '완전히', '너의', '것이다', '소리', '없지', '벌써',
+  '모르겠어요', '말이지', '사람들을', '처음', '말이죠', '사람들', '그녀의', '멋진', '왜요', '정말로',
+  '이름은', '와서', '대해서', '여보', '조금', '않았어', '말이에요', '이름이', '여보세요', '서로', '안돼요',
+  '죽을', '매우', '사랑해', '오늘은', '싶은', '어디로', '단지', '아닌', '나가', '뿐이야', '미안',
+  '확실히', '싶어요', '죄송합니다', '때까지', '없고', '어때요', '당연히', '데리고', '필요한', '없다',
+  '가고', '글쎄', '않는', '했죠', '나의', '별로', '않은', '라고', '여전히', '없을', '있어서', '이야기',
+  '엄마는', '부인', '하는데', '않고', '알았지', '아니고', '여자가', '되지', '거기서', '훨씬', '아버지가',
+  '망할', '뭔지', '수술', '듣고', '어쩌면', '보세요', '생각이', '어느', '그러지', '되면', '아마도',
+  '준비', '전화', '뒤에', '도대체', '너를', '당신도', '것처럼', '않으면', '말하는', '최고의', '말하지',
+  '모르는', '유일한', '갑자기', '이봐요', '건가요', '없다고', '것입니다', '있잖아요', '되고', '어쨌든',
+  '가진', '이번', '뭐하는', '후에', '친구가', '신경', '그만해', '누구야', '당신에게', '없었어', '그들을',
+  '있게', '알잖아', '누군가', '분명히', '생각을', '일단', '가야', '걱정', '보자', '매일', '수는',
+  '아침', '말할', '말아요', '모두가', '않았어요', '얘기를', '봤어요', '대신', '마치', '건데', '자넨',
+  '했잖아', '둘이', '당신과', '집으로', '한다', '두고', '이름을', '있네', '그들의', '뭔데', '금방',
+  '사는', '좋아하는', '찾을', '맘에', '결국', '이유가', '필요해요', '중에', '그때', '보는', '너랑'
 ]);
 
 function koreanScore(word) {
@@ -2529,11 +2594,22 @@ function analyzeText(rawText, scanAll = false) {
     // Latin languages honest silences the four most common things a Korean
     // types. A romanised Korean phrase is long and decomposes into many clean
     // syllables, and that is the evidence the second word was standing in for.
-    // Four syllables is the line: 안녕 (2) still needs a neighbour, 안녕하세요
-    // (5) speaks for itself. wordCouldBeKorean has already required a complete
-    // syllable decomposition and rejected anything English-looking, so what
-    // reaches here is a long token that is Korean or nothing.
-    const koSoloRun = w => convertToKorean(w).length >= 4;
+    // Three syllables is the line. It was four, and four is wrong: Korean
+    // chat is built out of three-syllable words — 뭐해요, 고마워, 아니요,
+    // 했어요, 알았어 — and every one of them was silent. Greetings went from
+    // 70% to 90% and chat from 50% to 90% by moving it one syllable.
+    //
+    // Measured rather than argued, because this is the rule most likely to
+    // flood somebody with false positives: every word in EN_LEXICON alone and
+    // 20,000 random English pairs produce the identical count at three that
+    // they produce at four — 6 and 53, none of the pairs Korean. At two it
+    // collapses: 28 singles and 229 pairs, 173 of them claimed by Korean.
+    // So the cliff is between two and three, not three and four.
+    //
+    // 안녕 (2) still needs a neighbour. 안녕하세요 (5) still speaks for itself.
+    // wordCouldBeKorean has already required a complete syllable decomposition
+    // and rejected anything English-looking before a token reaches here.
+    const koSoloRun = w => convertToKorean(w).length >= 3;
     const allKoRuns = collectRuns(koCandWords, wordCouldBeKorean, scriptBridge(EN_TO_KO));
 
     const koRunEntry = [...allKoRuns].reverse().find(r => isRealRun(r) &&
