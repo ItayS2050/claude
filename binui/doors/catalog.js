@@ -604,13 +604,29 @@ window.CATALOG = {
      "color": "לבן",
      "swatch": "#F1ECF3",
      "src": "img/eli-1034-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-1034-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.1672,
+      0.2625,
+      0.2218,
+      0.7531
+     ]
     },
     {
      "color": "שחור",
      "swatch": "#2B2927",
      "src": "img/eli-1034-1.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-1034-1-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.1672,
+      0.2609,
+      0.2253,
+      0.7547
+     ]
     }
    ]
   },
@@ -661,7 +677,15 @@ window.CATALOG = {
      "color": "חום",
      "swatch": "#575859",
      "src": "img/eli-1086-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-1086-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.068,
+      0.3312,
+      0.2449,
+      0.8219
+     ]
     }
    ]
   },
@@ -684,6 +708,14 @@ window.CATALOG = {
       0.1078,
       0.701,
       0.7609
+     ],
+     "eclean": "img/eli-8008-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7641,
+      0.2906,
+      0.9369,
+      0.7906
      ]
     }
    ]
@@ -707,6 +739,14 @@ window.CATALOG = {
       0.0922,
       0.691,
       0.7375
+     ],
+     "eclean": "img/eli-8010-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7475,
+      0.5687,
+      0.9103,
+      0.6438
      ]
     },
     {
@@ -719,6 +759,14 @@ window.CATALOG = {
       0.1109,
       0.691,
       0.7609
+     ],
+     "eclean": "img/eli-8010-1-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7508,
+      0.5703,
+      0.9136,
+      0.6531
      ]
     },
     {
@@ -731,6 +779,14 @@ window.CATALOG = {
       0.1078,
       0.691,
       0.7609
+     ],
+     "eclean": "img/eli-8010-2-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7641,
+      0.2922,
+      0.9037,
+      0.7906
      ]
     },
     {
@@ -743,6 +799,14 @@ window.CATALOG = {
       0.1125,
       0.6921,
       0.7609
+     ],
+     "eclean": "img/eli-8010-3-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7649,
+      0.2922,
+      0.9073,
+      0.7906
      ]
     }
    ]
@@ -766,6 +830,14 @@ window.CATALOG = {
       0.1141,
       0.7433,
       0.6797
+     ],
+     "eclean": "img/eli-5013-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7367,
+      0.6125,
+      0.9133,
+      0.6969
      ]
     },
     {
@@ -778,6 +850,14 @@ window.CATALOG = {
       0.1203,
       0.6789,
       0.5938
+     ],
+     "eclean": "img/eli-5013-1-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7525,
+      0.2922,
+      0.9097,
+      0.7937
      ]
     }
    ]
@@ -801,6 +881,14 @@ window.CATALOG = {
       0.1125,
       0.6823,
       0.6797
+     ],
+     "eclean": "img/eli-5005-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7559,
+      0.3203,
+      0.903,
+      0.7906
      ]
     },
     {
@@ -819,6 +907,14 @@ window.CATALOG = {
       0.1203,
       0.6944,
       0.6594
+     ],
+     "eclean": "img/eli-5005-2-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7542,
+      0.6156,
+      0.907,
+      0.6828
      ]
     }
    ]
@@ -848,6 +944,14 @@ window.CATALOG = {
       0.1656,
       0.6523,
       0.6125
+     ],
+     "eclean": "img/eli-6012-1-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7583,
+      0.3016,
+      0.904,
+      0.7984
      ]
     },
     {
@@ -860,6 +964,14 @@ window.CATALOG = {
       0.0875,
       0.7086,
       0.6219
+     ],
+     "eclean": "img/eli-6012-2-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.6391,
+      0.3,
+      0.9172,
+      0.7984
      ]
     },
     {
@@ -906,7 +1018,15 @@ window.CATALOG = {
      "color": "לבן",
      "swatch": "#EAE9E7",
      "src": "img/eli-7006-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-7006-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.745,
+      0.5797,
+      0.9073,
+      0.6234
+     ]
     }
    ]
   },
@@ -929,6 +1049,14 @@ window.CATALOG = {
       0.1125,
       0.66,
       0.8594
+     ],
+     "eclean": "img/eli-7014-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7533,
+      0.3719,
+      0.91,
+      0.7906
      ]
     },
     {
@@ -941,6 +1069,14 @@ window.CATALOG = {
       0.1109,
       0.711,
       0.8594
+     ],
+     "eclean": "img/eli-7014-1-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7508,
+      0.3688,
+      0.7973,
+      0.7844
      ]
     },
     {
@@ -953,6 +1089,14 @@ window.CATALOG = {
       0.1094,
       0.7133,
       0.8594
+     ],
+     "eclean": "img/eli-7014-2-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7533,
+      0.3672,
+      0.91,
+      0.7906
      ]
     },
     {
@@ -965,6 +1109,14 @@ window.CATALOG = {
       0.1375,
       0.6567,
       0.8594
+     ],
+     "eclean": "img/eli-7014-3-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7467,
+      0.5781,
+      0.91,
+      0.6516
      ]
     },
     {
@@ -977,6 +1129,14 @@ window.CATALOG = {
       0.1094,
       0.7133,
       0.8594
+     ],
+     "eclean": "img/eli-7014-4-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7567,
+      0.3688,
+      0.9033,
+      0.7891
      ]
     }
    ]
@@ -1000,6 +1160,14 @@ window.CATALOG = {
       0.1109,
       0.6858,
       0.8594
+     ],
+     "eclean": "img/eli-8006-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.7534,
+      0.5844,
+      0.9257,
+      0.6687
      ]
     }
    ]
@@ -1023,6 +1191,14 @@ window.CATALOG = {
       0.1422,
       0.6486,
       0.8594
+     ],
+     "eclean": "img/eli-7506-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7027,
+      0.375,
+      0.9122,
+      0.7969
      ]
     }
    ]
@@ -1040,7 +1216,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#494748",
      "src": "img/eli-2019-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2019-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7669,
+      0.2922,
+      0.9155,
+      0.7969
+     ]
     }
    ]
   },
@@ -1063,6 +1247,14 @@ window.CATALOG = {
       0.0391,
       0.6486,
       0.8594
+     ],
+     "eclean": "img/eli-7505-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7568,
+      0.2891,
+      0.9189,
+      0.7969
      ]
     }
    ]
@@ -1080,7 +1272,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#38393F",
      "src": "img/eli-7504-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-7504-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7475,
+      0.2906,
+      0.9091,
+      0.7969
+     ]
     }
    ]
   },
@@ -1097,7 +1297,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#3E4347",
      "src": "img/eli-7101-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-7101-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.7568,
+      0.2938,
+      0.9155,
+      0.7969
+     ]
     }
    ]
   },
@@ -1131,7 +1339,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#433E3B",
      "src": "img/eli-2017-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2017-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.0514,
+      0.2969,
+      0.2329,
+      0.7953
+     ]
     }
    ]
   },
@@ -1148,7 +1364,15 @@ window.CATALOG = {
      "color": "מנטה",
      "swatch": "#9DB8B3",
      "src": "img/eli-2021-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2021-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.1233,
+      0.2922,
+      0.25,
+      0.7937
+     ]
     }
    ]
   },
@@ -1216,7 +1440,15 @@ window.CATALOG = {
      "color": "שמנת",
      "swatch": "#DEE0DD",
      "src": "img/eli-2701-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2701-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.0928,
+      0.225,
+      0.2921,
+      0.8875
+     ]
     }
    ]
   },
@@ -1233,7 +1465,15 @@ window.CATALOG = {
      "color": "זית",
      "swatch": "#75786D",
      "src": "img/eli-2702-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2702-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0759,
+      0.6078,
+      0.169,
+      0.6547
+     ]
     }
    ]
   },
@@ -1250,7 +1490,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#454E53",
      "src": "img/eli-2703-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2703-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0893,
+      0.5703,
+      0.2612,
+      0.65
+     ]
     }
    ]
   },
@@ -1267,7 +1515,15 @@ window.CATALOG = {
      "color": "שמנת",
      "swatch": "#D7D9D6",
      "src": "img/eli-2704-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2704-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0859,
+      0.6062,
+      0.1856,
+      0.6516
+     ]
     }
    ]
   },
@@ -1284,7 +1540,15 @@ window.CATALOG = {
      "color": "כחול",
      "swatch": "#2D4682",
      "src": "img/eli-2705-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2705-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0859,
+      0.5719,
+      0.2818,
+      0.6516
+     ]
     }
    ]
   },
@@ -1335,7 +1599,15 @@ window.CATALOG = {
      "color": "זית",
      "swatch": "#5D5C64",
      "src": "img/eli-5017-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-5017-0-clean.webp",
+     "hk": "bar",
+     "hb": [
+      0.103,
+      0.2906,
+      0.2392,
+      0.7922
+     ]
     }
    ]
   },
@@ -1358,6 +1630,14 @@ window.CATALOG = {
       0.0906,
       0.7215,
       0.6047
+     ],
+     "eclean": "img/eli-5498-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0839,
+      0.5828,
+      0.2383,
+      0.6531
      ]
     }
    ]
@@ -1375,7 +1655,15 @@ window.CATALOG = {
      "color": "זית",
      "swatch": "#707479",
      "src": "img/eli-2510-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2510-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0777,
+      0.6172,
+      0.1858,
+      0.6656
+     ]
     }
    ]
   },
@@ -1409,7 +1697,15 @@ window.CATALOG = {
      "color": "אפור בהיר",
      "swatch": "#AABFBE",
      "src": "img/eli-2498-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-2498-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0811,
+      0.5875,
+      0.3209,
+      0.7578
+     ]
     }
    ]
   },
@@ -1511,7 +1807,15 @@ window.CATALOG = {
      "color": "זית",
      "swatch": "#75786D",
      "src": "img/eli-6512-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-6512-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0759,
+      0.6078,
+      0.169,
+      0.6547
+     ]
     }
    ]
   },
@@ -1545,7 +1849,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#3C3D41",
      "src": "img/eli-6515-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-6515-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0796,
+      0.5734,
+      0.2422,
+      0.6516
+     ]
     }
    ]
   },
@@ -1579,7 +1891,15 @@ window.CATALOG = {
      "color": "אנתרציט",
      "swatch": "#433D32",
      "src": "img/eli-4022-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-4022-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0759,
+      0.6031,
+      0.1793,
+      0.6516
+     ]
     }
    ]
   },
@@ -1665,6 +1985,14 @@ window.CATALOG = {
       0.1375,
       0.7365,
       0.6531
+     ],
+     "eclean": "img/eli-3003-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0709,
+      0.5891,
+      0.2432,
+      0.625
      ]
     }
    ]
@@ -1688,6 +2016,14 @@ window.CATALOG = {
       0.1125,
       0.7407,
       0.8594
+     ],
+     "eclean": "img/eli-3004-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0976,
+      0.5984,
+      0.2222,
+      0.6203
      ]
     }
    ]
@@ -1711,6 +2047,14 @@ window.CATALOG = {
       0.13,
       0.78,
       0.87
+     ],
+     "eclean": "img/eli-3005-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0709,
+      0.5844,
+      0.2568,
+      0.6312
      ]
     }
    ]
@@ -1734,6 +2078,14 @@ window.CATALOG = {
       0.15,
       0.6532,
       0.7109
+     ],
+     "eclean": "img/eli-3006-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0707,
+      0.5891,
+      0.2458,
+      0.6328
      ]
     }
    ]
@@ -1780,6 +2132,14 @@ window.CATALOG = {
       0.1125,
       0.7345,
       0.7016
+     ],
+     "eclean": "img/eli-3008-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0759,
+      0.5922,
+      0.2276,
+      0.6734
      ]
     }
    ]
@@ -1826,6 +2186,14 @@ window.CATALOG = {
       0.1344,
       0.7897,
       0.7812
+     ],
+     "eclean": "img/eli-3011-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0793,
+      0.5938,
+      0.1897,
+      0.6375
      ]
     }
    ]
@@ -1849,6 +2217,14 @@ window.CATALOG = {
       0.1219,
       0.8379,
       0.5266
+     ],
+     "eclean": "img/eli-3012-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0793,
+      0.5969,
+      0.2483,
+      0.6375
      ]
     }
    ]
@@ -1866,7 +2242,15 @@ window.CATALOG = {
      "color": "צהוב",
      "swatch": "#FBC211",
      "src": "img/eli-3013-0.webp",
-     "extra": 0
+     "extra": 0,
+     "eclean": "img/eli-3013-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0825,
+      0.5984,
+      0.1787,
+      0.6766
+     ]
     }
    ]
   },
@@ -1889,6 +2273,14 @@ window.CATALOG = {
       0.1281,
       0.7241,
       0.6766
+     ],
+     "eclean": "img/eli-3014-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0724,
+      0.6,
+      0.2517,
+      0.6781
      ]
     }
    ]
@@ -1935,6 +2327,14 @@ window.CATALOG = {
       0.1,
       0.7621,
       0.6219
+     ],
+     "eclean": "img/eli-3016-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0793,
+      0.5969,
+      0.2414,
+      0.6375
      ]
     }
    ]
@@ -1958,6 +2358,14 @@ window.CATALOG = {
       0.1234,
       0.7034,
       0.6625
+     ],
+     "eclean": "img/eli-3017-0-clean.webp",
+     "hk": "lever",
+     "hb": [
+      0.0793,
+      0.5969,
+      0.2207,
+      0.6391
      ]
     }
    ]

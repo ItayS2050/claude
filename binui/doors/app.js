@@ -80,7 +80,7 @@
     kind: 'interior', series: 'all', q: '',
     model: CAT.interior.find(m => m.name === 'יובל') || CAT.interior[0], vi: 0,
     opts: { ...DEFAULTS.interior, ...COMMON() },
-    open: new Set(['color', 'handle']),
+    open: new Set(),
     bg: null, bgIsSample: true, quad: null, marking: true, light: -6, depth: 10,
     compare: [],
   };
@@ -254,8 +254,29 @@
   }
   function render() {
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => { compose(ctx, canvas.width, canvas.height); placeHandles(); });
+    raf = requestAnimationFrame(() => { compose(ctx, canvas.width, canvas.height); placeHandles(); drawMini(); });
   }
+  // תצוגה מוקטנת שצפה בטלפון, כדי לראות את הדלת בזמן הבחירה
+  const mini = $('#mini'), miniC = $('#miniCanvas');
+  let stageVisible = true;
+  function drawMini() {
+    if (mini.hidden) return;
+    const xs = st.quad.map(p => p[0]), ys = st.quad.map(p => p[1]);
+    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const pad = (y1 - y0) * .08; x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
+    const k = Math.min(miniC.width / (x1 - x0), miniC.height / (y1 - y0)), w = (x1 - x0) * k, h = (y1 - y0) * k;
+    const g = miniC.getContext('2d'); g.fillStyle = '#0d1112'; g.fillRect(0, 0, miniC.width, miniC.height);
+    g.drawImage(canvas, x0, y0, x1 - x0, y1 - y0, (miniC.width - w) / 2, (miniC.height - h) / 2, w, h);
+  }
+  function updateMini() {
+    const want = !stageVisible && window.matchMedia('(max-width: 960px)').matches && !$('#view-studio').hidden;
+    if (mini.hidden === !want) return;
+    mini.hidden = !want; if (want) drawMini();
+  }
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { stageVisible = es[0].isIntersecting; updateMini(); }, { threshold: .15 }).observe(stageEl);
+  window.addEventListener('resize', updateMini);
+  mini.addEventListener('click', () => stageEl.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+
   function snapshot(max = 900) {
     const k = Math.min(1, max / Math.max(canvas.width, canvas.height));
     const c = document.createElement('canvas'); c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
@@ -331,12 +352,14 @@
   function recolor(g, W, H, from, to) {
     const d = g.getImageData(0, 0, W, H), p = d.data, src = hex2rgb(from), dst = hex2rgb(to);
     const sl = Math.max(20, .3 * src[0] + .59 * src[1] + .11 * src[2]);
+    // מדלת כהה לבהירה: מצמצמים את טווח הבהירות כדי שהמרקם לא יהפוך לרעש
+    const lo = sl < 70 ? .82 : .45, hi = sl < 70 ? 1.18 : 1.6;
     for (let i = 0; i < p.length; i += 4) {
       if (p[i + 3] < 10) continue;
       const dr = p[i] - src[0], dg = p[i + 1] - src[1], db = p[i + 2] - src[2], dist = Math.sqrt(dr * dr + dg * dg + db * db);
       const w = dist < 40 ? 1 : dist > 85 ? 0 : 1 - (dist - 40) / 45;
       if (!w) continue;
-      const r = Math.max(.45, Math.min(1.6, (.3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]) / sl));
+      const r = Math.max(lo, Math.min(hi, (.3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2]) / sl));
       for (let k = 0; k < 3; k++) p[i + k] = p[i + k] * (1 - w) + Math.min(255, dst[k] * r) * w;
     }
     g.putImageData(d, 0, 0);
@@ -402,15 +425,51 @@
     if (u.r) panel(u.l * sw + W);
     return c;
   }
+  // ידית לדלת כניסה: מוט אנכי, ידית משיכה אופקית או סט ידית מנוף, במקום הידית שנמחקה מהתמונה
+  const entryHandleSwaps = (v, o) => !!v.eclean && o.handle !== 'lever';
+  async function paintEntryHandle(g, W, H, v, o) {
+    const h = find('eHandle', o.handle), im = await loadImg(h.img);
+    const [x0, , x1] = v.hb, cx = (x0 + x1) / 2 * W, lockLeft = cx < W / 2;
+    const perCm = H * .9 / 240, iw = im.naturalWidth, ih = im.naturalHeight;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = W * .015; g.shadowOffsetX = W * .006; g.shadowOffsetY = W * .006;
+    let cylX, cylY = H * .615;
+    if (h.kind === 'bar') {
+      const len = o.handleLen || h.lens[0], bh = len * perCm, bw = Math.max(W * .022, bh * iw / ih);
+      const x = Math.min(Math.max(cx, W * .13), W * .87), y = H * .55;
+      g.drawImage(im, x - bw / 2, y - bh / 2, bw, bh);
+      cylX = lockLeft ? Math.max(W * .115, x - W * .065) : Math.min(W * .885, x + W * .065);
+    } else if (h.kind === 'pull') {
+      const len = o.handleLen || h.lens[0], pw = Math.min(W * .62, len * W * .84 / 98), ph = pw * ih / iw;
+      const x = lockLeft ? W * .13 + pw / 2 : W * .87 - pw / 2;
+      // ידית משיכה לא עולה על החלון: אם החלון יורד עד גובה הידית, היא יורדת מתחתיו
+      const py = v.win && v.win[3] * H > H * .5 ? Math.min(H * .8, v.win[3] * H + H * .05) : H * .55;
+      g.drawImage(im, x - pw / 2, py - ph / 2, pw, ph);
+      cylX = lockLeft ? W * .13 + pw + W * .05 : W * .87 - pw - W * .05; cylY = py + H * .06;
+    } else {
+      const lw = W * .26, lh = lw * ih / iw, px = lockLeft ? Math.max(cx, W * .14) : Math.min(cx, W * .86), py = H * .55;
+      g.translate(px, py); if (!lockLeft) g.scale(-1, 1);
+      g.drawImage(im, -lw * .2, -lh * .28, lw, lh);
+    }
+    g.restore();
+    if (cylX) { // צילינדר
+      const r = W * .024, y = cylY;
+      g.save(); g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = W * .01;
+      const gr = g.createRadialGradient(cylX - r * .3, y - r * .3, r * .1, cylX, y, r);
+      gr.addColorStop(0, '#F2F3F4'); gr.addColorStop(1, '#8E9396');
+      g.beginPath(); g.arc(cylX, y, r, 0, Math.PI * 2); g.fillStyle = gr; g.fill(); g.restore();
+      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(cylX - r * .12, y - r * .45, r * .24, r * .9);
+    }
+  }
   async function buildDoor(m, v, o) {
-    const useClean = m.kind === 'interior' && v.clean;
-    const img = await loadImg(useClean ? v.clean : v.src);
+    const useClean = m.kind === 'interior' ? !!v.clean : entryHandleSwaps(v, o);
+    const img = await loadImg(useClean ? (v.clean || v.eclean) : v.src);
     const W = img.naturalWidth, H = img.naturalHeight, c = mk(W, H), g = c.getContext('2d');
     g.drawImage(img, 0, 0);
     const leaf = leafColor(v, o);
     if (m.kind === 'entry') {
       if (o.ral) recolor(g, W, H, v.swatch, leaf);
       if (v.win && o.grille) await paintWindow(g, W, H, v.win, o, leaf);
+      if (useClean) await paintEntryHandle(g, W, H, v, o);
     } else if (useClean) await paintHandle(g, W, H, v, o);
     let out = o.side === 'left' ? flip(c) : c;
     if (m.kind === 'entry' && o.sideUnit !== 'none') out = await addSidePanels(out, o, leaf);
@@ -456,10 +515,6 @@
       <span class="pl">${it.l}</span>${priceTag(p)}${it.badge ? `<em>${it.badge}</em>` : ''}</button>`; }).join('')}</div>`;
   const chipRow = (key, items, cur, group) => `<div class="chips-row">${items.map(it => `<button class="chip" data-k="${key}" data-v="${it.v}" aria-pressed="${it.v === cur}">${it.sw ? `<i style="background:${it.sw}"></i>` : ''}${it.l}${group && P(group, it) ? ` <small>+${fmt(P(group, it))}</small>` : ''}</button>`).join('')}</div>`;
   const check = (key, label, p, on) => `<label class="ck"><input type="checkbox" data-ck="${key}" ${on ? 'checked' : ''}><span>${label}</span>${p ? `<small>+${fmt(p)}</small>` : ''}</label>`;
-  const sec = (id, title, value, price, body, note = '') => `<details class="sec" data-sec="${id}" ${st.open.has(id) ? 'open' : ''}>
-    <summary><span class="st">${title}</span><span class="sv">${value}</span>${price ? `<span class="sp">+${fmt(price)}</span>` : ''}</summary>
-    <div class="sb">${note ? `<p class="note">${note}</p>` : ''}${body}</div></details>`;
-
   function calc(m = st.model, vi = st.vi, o = st.opts) {
     const v = m.variants[vi], L = [[`דלת ${m.brand} ${m.kind === 'entry' ? 'דגם ' : ''}${m.name}, כולל משקוף`, priceOf(m)]], D = [];
     const add = (label, price, desc = label) => { if (price) L.push([label, price]); if (desc) D.push(desc); };
@@ -499,74 +554,87 @@
     return { lines: L, unit, total: unit * (o.qty || 1), desc: D.filter(Boolean).join(' · ') };
   }
 
-  function sectionsInterior(m, v, o) {
+  // ארבע ההחלטות שמוכרות את הדלת מוצגות תמיד; כל השאר נמצא ב"פרטים טכניים" עם ברירות מחדל סבירות
+  const step = (n, title, value, price, body, note = '') => `<section class="step">
+    <header><span class="sn">${n}</span><h3>${title}</h3><span class="sv">${value}</span>${price ? `<span class="sp">+${fmt(price)}</span>` : ''}</header>
+    ${note ? `<p class="note">${note}</p>` : ''}${body}</section>`;
+  const block = (title, value, body) => `<div class="tblock"><h4>${title}${value ? ` <small>${value}</small>` : ''}</h4>${body}</div>`;
+  const sideChips = o => chipRow('side', [{ v: 'right', l: 'ימין' }, { v: 'left', l: 'שמאל' }], o.side);
+  const installBlock = (m, o) => block('התקנה', '', check('install', 'התקנה', m.kind === 'entry' ? settings.instE : settings.instI, o.install) +
+    check('remove', 'פירוק ופינוי דלת קיימת', m.kind === 'entry' ? settings.remE : settings.remI, o.remove));
+
+  function stepsInterior(m, v, o) {
     const hd = find('iHandle', o.handle), cy = find('iCyl', o.cyl), hg = find('iHinge', o.hinge), fr = find('iFrame', o.frame);
     const w = find('iWidth', o.width), h = find('iHeight', o.height), mz = find('iMez', o.mez);
-    const extrasPrice = (o.mez !== 'none' ? P('iMez', mz) : 0) + (o.mamad ? P('iMamad', G.iMamad[0]) : 0);
-    return [
-      sec('color', 'גוון', v.color, v.extra, `<div class="swatches">${m.variants.map((x, i) =>
+    const main = [
+      step(2, 'גוון', v.color, v.extra, `<div class="swatches">${m.variants.map((x, i) =>
         `<button class="sw" data-vi="${i}" aria-pressed="${i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}${x.extra ? ` +${fmt(x.extra)}` : ''}</button>`).join('')}</div>`),
-      sec('handle', 'ידית', hd.l.replace('ידית ', ''), P('iHandle', hd), picks('handle', G.iHandle, o.handle, { group: 'iHandle', cls: 'hw' }),
-        v.clean ? 'הידית שבוחרים מופיעה על הדלת בהדמיה.' : 'בדגם הזה הידית לא מוחלפת בהדמיה, אבל נכנסת להצעת המחיר.'),
-      sec('lock', 'נעילה', cy.l, P('iCyl', cy), picks('cyl', G.iCyl, o.cyl, { group: 'iCyl', cls: 'hw' })),
-      o.frame === 'zero' ? '' : sec('hinge', 'צירים', hg.l.replace('צירים ', ''), P('iHinge', hg), picks('hinge', G.iHinge, o.hinge, { group: 'iHinge', cls: 'hw' })),
-      sec('size', 'משקוף, מידות ופתיחה', `${fr.v === 'zero' ? 'ZERO · ' : ''}${w.l} · ${h.l} · ${o.side === 'left' ? 'שמאל' : 'ימין'}`,
-        P('iFrame', fr) + P('iWidth', w) + P('iHeight', h),
-        `<div class="row-l"><span>משקוף</span>${chipRow('frame', G.iFrame, o.frame, 'iFrame')}</div>
-         <div class="row-l"><span>רוחב</span>${chipRow('width', G.iWidth, o.width, 'iWidth')}</div>
-         <div class="row-l"><span>גובה</span>${chipRow('height', G.iHeight, o.height, 'iHeight')}</div>
-         <div class="row-l"><span>כיוון פתיחה</span>${chipRow('side', [{ v: 'right', l: 'ימין' }, { v: 'left', l: 'שמאל' }], o.side)}</div>`,
-        o.frame === 'zero' ? 'משקוף ZERO מגיע עם צירים נסתרים, והדלת נראית חלק מהקיר.' : ''),
-      sec('extras', 'מזוזה וממ״ד', [o.mez !== 'none' ? mz.l : '', o.mamad ? 'ממ״ד' : ''].filter(Boolean).join(' · ') || 'ללא', extrasPrice,
-        picks('mez', G.iMez, o.mez, { group: 'iMez', cls: 'hw' }) + check('mamad', G.iMamad[0].l, P('iMamad', G.iMamad[0]), o.mamad)),
+      step(3, 'ידית', hd.l.replace('ידית ', ''), P('iHandle', hd), picks('handle', G.iHandle, o.handle, { group: 'iHandle', cls: 'hw' }),
+        v.clean ? '' : 'בדגם הזה ההדמיה מציגה את הידית המקורית. הידית שתבחרו תיכנס להצעה.'),
     ];
+    const techPrice = P('iCyl', cy) + (o.frame !== 'zero' ? P('iHinge', hg) : 0) + P('iFrame', fr) + P('iWidth', w) + P('iHeight', h) +
+      (o.mez !== 'none' ? P('iMez', mz) : 0) + (o.mamad ? P('iMamad', G.iMamad[0]) : 0);
+    const techSummary = [`רוחב ${w.l}`, `פתיחה ל${o.side === 'left' ? 'שמאל' : 'ימין'}`, o.frame === 'zero' ? 'ZERO' : '', o.install ? 'כולל התקנה' : 'ללא התקנה'].filter(Boolean).join(' · ');
+    const tech = [
+      block('מידות ופתיחה', '', `<div class="row-l"><span>רוחב</span>${chipRow('width', G.iWidth, o.width, 'iWidth')}</div>
+        <div class="row-l"><span>גובה</span>${chipRow('height', G.iHeight, o.height, 'iHeight')}</div>
+        <div class="row-l"><span>כיוון פתיחה</span>${sideChips(o)}</div>`),
+      block('משקוף', o.frame === 'zero' ? 'מגיע עם צירים נסתרים' : '', chipRow('frame', G.iFrame, o.frame, 'iFrame')),
+      block('נעילה', '', picks('cyl', G.iCyl, o.cyl, { group: 'iCyl', cls: 'hw sm' })),
+      o.frame === 'zero' ? '' : block('צירים', '', picks('hinge', G.iHinge, o.hinge, { group: 'iHinge', cls: 'hw sm' })),
+      block('מזוזה וממ״ד', '', picks('mez', G.iMez, o.mez, { group: 'iMez', cls: 'hw sm' }) + check('mamad', G.iMamad[0].l, P('iMamad', G.iMamad[0]), o.mamad)),
+      installBlock(m, o),
+    ];
+    return { main, tech, techSummary, techPrice };
   }
-  function sectionsEntry(m, v, o) {
+  function stepsEntry(m, v, o) {
     const leaf = leafColor(v, o), ral = o.ral && RAL.find(r => r[0] === o.ral);
     const hd = find('eHandle', o.handle), cy = find('eCyl', o.cyl), w = find('eWidth', o.width), mz = find('eMez', o.mez), side = find('eSide', o.sideUnit);
     const gr = grilleOf(o.grille), gc = find('eGColor', o.grilleColor), gl = find('eGlass', o.glass);
-    const winPrice = v.win ? (o.grille ? grillePrice(o.grille) : 0) + P('eGColor', gc) + P('eGlass', gl) + (o.belgian ? P('eBelgian', G.eBelgian[0]) : 0) : 0;
     const extrasOn = G.eExtra.filter(x => o[x.v]);
     const grilleItems = [{ v: '', l: 'כמו בתמונה', p: 0, icon: '↺' }, ...EX.grilles.map(g => ({ v: g.num, l: g.num, img: g.src, badge: g.special ? 'מיוחד' : '' }))];
-    return [
-      sec('color', 'גוון', ral ? `RAL ${ral[0]} ${ral[1]}` : v.color, o.ral ? P('eRal', G.eRal[0]) : 0,
-        `<div class="row-l"><span>גוונים מהקטלוג</span><div class="swatches">${m.variants.map((x, i) =>
-          `<button class="sw" data-vi="${i}" aria-pressed="${!o.ral && i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}</button>`).join('')}</div></div>
-         <div class="row-l"><span>מניפת גוונים (RAL) · +${fmt(P('eRal', G.eRal[0]))}</span><div class="ral">${RAL.map(r =>
-          `<button class="ralb" data-k="ral" data-v="${r[0]}" aria-pressed="${o.ral === r[0]}" title="RAL ${r[0]} ${r[1]}"><i style="background:${r[2]}"></i><small>${r[0]}</small></button>`).join('')}</div></div>`,
-        'כל דלת אפשר להזמין בכל גוון מהמניפה. הגוון על המסך בקירוב.'),
-      sec('grille', 'סורג וזכוכית', v.win ? `${gr ? 'סורג ' + gr.num : 'סורג כמו בתמונה'} · ${gc.l} · ${gl.l}` : 'אין חלון בדגם', winPrice,
-        v.win ? `${picks('grille', grilleItems, o.grille, { cls: 'gr', price: it => it.v ? grillePrice(it.v) : 0 })}
-          <div class="row-l"><span>צבע הסורג</span>${chipRow('grilleColor', G.eGColor.map(x => x.v === 'door' ? { ...x, sw: leaf } : x), o.grilleColor, 'eGColor')}</div>
-          <div class="row-l"><span>זכוכית</span>${chipRow('glass', G.eGlass, o.glass, 'eGlass')}</div>
-          ${check('belgian', G.eBelgian[0].l, P('eBelgian', G.eBelgian[0]), o.belgian)}`
-          : `<button class="btn small" data-act="winFilter">הצגת דגמים עם חלון</button>`,
-        v.win ? `${EX.grilles.length} סורגים מקטלוג אלידור. ייתכנו שינויים בפרופורציות לפי מידות החלון.` : 'לדגם הזה אין חלון זכוכית, ולכן אי אפשר להרכיב בו סורג.'),
-      sec('sideunit', 'יחידת צד', o.sideUnit === 'none' ? 'ללא' : `${side.l} · סורג ${o.sideGrille}`, P('eSide', side),
-        `${chipRow('sideUnit', G.eSide, o.sideUnit, 'eSide')}${o.sideUnit === 'none' ? '' : `<div class="row-l"><span>סורג ליחידת הצד</span>${picks('sideGrille', G.eSideGrille, o.sideGrille, { group: 'eSideGrille', cls: 'gr side' })}</div>`}`,
-        'חלון קבוע עם סורג לצד הדלת. הפתח המסומן בתמונה מתרחב אוטומטית.'),
-      sec('handle', 'ידית', hd.l + (o.handleLen ? ` · ${o.handleLen} ס״מ` : ''), P('eHandle', hd) + handleLenPrice(hd, o.handleLen),
+    const handleNote = v.eclean ? '' : 'בדגם הזה ההדמיה מציגה את הידית המקורית. הידית שתבחרו תיכנס להצעה.';
+    const main = [
+      step(2, 'גוון', ral ? `RAL ${ral[0]} ${ral[1]}` : v.color, o.ral ? P('eRal', G.eRal[0]) : 0,
+        `${m.variants.length > 1 || !o.ral ? `<div class="swatches">${m.variants.map((x, i) =>
+          `<button class="sw" data-vi="${i}" aria-pressed="${!o.ral && i === st.vi}"><i style="background:${x.swatch}"></i>${x.color}</button>`).join('')}</div>` : ''}
+         <div class="row-l"><span>כל גוון מהמניפה · +${fmt(P('eRal', G.eRal[0]))}</span><div class="ral">${RAL.map(r =>
+          `<button class="ralb" data-k="ral" data-v="${r[0]}" aria-pressed="${o.ral === r[0]}" title="RAL ${r[0]} ${r[1]}"><i style="background:${r[2]}"></i><small>${r[0]}</small></button>`).join('')}</div></div>`),
+      v.win
+        ? step(3, 'סורג', `${gr ? gr.num : 'כמו בתמונה'} · ${gc.l}`, (o.grille ? grillePrice(o.grille) : 0) + P('eGColor', gc),
+          `${picks('grille', grilleItems, o.grille, { cls: 'gr', price: it => it.v ? grillePrice(it.v) : 0 })}
+           <div class="row-l"><span>צבע הסורג</span>${chipRow('grilleColor', G.eGColor.map(x => x.v === 'door' ? { ...x, sw: leaf } : x), o.grilleColor, 'eGColor')}</div>`)
+        : step(3, 'סורג', 'אין חלון בדגם', 0, `<button class="btn small" data-act="winFilter">הצגת דגמים עם חלון לסורג</button>`, 'לדגם הזה אין חלון זכוכית, ולכן אין בו סורג.'),
+      step(4, 'ידית', hd.l + (o.handleLen ? ` · ${o.handleLen} ס״מ` : ''), P('eHandle', hd) + handleLenPrice(hd, o.handleLen),
         picks('handle', G.eHandle, o.handle, { group: 'eHandle', cls: 'hw eh' }) +
         (hd.lens ? `<div class="row-l"><span>אורך</span>${chipRow('handleLen', hd.lens.map((x, i) => ({ v: String(x), l: `${x} ס״מ`, p: i * P('eHandleLen', G.eHandleLen[0]) })), String(o.handleLen))}</div>` : ''),
-        'ידיות ופרזול מקטלוג אלידור. ההדמיה מציגה את הידית שבתמונת הדגם.'),
-      sec('lock', 'מנעול וצילינדר', cy.l, P('eCyl', cy), chipRow('cyl', G.eCyl, o.cyl, 'eCyl')),
-      sec('size', 'מידות ופתיחה', `${w.l} · ${o.side === 'left' ? 'שמאל' : 'ימין'}`, P('eWidth', w),
-        `<div class="row-l"><span>רוחב</span>${chipRow('width', G.eWidth, o.width, 'eWidth')}</div>
-         <div class="row-l"><span>כיוון פתיחה</span>${chipRow('side', [{ v: 'right', l: 'ימין' }, { v: 'left', l: 'שמאל' }], o.side)}</div>`),
-      sec('extras', 'אביזרים', [o.mez !== 'none' ? mz.l : '', ...extrasOn.map(x => x.l.split(' (')[0])].filter(Boolean).join(' · ') || 'ללא',
-        (o.mez !== 'none' ? P('eMez', mz) : 0) + extrasOn.reduce((s, x) => s + P('eExtra', x), 0),
-        `${G.eExtra.map(x => check(x.v, x.l, P('eExtra', x), o[x.v])).join('')}<div class="row-l"><span>מזוזה</span>${chipRow('mez', G.eMez, o.mez, 'eMez')}</div>`),
+        handleNote),
     ];
+    const techPrice = P('eSide', side) + (v.win ? P('eGlass', gl) + (o.belgian ? P('eBelgian', G.eBelgian[0]) : 0) : 0) + P('eCyl', cy) + P('eWidth', w) +
+      (o.mez !== 'none' ? P('eMez', mz) : 0) + extrasOn.reduce((s, x) => s + P('eExtra', x), 0);
+    const techSummary = [`רוחב ${w.l}`, `פתיחה ל${o.side === 'left' ? 'שמאל' : 'ימין'}`, o.sideUnit !== 'none' ? `יחידת צד ${side.l}` : '', o.install ? 'כולל התקנה' : 'ללא התקנה'].filter(Boolean).join(' · ');
+    const tech = [
+      block('מידות ופתיחה', '', `<div class="row-l"><span>רוחב</span>${chipRow('width', G.eWidth, o.width, 'eWidth')}</div><div class="row-l"><span>כיוון פתיחה</span>${sideChips(o)}</div>`),
+      block('יחידת צד', 'חלון קבוע עם סורג לצד הדלת', `${chipRow('sideUnit', G.eSide, o.sideUnit, 'eSide')}${o.sideUnit === 'none' ? '' :
+        `<div class="row-l"><span>סורג ליחידת הצד</span>${picks('sideGrille', G.eSideGrille, o.sideGrille, { group: 'eSideGrille', cls: 'gr side' })}</div>`}`),
+      v.win ? block('זכוכית', '', chipRow('glass', G.eGlass, o.glass, 'eGlass') + check('belgian', G.eBelgian[0].l, P('eBelgian', G.eBelgian[0]), o.belgian)) : '',
+      block('מנעול וצילינדר', '', chipRow('cyl', G.eCyl, o.cyl, 'eCyl')),
+      block('אביזרים', '', `${G.eExtra.map(x => check(x.v, x.l, P('eExtra', x), o[x.v])).join('')}<div class="row-l"><span>מזוזה</span>${chipRow('mez', G.eMez, o.mez, 'eMez')}</div>`),
+      installBlock(m, o),
+    ];
+    return { main, tech, techSummary, techPrice };
   }
   function renderDetail() {
     const m = st.model, v = m.variants[st.vi], o = st.opts, c = calc();
-    const secs = (m.kind === 'entry' ? sectionsEntry : sectionsInterior)(m, v, o).join('');
+    const s = (m.kind === 'entry' ? stepsEntry : stepsInterior)(m, v, o);
+    const n = s.main.length + 2;
     $('#detail').innerHTML = `
-      <div><h2>${m.kind === 'entry' ? 'דגם ' : ''}${m.name}</h2><div class="sub">${m.brand} · ${m.series} · ${m.desc}</div></div>
-      <div class="secs">${secs}
-        <details class="sec" data-sec="install" ${st.open.has('install') ? 'open' : ''}><summary><span class="st">התקנה</span><span class="sv">${o.install ? 'כולל התקנה' : 'ללא התקנה'}${o.remove ? ' · פירוק' : ''}</span></summary>
-          <div class="sb">${check('install', 'התקנה', m.kind === 'entry' ? settings.instE : settings.instI, o.install)}${check('remove', 'פירוק ופינוי דלת קיימת', m.kind === 'entry' ? settings.remE : settings.remI, o.remove)}</div></details>
-      </div>
+      <div class="model-h"><h2>${m.kind === 'entry' ? 'דגם ' : ''}${m.name}</h2><div class="sub">${m.brand} · ${m.series} · ${m.desc}</div></div>
+      ${s.main.join('')}
+      <details class="tech" data-sec="tech" ${st.open.has('tech') ? 'open' : ''}>
+        <summary><span class="sn">${n}</span><span class="tt">פרטים טכניים</span><span class="sv">${s.techSummary}</span>${s.techPrice ? `<span class="sp">+${fmt(s.techPrice)}</span>` : ''}</summary>
+        <div class="tb">${s.tech.join('')}</div>
+      </details>
       <div class="opts">
         <label class="field"><span>חדר / מיקום</span><input type="text" id="oRoom" value="${esc(o.room || '')}" placeholder="${m.kind === 'entry' ? 'כניסה ראשית' : 'חדר שינה הורים'}"></label>
         <label class="field"><span>כמות</span><input type="number" id="oQty" min="1" value="${o.qty}"></label>
@@ -588,7 +656,6 @@
     st.model = kind === 'entry' ? (CAT.entry.find(m => m.name === '3014') || CAT.entry[0]) : (CAT.interior.find(m => m.name === 'יובל') || CAT.interior[0]);
     st.vi = 0;
     st.opts = { ...DEFAULTS[kind], side: st.opts.side, install: st.opts.install, remove: st.opts.remove, qty: 1, room: '' };
-    st.open = new Set(kind === 'entry' ? ['color', 'grille'] : ['color', 'handle']);
     if (st.bgIsSample) useSample();
     refreshPanel(); updateDoor();
   }
@@ -603,7 +670,7 @@
     renderDetail(); updateDoor();
   });
   const detail = $('#detail');
-  detail.addEventListener('toggle', e => { const d = e.target.closest('.sec'); if (!d) return; d.open ? st.open.add(d.dataset.sec) : st.open.delete(d.dataset.sec); }, true);
+  detail.addEventListener('toggle', e => { const d = e.target.closest('[data-sec]'); if (!d) return; d.open ? st.open.add(d.dataset.sec) : st.open.delete(d.dataset.sec); }, true);
   detail.addEventListener('click', e => {
     const sw = e.target.closest('.sw');
     if (sw) { st.vi = +sw.dataset.vi; st.opts.ral = null; renderDetail(); updateDoor(); return; }
@@ -775,6 +842,7 @@
     if (view === 'quote') renderQuote();
     if (view === 'settings') renderSettings();
     if (view === 'studio') { refreshPanel(); render(); }
+    updateMini();
     try { history.replaceState(null, '', '#' + view); } catch { /* ignore */ }
   }
   $$('.tabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.view)));

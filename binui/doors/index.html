@@ -139,7 +139,8 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .tile small { font: 500 .7rem/1 var(--f-num); color: var(--muted); }
 .tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
-.detail { padding: 14px 12px; display: grid; gap: 14px; }
+.detail { padding: 14px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.detail > * { min-width: 0; }
 .detail h2 { margin: 0; font: 600 1.35rem/1.15 var(--f-display); text-wrap: balance; }
 .detail .sub { color: var(--muted); font-size: .92rem; margin-top: 2px; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -218,6 +219,33 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .brk div { display: flex; justify-content: space-between; gap: 12px; padding: 1px 0; max-width: 420px; }
 .brk div span:last-child { font-family: var(--f-num); white-space: nowrap; }
 .dot { display: block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgb(0 0 0 / .2); }
+
+
+/* focused flow: numbered steps for the decisions that sell the door, one panel for the rest */
+.step-h, .step header, .tech summary { display: flex; align-items: baseline; gap: 8px; }
+.sn { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--bg); font: 600 .8rem/24px var(--f-display); text-align: center; align-self: center; }
+.step-h h3, .step h3 { margin: 0; font: 600 1.05rem/1.2 var(--f-display); }
+.model-h { padding-bottom: 2px; }
+.step { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.step header .sv, .tech summary .sv { color: var(--muted); font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.step header .sp, .tech summary .sp { font: 500 .8rem/1 var(--f-num); color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 7px; white-space: nowrap; }
+.step .note { margin: 0; font-size: .82rem; color: var(--muted); }
+.tech { border: 1px solid var(--line); border-radius: 8px; background: var(--sunken); }
+.tech summary { list-style: none; cursor: pointer; padding: 12px; }
+.tech summary::-webkit-details-marker { display: none; }
+.tech summary .tt { font: 600 1.05rem/1.2 var(--f-display); white-space: nowrap; }
+.tech summary::after { content: "▾"; color: var(--muted); margin-inline-start: 4px; }
+.tech[open] summary::after { content: "▴"; }
+.tech .tb { display: grid; gap: 16px; padding: 4px 12px 14px; }
+.tblock { display: grid; gap: 8px; }
+.tblock h4 { margin: 0; font: 600 .9rem/1.2 var(--f-display); }
+.tblock h4 small { font: 400 .8rem/1.2 var(--f-body); color: var(--muted); margin-inline-start: 6px; }
+.picks.hw.sm { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+.picks.hw.sm .pi { height: 44px; }
+.picks.hw.sm .pi img { max-height: 40px; }
+.mini { position: fixed; inset-inline-end: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 30; padding: 0; border: 2px solid var(--surface); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 20px rgb(0 0 0 / .35); cursor: pointer; background: #0d1112; }
+.mini canvas { display: block; width: 96px; height: 160px; }
+.mini span { position: absolute; inset-inline: 0; bottom: 0; background: rgb(0 0 0 / .55); color: #fff; font-size: .7rem; padding: 2px 0; text-align: center; }
 
 /* quote view */
 .quote-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
@@ -347,6 +375,7 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 
   <aside class="panel">
     <div class="panel-head">
+      <div class="step-h"><span class="sn">1</span><h3>דגם</h3></div>
       <div class="seg" role="group" aria-label="סוג דלת">
         <button id="kind-interior" data-kind="interior" aria-pressed="true">דלתות פנים</button>
         <button id="kind-entry" data-kind="entry" aria-pressed="false">דלתות כניסה</button>
@@ -443,6 +472,7 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 </section>
 </main>
 
+<button class="mini" id="mini" hidden aria-label="חזרה להדמיה"><canvas id="miniCanvas" width="192" height="320"></canvas><span>הדמיה</span></button>
 <div class="toast" id="toast" hidden></div>
 
 <script src="catalog.js"></script>
