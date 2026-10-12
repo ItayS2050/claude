@@ -1,4 +1,4 @@
-/* דלתות במקום — אב-טיפוס: הדמיית דלת על תמונת הפתח של הלקוח והפקת הצעת מחיר במקום. */
+/* פתח — אב-טיפוס: הדמיית דלת על תמונת הפתח של הלקוח והפקת הצעת מחיר במקום. */
 (() => {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
@@ -11,15 +11,17 @@
 
   /* ---------- storage (best effort) ---------- */
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('dlatot:' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem('dlatot:' + k, JSON.stringify(v)); return true; } catch { return false; } },
+    // נתונים שנשמרו לפני שינוי השם (dlatot:) נקראים פעם אחת ועוברים למפתח החדש
+    get(k, d) { try { const v = localStorage.getItem('petach:' + k) ?? localStorage.getItem('dlatot:' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('petach:' + k, JSON.stringify(v)); return true; } catch { return false; } },
   };
 
   /* ---------- settings ---------- */
-  const DEFAULT_SETTINGS = { name: 'דלתות במקום', phone: '03-0000000', line: 'אולם תצוגה · רחוב התעשייה 1', vat: 18, valid: 30,
+  const DEFAULT_SETTINGS = { name: 'העסק שלכם', phone: '03-0000000', line: 'אולם תצוגה · רחוב התעשייה 1', vat: 18, valid: 30,
     instI: 350, instE: 650, remI: 150, remE: 350, deposit: 30, prices: {}, opt: {} };
   let settings = { ...DEFAULT_SETTINGS, ...store.get('settings', {}) };
   settings.opt = settings.opt || {};
+  if (settings.name === 'דלתות במקום') settings.name = DEFAULT_SETTINGS.name; // שם הדוגמה הקודם
   const priceOf = m => settings.prices[m.id] ?? m.price;
   const saveSettings = () => store.set('settings', settings);
 
@@ -765,7 +767,7 @@
     const rows = quote.items.map((it, i) => `${i + 1}. ${it.room ? it.room + ' – ' : ''}${it.title}\n   ${it.desc}\n   ${it.qty} × ${fmt(it.unit)} = ${fmt(it.unit * it.qty)}`);
     return [`שלום${quote.customer.name ? ' ' + quote.customer.name : ''},`, `הצעת מחיר מס׳ ${quote.num} מ${settings.name}:`, '', ...rows, '',
       quote.discount ? `הנחה ${quote.discount}%: −${fmt(t.disc)}` : '', `סה״כ לפני מע״מ: ${fmt(t.net)}`, `מע״מ ${settings.vat}%: ${fmt(t.vat)}`, `סה״כ לתשלום: ${fmt(t.grand)}`, '',
-      `ההצעה בתוקף ${settings.valid} יום.${quote.approved ? ' אושרה ונחתמה.' : ''}`, `${settings.name} · ${settings.phone}`].filter(l => l !== '').join('\n').replace(/\n(?=\d\.)/g, '\n\n');
+      `ההצעה בתוקף ${settings.valid} יום.${quote.approved ? ' אושרה ונחתמה.' : ''}`, `${settings.name} · ${settings.phone}`, '', 'הופק עם פתח'].filter(l => l !== '').join('\n').replace(/\n(?=\d\.)/g, '\n\n');
   }
   function updateWa() {
     let ph = (quote.customer.phone || '').replace(/\D/g, '');
@@ -833,7 +835,7 @@
   $('#optBody').addEventListener('input', e => { const i = e.target.closest('[data-opt]'); if (!i) return; settings.opt[i.dataset.opt] = +i.value || 0; saveSettings(); });
   $('#resetPrices').addEventListener('click', () => { $('#resetPrices').hidden = true; $('#resetConfirm').hidden = false; setTimeout(() => { $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; }, 4000); });
   $('#resetConfirm').addEventListener('click', () => { settings = { ...DEFAULT_SETTINGS, prices: {}, opt: {} }; saveSettings(); renderSettings(); applyBrand(); $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; toast('המחירים חזרו לערכי הדוגמה'); });
-  function applyBrand() { $('#bizName').textContent = settings.name || 'דלתות במקום'; }
+  function applyBrand() { $('#bizName').textContent = settings.name || ''; $('#bizName').hidden = !settings.name; }
 
   /* ---------- views & toast ---------- */
   function show(view) {

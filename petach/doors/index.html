@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>דלתות במקום</title>
+<title>פתח</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -57,9 +57,10 @@ img { max-width: 100%; }
 /* top bar */
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line);
   display: flex; align-items: center; gap: 16px; padding: 10px 16px; flex-wrap: wrap; }
-.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.brand b { font: 700 1.25rem/1.1 var(--f-display); letter-spacing: -.01em; }
-.brand span { color: var(--muted); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brand .logo { width: 26px; height: 26px; flex: none; color: var(--ink); }
+.brand b { font: 700 1.4rem/1 var(--f-display); letter-spacing: -.01em; }
+.brand span { color: var(--muted); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-inline-start: 1px solid var(--line); padding-inline-start: 10px; margin-inline-start: 4px; }
 .tabs { display: flex; gap: 4px; margin-inline-start: auto; background: var(--sunken); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
 .tabs button { border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; cursor: pointer; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
@@ -248,6 +249,7 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .mini span { position: absolute; inset-inline: 0; bottom: 0; background: rgb(0 0 0 / .55); color: #fff; font-size: .7rem; padding: 2px 0; text-align: center; }
 
 /* quote view */
+.made { margin-top: 28px; padding-top: 10px; border-top: 1px solid var(--paper-line); font-size: .78rem; color: var(--paper-muted); text-align: center; }
 .quote-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
 @media (max-width: 960px) { .quote-wrap { grid-template-columns: minmax(0, 1fr); } }
 .paper { background: var(--paper); color: var(--paper-ink); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: clamp(18px, 4vw, 44px); max-width: 860px; width: 100%; justify-self: center; color-scheme: light; }
@@ -331,7 +333,7 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 </head>
 <body>
 <header class="top">
-  <div class="brand"><b id="bizName">דלתות במקום</b><span>הדמיה והצעת מחיר אצל הלקוח</span></div>
+  <div class="brand"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21.5V2.5h14v19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M19 2.5 11 5.2v18.3l8-2z" fill="var(--accent)"/></svg><b>פתח</b><span id="bizName"></span></div>
   <nav class="tabs" role="tablist">
     <button role="tab" id="tab-studio" aria-selected="true" data-view="studio">הדמיה ובחירה</button>
     <button role="tab" id="tab-quote" aria-selected="false" data-view="quote">הצעת מחיר <span class="badge" id="qCount" hidden>0</span></button>
@@ -419,6 +421,7 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
       </div>
     </div>
     <div id="approvedStamp" hidden class="approved"></div>
+    <div class="made">הופק עם <b>פתח</b> · רואים את זה בבית, לפני שזה בבית</div>
   </article>
 
   <aside class="q-side">
