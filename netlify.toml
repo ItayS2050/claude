@@ -1,0 +1,34 @@
+# פתח: אתר סטטי, בלי שלב build. Netlify מפרסם את התיקייה petach/doors.
+[build]
+  base = "petach/doors"
+  publish = "."
+  command = "echo 'static site, nothing to build'"
+
+# אתר פיילוט: לא להופיע במנועי חיפוש
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), geolocation=(), microphone=()"
+
+# קוד האפליקציה תמיד נבדק מול השרת, כדי שעדכונים יגיעו מיד
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# תמונות הקטלוג כמעט לא משתנות
+[[headers]]
+  for = "/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

@@ -91,8 +91,12 @@
     const n = (store.get('qseq', 1040)) + 1; store.set('qseq', n);
     return { num: `${new Date().getFullYear()}-${n}`, created: Date.now(), customer: { name: '', phone: '', addr: '' }, items: [], discount: 0, approved: null };
   }
-  const saveQuote = () => { if (!store.set('quote', quote)) { // תמונות גדולות מדי לאחסון: שומרים בלי תמונות
-      store.set('quote', { ...quote, items: quote.items.map(i => ({ ...i, img: '' })) }); } };
+  let archiveTimer = 0;
+  const saveQuote = () => {
+    if (!store.set('quote', quote)) { // תמונות גדולות מדי לאחסון: שומרים בלי תמונות; העותק המלא נשמר ב-IndexedDB
+      store.set('quote', { ...quote, items: quote.items.map(i => ({ ...i, img: '' })) }); }
+    clearTimeout(archiveTimer); archiveTimer = setTimeout(() => archiveQuote(), 400);
+  };
 
   /* ---------- image loading ---------- */
   const imgCache = new Map();
@@ -754,6 +758,8 @@
     const a = $('#approvedStamp'); a.hidden = !quote.approved; if (quote.approved) a.textContent = `אושר ונחתם ע״י הלקוח · ${new Date(quote.approved).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}`;
     $('#printBtn').hidden = window.self !== window.top; // בתוך מסגרת אין חלון הדפסה
     updateWa(); sizeSig();
+    if (quote.signature) { const im = new Image(); im.onload = () => { clearSig(); sg.drawImage(im, 0, 0, sig.width, sig.height); sigDirty = true; }; im.src = quote.signature; }
+    renderQList();
   }
   function renderTotals() {
     const t = totals();
@@ -791,10 +797,8 @@
   $('#approveBtn').addEventListener('click', () => {
     if (!quote.items.length) return toast('אין עדיין פריטים בהצעה');
     if (!sigDirty) return toast('הלקוח צריך לחתום בתיבת החתימה');
-    quote.approved = Date.now(); saveQuote(); renderQuote(); toast('ההצעה אושרה');
+    quote.approved = Date.now(); quote.signature = sig.toDataURL('image/png'); saveQuote(); renderQuote(); toast('ההצעה אושרה ונשמרה עם החתימה');
   });
-  $('#newQuoteBtn').addEventListener('click', () => { $('#newQuoteBtn').hidden = true; $('#newQuoteConfirm').hidden = false; setTimeout(() => { $('#newQuoteBtn').hidden = false; $('#newQuoteConfirm').hidden = true; }, 4000); });
-  $('#newQuoteConfirm').addEventListener('click', () => { quote = newQuote(); saveQuote(); clearSig(); updateCount(); renderQuote(); $('#newQuoteBtn').hidden = false; $('#newQuoteConfirm').hidden = true; toast('נפתחה הצעה חדשה'); });
 
   // signature pad
   const sig = $('#sigCanvas'), sg = sig.getContext('2d');
@@ -814,12 +818,13 @@
     sg.lineTo(x, y); sg.stroke(); sigDirty = true;
   });
   ['pointerup', 'pointercancel'].forEach(t => sig.addEventListener(t, () => { sigDrawing = false; }));
-  $('#sigClear').addEventListener('click', () => { clearSig(); if (quote.approved) { quote.approved = null; saveQuote(); renderQuote(); } });
+  $('#sigClear').addEventListener('click', () => { clearSig(); if (quote.approved || quote.signature) { quote.approved = null; delete quote.signature; saveQuote(); renderQuote(); } });
 
   /* ---------- settings ---------- */
   const S_FIELDS = [['sName', 'name'], ['sPhone', 'phone'], ['sLine', 'line'], ['sVat', 'vat', 1], ['sValid', 'valid', 1], ['sInstI', 'instI', 1], ['sInstE', 'instE', 1], ['sRemI', 'remI', 1], ['sRemE', 'remE', 1], ['sDeposit', 'deposit', 1]];
   function renderSettings() {
     S_FIELDS.forEach(([id, k]) => { $('#' + id).value = settings[k]; });
+    renderBackupInfo();
     const group = (title, arr) => `<tr class="grp"><td colspan="5">${title}</td></tr>` + arr.map(m => `<tr><td><img src="${m.variants[0].src}" alt="" loading="lazy"></td>
       <td>${m.kind === 'entry' ? 'דגם ' : ''}${m.name}</td><td>${m.series}</td><td>${m.variants.length}</td>
       <td><input type="number" min="0" step="50" data-price="${m.id}" value="${priceOf(m)}" aria-label="מחיר ${m.name}"></td></tr>`).join('');
@@ -836,6 +841,139 @@
   $('#resetPrices').addEventListener('click', () => { $('#resetPrices').hidden = true; $('#resetConfirm').hidden = false; setTimeout(() => { $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; }, 4000); });
   $('#resetConfirm').addEventListener('click', () => { settings = { ...DEFAULT_SETTINGS, prices: {}, opt: {} }; saveSettings(); renderSettings(); applyBrand(); $('#resetPrices').hidden = false; $('#resetConfirm').hidden = true; toast('המחירים חזרו לערכי הדוגמה'); });
   function applyBrand() { $('#bizName').textContent = settings.name || ''; $('#bizName').hidden = !settings.name; }
+
+  /* ---------- pilot: saved quotes (IndexedDB), backup, Excel price list, installable app ---------- */
+  // כל הצעה נשמרת במסד הנתונים של הדפדפן עם התמונות והחתימה, כך שאפשר לחזור אליה אחר כך
+  const idb = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('petach', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('quotes', { keyPath: 'num' });
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const run = (mode, fn) => open().then(db => new Promise((res, rej) => {
+      const t = db.transaction('quotes', mode), req = fn(t.objectStore('quotes'));
+      t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error);
+    }));
+    return { put: q => run('readwrite', s => s.put(q)), all: () => run('readonly', s => s.getAll()) };
+  })();
+  let qCache = [];
+  const hasContent = q => q.items.length || q.customer.name || q.customer.phone;
+  function archiveQuote() {
+    if (!hasContent(quote)) return Promise.resolve();
+    return idb.put(JSON.parse(JSON.stringify(quote))).then(renderQList).catch(e => console.warn('quote archive', e));
+  }
+  async function renderQList() {
+    try { qCache = (await idb.all()).sort((a, b) => b.created - a.created); } catch { qCache = []; }
+    const tot = q => { const sub = q.items.reduce((s, i) => s + i.unit * i.qty, 0), net = sub * (1 - (q.discount || 0) / 100); return net * (1 + settings.vat / 100); };
+    $('#qList').innerHTML = qCache.length ? qCache.map(q => `<li><button data-num="${esc(q.num)}" aria-current="${q.num === quote.num}">
+        <b>${esc(q.customer.name || 'ללא שם לקוח')}</b><span class="amt">${fmt(tot(q))}</span>
+        <small>${esc(q.num)} · ${new Date(q.created).toLocaleDateString('he-IL')} · ${q.items.length} פריטים</small>
+        <span class="st ${q.approved ? 'ok' : ''}">${q.approved ? 'נחתמה' : 'טיוטה'}</span></button></li>`).join('')
+      : '<li class="empty">עדיין אין הצעות שמורות.</li>';
+  }
+  $('#qList').addEventListener('click', e => {
+    const b = e.target.closest('[data-num]'); if (!b) return;
+    const q = qCache.find(x => x.num === b.dataset.num); if (!q || q.num === quote.num) return;
+    archiveQuote(); quote = JSON.parse(JSON.stringify(q)); store.set('quote', quote) || store.set('quote', { ...quote, items: quote.items.map(i => ({ ...i, img: '' })) });
+    clearSig(); updateCount(); renderQuote(); toast(`נפתחה הצעה ${quote.num}`);
+  });
+  $('#newQuoteBtn').addEventListener('click', async () => {
+    await archiveQuote(); quote = newQuote(); saveQuote(); clearSig(); updateCount(); renderQuote(); toast('נפתחה הצעה חדשה. הקודמת נשמרה ברשימה.');
+  });
+
+  // הורדת קובץ (עובד באתר עצמאי; בתוך תצוגה מקדימה מוגבלת ההורדה עלולה להיחסם)
+  function download(name, blob) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  const today = () => new Date().toISOString().slice(0, 10);
+  $('#backupBtn').addEventListener('click', async () => {
+    await archiveQuote();
+    let quotes = []; try { quotes = await idb.all(); } catch { /* ignore */ }
+    if (hasContent(quote) && !quotes.some(q => q.num === quote.num)) quotes.push(quote);
+    const data = { app: 'petach', version: 1, exported: new Date().toISOString(), settings, qseq: store.get('qseq', 1040), current: quote.num, quotes };
+    download(`petach-backup-${today()}.json`, new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    store.set('lastBackup', Date.now()); renderBackupInfo(); toast(`הגיבוי ירד (${quotes.length} הצעות)`);
+  });
+  $('#restoreInput').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (data.app !== 'petach' || !data.settings || !Array.isArray(data.quotes)) throw new Error('not a backup');
+      settings = { ...DEFAULT_SETTINGS, ...data.settings }; settings.opt = settings.opt || {}; saveSettings();
+      for (const q of data.quotes) await idb.put(q);
+      store.set('qseq', Math.max(store.get('qseq', 1040), data.qseq || 0));
+      const cur = data.quotes.find(q => q.num === data.current); if (cur) { quote = cur; saveQuote(); }
+      applyBrand(); updateCount(); renderSettings(); renderQList(); toast(`שוחזרו ${data.quotes.length} הצעות והמחירון`);
+    } catch (err) { console.warn(err); toast('הקובץ הזה אינו גיבוי של פתח. בחרו קובץ petach-backup-….json'); }
+  });
+  function renderBackupInfo() {
+    const t = store.get('lastBackup', 0);
+    $('#backupInfo').textContent = t ? `גיבוי אחרון: ${new Date(t).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}` : 'עדיין לא בוצע גיבוי בטאבלט הזה.';
+  }
+
+  // מחירון באקסל: עמודת "קוד" מזהה כל שורה, ועמודת "מחיר" היא מה שמעדכנים
+  let xlsxP = null;
+  const loadXlsx = () => window.XLSX ? Promise.resolve(window.XLSX) : (xlsxP = xlsxP || new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = 'vendor/xlsx.full.min.js'; s.onload = () => res(window.XLSX); s.onerror = () => { xlsxP = null; rej(new Error('xlsx')); };
+    document.head.appendChild(s);
+  }));
+  const SET_ROWS = [['instI', 'התקנת דלת פנים'], ['instE', 'התקנת דלת כניסה'], ['remI', 'פירוק דלת פנים ישנה'], ['remE', 'פירוק דלת כניסה ישנה']];
+  function priceRows() {
+    const rows = [];
+    CAT.interior.forEach(m => rows.push([m.id, 'דלת פנים · טלדור', m.name, m.series, priceOf(m)]));
+    CAT.entry.forEach(m => rows.push([m.id, 'דלת כניסה · אלידור', 'דגם ' + m.name, m.series, priceOf(m)]));
+    Object.entries(GROUP_TITLES).forEach(([g, title]) => G[g].forEach(it => rows.push([`opt:${g}:${it.v}`, 'תוספת · ' + title, it.l, '', P(g, it)])));
+    SET_ROWS.forEach(([k, l]) => rows.push([`set:${k}`, 'שירות', l, '', settings[k]]));
+    return rows;
+  }
+  $('#xlsxExport').addEventListener('click', async () => {
+    try {
+      const X = await loadXlsx();
+      const ws = X.utils.aoa_to_sheet([['קוד', 'קטגוריה', 'פריט', 'סדרה', 'מחיר'], ...priceRows()]);
+      ws['!cols'] = [{ wch: 26 }, { wch: 26 }, { wch: 40 }, { wch: 22 }, { wch: 10 }];
+      const wb = X.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
+      X.utils.book_append_sheet(wb, ws, 'מחירון');
+      X.writeFile(wb, `petach-pricelist-${today()}.xlsx`);
+    } catch (err) { console.warn(err); toast('לא הצלחנו ליצור את קובץ האקסל'); }
+  });
+  $('#xlsxImport').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const out = $('#xlsxResult');
+    try {
+      const X = await loadXlsx(), wb = X.read(await f.arrayBuffer());
+      const rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
+      const head = (rows[0] || []).map(h => String(h || '').trim()), ci = head.indexOf('קוד'), pi = head.indexOf('מחיר');
+      if (ci < 0 || pi < 0) throw new Error('missing columns');
+      let ok = 0, changed = 0, unknown = 0, bad = 0;
+      const optKeys = new Set(Object.keys(GROUP_TITLES).flatMap(g => G[g].map(it => `${g}:${it.v}`)));
+      for (const r of rows.slice(1)) {
+        const code = String(r[ci] ?? '').trim(); if (!code) continue;
+        const price = Number(String(r[pi] ?? '').replace(/[₪,\s]/g, ''));
+        if (!Number.isFinite(price) || price < 0) { bad++; continue; }
+        const was = byId[code] ? priceOf(byId[code]) : code.startsWith('opt:') && optKeys.has(code.slice(4)) ? settings.opt[code.slice(4)] ?? G[code.split(':')[1]].find(it => it.v === code.split(':').slice(2).join(':'))?.p : settings[code.slice(4)];
+        if (byId[code]) settings.prices[code] = price;
+        else if (code.startsWith('opt:') && optKeys.has(code.slice(4))) settings.opt[code.slice(4)] = price;
+        else if (code.startsWith('set:') && SET_ROWS.some(([k]) => k === code.slice(4))) settings[code.slice(4)] = price;
+        else { unknown++; continue; }
+        ok++; if (was !== price) changed++;
+      }
+      saveSettings(); renderSettings();
+      out.hidden = false;
+      out.textContent = `נקלטו ${ok} שורות, ${changed} מחירים השתנו.` + (unknown ? ` ${unknown} שורות עם קוד לא מוכר לא נקלטו.` : '') + (bad ? ` ב-${bad} שורות המחיר לא היה מספר.` : '');
+      toast(changed ? `המחירון עודכן: ${changed} מחירים השתנו` : 'המחירון נקלט, לא היו שינויים');
+    } catch (err) {
+      console.warn(err); out.hidden = false;
+      out.textContent = 'לא הצלחנו לקרוא את הקובץ. השתמשו בקובץ שהורדתם מכאן, עם העמודות "קוד" ו"מחיר" בשורה הראשונה.';
+    }
+  });
+
+  // אפליקציה בטאבלט: עבודה גם בלי אינטרנט, ובקשה מהדפדפן לא למחוק את הנתונים
+  if ('serviceWorker' in navigator && window.self === window.top && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
+  }
+  try { navigator.storage?.persist?.(); } catch { /* ignore */ }
 
   /* ---------- views & toast ---------- */
   function show(view) {

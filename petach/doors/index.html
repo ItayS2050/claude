@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>פתח</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1C2324">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="פתח">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -248,6 +255,19 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .mini canvas { display: block; width: 96px; height: 160px; }
 .mini span { position: absolute; inset-inline: 0; bottom: 0; background: rgb(0 0 0 / .55); color: #fff; font-size: .7rem; padding: 2px 0; text-align: center; }
 
+/* pilot: past quotes and settings column */
+.settings-col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.settings .file-btn { justify-content: center; }
+.qlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 360px; overflow-y: auto; }
+.qlist li button { width: 100%; text-align: start; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; }
+.qlist li button[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.qlist b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qlist small { color: var(--muted); font-size: .78rem; }
+.qlist .amt { font: 500 .82rem/1.4 var(--f-num); text-align: end; }
+.qlist .st { font-size: .72rem; font-weight: 700; border-radius: 4px; padding: 1px 6px; justify-self: end; background: var(--sunken); color: var(--muted); }
+.qlist .st.ok { background: var(--ok); color: #fff; }
+.qlist .empty { color: var(--muted); font-size: .85rem; }
+
 /* quote view */
 .made { margin-top: 28px; padding-top: 10px; border-top: 1px solid var(--paper-line); font-size: .78rem; color: var(--paper-muted); text-align: center; }
 .quote-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
@@ -434,16 +454,17 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
       <button class="btn" id="printBtn">הדפסה / שמירה כ-PDF</button>
     </div>
     <div class="q-card">
-      <h3>הצעה חדשה</h3>
-      <p>מנקה את הפריטים ואת פרטי הלקוח ופותח מספר הצעה חדש.</p>
+      <h3>הצעות</h3>
+      <p>ההצעה הנוכחית נשמרת אוטומטית. הצעה חדשה פותחת מספר חדש, והקודמת נשארת ברשימה.</p>
       <button class="btn" id="newQuoteBtn">התחלת הצעה חדשה</button>
-      <button class="btn" id="newQuoteConfirm" hidden style="border-color:var(--danger);color:var(--danger)">לחצו שוב לאישור</button>
+      <ul class="qlist" id="qList"></ul>
     </div>
   </aside>
 </section>
 
 <!-- ============ SETTINGS ============ -->
 <section id="view-settings" class="settings" hidden>
+  <div class="settings-col">
   <div class="card">
     <h2>פרטי העסק</h2>
     <label class="field"><span>שם העסק</span><input type="text" id="sName"></label>
@@ -458,9 +479,24 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
       <label class="field"><span>פירוק דלת כניסה ישנה (₪)</span><input type="number" id="sRemE"></label>
       <label class="field full"><span>מקדמה בחתימה (%)</span><input type="number" id="sDeposit" min="0" max="100"></label>
     </div>
-    <p class="src-note">הקטלוג נבנה אוטומטית מקטלוגי טלדור 2026/27 ואלידור 2025. הקטלוגים לא כוללים מחירים, ולכן כל המחירים כאן הם מחירי דוגמה. עדכנו אותם לפי המחירון שלכם. השינויים נשמרים בדפדפן הזה בלבד.</p>
+    <p class="src-note">הקטלוג נבנה אוטומטית מקטלוגי טלדור 2026/27 ואלידור 2025. הקטלוגים לא כוללים מחירים, ולכן כל המחירים כאן הם מחירי דוגמה. עדכנו אותם לפי המחירון שלכם. השינויים נשמרים בטאבלט הזה בלבד.</p>
     <button class="btn" id="resetPrices">שחזור מחירי הדוגמה</button>
     <button class="btn" id="resetConfirm" hidden style="border-color:var(--danger);color:var(--danger)">לחצו שוב לאישור</button>
+  </div>
+  <div class="card">
+    <h2>מחירון באקסל</h2>
+    <p>מורידים את המחירון לאקסל, מעדכנים את עמודת "מחיר" ומעלים את הקובץ בחזרה. כל שורה מזוהה לפי עמודת "קוד", אז לא לשנות אותה.</p>
+    <button class="btn" id="xlsxExport">הורדת המחירון לאקסל</button>
+    <label class="btn file-btn">העלאת מחירון מעודכן<input type="file" id="xlsxImport" accept=".xlsx,.xls,.csv"></label>
+    <p class="src-note" id="xlsxResult" hidden></p>
+  </div>
+  <div class="card">
+    <h2>גיבוי</h2>
+    <p>כל הנתונים, כולל ההצעות והחתימות, נשמרים בטאבלט הזה בלבד. כדאי לגבות פעם בשבוע ולשמור את הקובץ בדרייב או במייל.</p>
+    <button class="btn" id="backupBtn">הורדת גיבוי מלא</button>
+    <label class="btn file-btn">שחזור מגיבוי<input type="file" id="restoreInput" accept=".json,application/json"></label>
+    <p class="src-note" id="backupInfo"></p>
+  </div>
   </div>
   <div class="card">
     <h2>מחירון דגמים</h2>
