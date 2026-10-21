@@ -4435,7 +4435,25 @@ async function maybeShowTrialNotice() {
 //
 // So the engine keeps running and the fix is what is withheld. Once a day,
 // when a real mistake is found, Kiko says it found one.
-const EXPIRED_NUDGE_GAP_MS = 24 * 60 * 60 * 1000;
+// Every mistake, not one a day.
+//
+// It was once a day, and that was too careful. Two uninstall notes now say
+// the same thing — "it didn't detect my keyboard mistakes" — from people
+// whose trial had simply ended. An expired user types gibberish all morning,
+// sees nothing, and concludes the product is broken, which is both wrong and
+// the worst thing they could conclude. Kiko did detect every one of them.
+//
+// So it speaks for every mistake it catches. The only thing held back is the
+// same mistake twice in quick succession: a sentence raises detections as it
+// grows, and re-announcing the one the user is still typing is noise rather
+// than news. A different mistake always speaks, immediately.
+const EXPIRED_NUDGE_REPEAT_MS = 2 * 60 * 1000;
+
+// What was last announced, so a growing sentence is one mistake and not six.
+// Deliberately in memory and not storage: a new page is a new chance to tell
+// someone their product has stopped working.
+let lastExpiredSig = null;
+let lastExpiredAt  = 0;
 
 // Run the engine with the paywall lifted, exactly as bestOfLanguages lifts
 // and restores enabledLangs. Nothing is shown from this — the caller decides
@@ -4448,7 +4466,7 @@ function analyzeIgnoringPaywall(fn) {
 
 // What the notice says, and does not say. It reports that a mistake was
 // found and how many words it covers; it does not show the correction.
-// Handing over the fix once a day is handing over the product to exactly the
+// Handing over the fix is handing over the product to exactly the
 // people who are deciding whether to buy it, and they have already watched it
 // work for thirty days — the question in their mind is not whether it works,
 // it is whether they want it back. One line to change if that reads wrong:
@@ -4456,9 +4474,11 @@ function analyzeIgnoringPaywall(fn) {
 async function maybeNudgeExpired(detection) {
   try {
     if (entitled || !detection) return false;
+    // showTrialToast refuses while another toast is up, so bursts cannot
+    // stack however fast somebody types.
     if (activeToast) return false;
-    const d = await chrome.storage.local.get('expiredNudgeAt');
-    if (!expiredNudgeDue(d.expiredNudgeAt)) return false;
+    const sig = detection.words.join('|');
+    if (!expiredNudgeDue(sig, lastExpiredSig, lastExpiredAt)) return false;
     const n = detection.words.length;
     const shown = showTrialToast({
       title:  t('expiredCaughtTitle', null, 'Kiko just caught a layout mistake'),
@@ -4469,15 +4489,16 @@ async function maybeNudgeExpired(detection) {
       cta:    t('trialEndedCta', null, 'Keep Kiko'),
       accent: '#f87171',
     });
-    if (shown) await chrome.storage.local.set({ expiredNudgeAt: Date.now() });
+    if (shown) { lastExpiredSig = sig; lastExpiredAt = Date.now(); }
     return shown;
   } catch { return false; }
 }
 
-// Separate from the storage and the DOM so the schedule can be tested without
-// either, the same way expiryNoticeDue is.
-function expiredNudgeDue(lastAt, now = Date.now()) {
-  return now - (lastAt || 0) >= EXPIRED_NUDGE_GAP_MS;
+// Separate from the DOM so the rule can be tested without one, the same way
+// expiryNoticeDue is. A different mistake always speaks; the same one waits.
+function expiredNudgeDue(sig, lastSig, lastAt, now = Date.now()) {
+  if (sig !== lastSig) return true;
+  return now - (lastAt || 0) >= EXPIRED_NUDGE_REPEAT_MS;
 }
 
 async function maybeShowReviewToast() {

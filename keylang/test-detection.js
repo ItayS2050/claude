@@ -69,7 +69,7 @@ function loadContentScript() {
     '         truncatePreview, isDuplicateOfVisibleToast,' +
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
-    '         expiredNudgeDue, EXPIRED_NUDGE_GAP_MS, analyzeIgnoringPaywall, findRunSpan,' +
+    '         expiredNudgeDue, EXPIRED_NUDGE_REPEAT_MS, analyzeIgnoringPaywall, findRunSpan,' +
     '         wordCouldBeRussian,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
@@ -1081,26 +1081,31 @@ console.log('Everyday Russian and Arabic, converted by the keyboard table');
   }
 }
 
-console.log('An expired trial still notices, once a day');
+console.log('An expired trial notices every mistake, not one a day');
 {
   const due = kiko.expiredNudgeDue;
-  const DAY = kiko.EXPIRED_NUDGE_GAP_MS;
-  const now = 1000 * DAY;
+  const GAP = kiko.EXPIRED_NUDGE_REPEAT_MS;
+  const now = 1000 * GAP;
   const is = (label, got, want) => {
     if (got === want) { pass++; return; }
     fail++; console.log(`  FAIL  ${label}: expected ${want}, got ${got}`);
   };
-  // Never nudged before. The commonest case on the day a trial runs out.
-  is('never nudged before',        due(undefined, now), true);
-  is('nor zero',                   due(0, now), true);
-  is('an hour ago is too soon',    due(now - 3600e3, now), false);
-  is('and so is 23 hours',         due(now - 23 * 3600e3, now), false);
-  is('a day later is due again',   due(now - DAY, now), true);
-  is('and it keeps coming back',   due(now - 40 * DAY, now), true);
-  // The old expiry notice stopped after three, for ever. This one does not,
-  // and that is the point: it only ever fires on a real mistake, so it is a
-  // reminder at the moment of need rather than a timer.
-  is('a clock from the future does not unlock it', due(now + DAY, now), false);
+  // This was once a day and it was wrong. Two uninstall notes said "it
+  // didn't detect my keyboard mistakes" from people whose trial had ended:
+  // Kiko caught every one and said nothing, because it had already spoken
+  // that morning.
+  is('nothing announced yet',          due('a|b', null, 0, now), true);
+  is('a different mistake speaks at once',
+                                       due('c|d', 'a|b', now - 1000, now), true);
+  is('and again, immediately',         due('e|f', 'c|d', now, now), true);
+  // The one thing held back: the sentence being typed raises a detection on
+  // every keystroke, and re-announcing the same words is noise, not news.
+  is('the same mistake does not repeat', due('a|b', 'a|b', now - 1000, now), false);
+  is('nor a second later',             due('a|b', 'a|b', now - 1, now), false);
+  is('but it does after the gap',      due('a|b', 'a|b', now - GAP, now), true);
+  // No daily cap of any kind: a user mistyping all week is told all week.
+  is('a nudge from yesterday blocks nothing',
+                                       due('a|b', 'a|b', now - 24 * 3600e3, now), true);
 }
 
 // The engine has to keep running for an expired user or there is nothing to
