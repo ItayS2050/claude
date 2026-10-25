@@ -3965,18 +3965,29 @@ function showToast(element, detection, forceShow = false) {
   // Same detection as the one already on screen — leave the toast alone
   if (!forceShow && isDuplicateOfVisibleToast(sig, shownDetection, activeToast)) return;
 
-  // Guard: don't regress to a smaller detection on the same element.
+  // Guard: don't regress to a smaller detection on the same element — but
+  // only while the text it is protecting is still in the field.
   //
-  // Returning here leaves the toast on screen untouched, so in principle a
-  // user who deletes half a sentence keeps looking at an offer to fix words
-  // that are gone. A version of this that only protected text still present
-  // in the field was written and then removed: reverting it failed no test,
-  // including one written specifically to catch it — something else updates
-  // the toast after a delete and the guard never gets the chance. Unobservable
-  // means unshipped here, so the guard stays as it was until the path that
-  // actually reaches it is understood.
+  // This is the freeze. Reported as "Kiko stops working when I switch tabs,
+  // then I delete and retype and it works", and tabs have nothing to do with
+  // it: leaving a toast on screen and then typing any *shorter* mistake is
+  // enough. Returning here leaves the existing toast untouched, so the offer
+  // on screen stays pinned to a sentence that is no longer there, and every
+  // shorter detection after it is dropped in silence. Measured in a real
+  // browser: field "ghbdtn rfr", toast still reading "akuo nvhs ekhu vuc nv
+  // akunl", focus fine, page visible.
+  //
+  // This exact fix was written in 4.19 and removed again because reverting it
+  // failed no test. That was my error, not the fix's: the test deleted text
+  // and something else cleared the toast before the guard was reached. The
+  // case that reaches it is replacing the text with a different, shorter
+  // mistake, which is what a person does all day.
   if (activeToast && lastDetection && lastElement === element) {
-    if (detection.words.length < lastDetection.words.length) return;
+    const fieldNow = element.isContentEditable
+      ? (element.innerText || element.textContent || '')
+      : (element.value || '');
+    const stillThere = !!lastDetection.original && fieldNow.includes(lastDetection.original);
+    if (stillThere && detection.words.length < lastDetection.words.length) return;
   }
 
   detection          = localiseDetection(detection);

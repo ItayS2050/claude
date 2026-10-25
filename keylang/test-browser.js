@@ -370,6 +370,46 @@ const noToast = `!document.getElementById('kld-toast')`;
       ok('the field really did shrink', field.length < 32, JSON.stringify(field));
     }
 
+    // ── The freeze ────────────────────────────────────────────
+    //
+    // "Kiko stops working when I switch tabs — then I delete and retype and
+    // it works." Tabs turned out to be irrelevant: all it takes is a toast
+    // still on screen and a next mistake that is shorter than the last one.
+    // showToast refuses to regress to a smaller detection and returns
+    // without touching the toast, so the offer stays pinned to a sentence
+    // that is no longer in the field and every shorter detection after it is
+    // dropped in silence.
+    //
+    // The same fix went in in 4.19 and came out again because reverting it
+    // failed no test: that test deleted the text, and something else cleared
+    // the toast before the guard was reached. Replacing the text with a
+    // different, shorter mistake is the case that reaches it, and it is what
+    // somebody does all day.
+    {
+      await ageTo(1, { d30: true });
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu vuc nv akunl');
+      const long = await B.until(s, OFFER, { timeout: 12000, step: 600 });
+      ok('a long mistake raises a toast',
+         !!long && /שלום מהיד קליו/.test(long), String(long).replace(/\n/g, ' | '));
+
+      // Replace it, in place, with a shorter mistake in another language.
+      // No dismissal, no reload — the toast from a moment ago is still up.
+      await s.eval('var f=document.getElementById("f");f.focus();f.value="";'
+                 + 'f.dispatchEvent(new Event("input",{bubbles:true}));"ok"');
+      await B.sleep(500);
+      await type(s, 'ghbdtn rfr');
+      const short = await B.until(s,
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return null;`
+        + `return /привет как/.test(t.innerText)?t.innerText:null})()`,
+        { timeout: 12000, step: 600 });
+      ok('and a shorter one straight after it is still offered',
+         !!short, 'the toast stayed frozen on the previous sentence: '
+                  + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+      ok('with the old sentence gone from the offer',
+         !!short && !/שלום מהיד קליו/.test(short), String(short).replace(/\n/g, ' | '));
+    }
+
     // ── The notice at the moment it matters ───────────────────
     //
     // Asked directly: how does an expired user find out? Before this they
