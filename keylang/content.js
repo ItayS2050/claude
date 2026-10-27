@@ -1889,6 +1889,13 @@ const COMMON_KO_WORDS = new Set([
   '아침', '말할', '말아요', '모두가', '않았어요', '얘기를', '봤어요', '대신', '마치', '건데', '자넨',
   '했잖아', '둘이', '당신과', '집으로', '한다', '두고', '이름을', '있네', '그들의', '뭔데', '금방',
   '사는', '좋아하는', '찾을', '맘에', '결국', '이유가', '필요해요', '중에', '그때', '보는', '너랑'
+,
+  // Three-syllable words the solo rule needs by name. The list is what makes
+  // a three-syllable token evidence, so an everyday word missing from it is
+  // an everyday message going unanswered.
+  '뭐해요','늦어요','계세요','안녕히','알았어','고마워요','미안해','괜찮아',
+  '그래요','맞아요','좋아요','싫어요','모르겠','어디야','뭐야','있어요','없어요',
+  '할게요','갈게요','왔어요','했어요','됐어요','보내요','받았어','알겠어'
 ]);
 
 function koreanScore(word) {
@@ -2133,7 +2140,19 @@ function soloHebrewWord(word) {
   if (!wordCouldBeHebrew(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
-  return hebrewScore(mapped.join('')) >= HE_SOLO_SURE;
+  // A word list, not a bigram score.
+  //
+  // The score was the obvious gate and it was wrong: "bans" maps to נשמד,
+  // which is a real Hebrew word and scores a flat 1.00, so pasting ordinary
+  // English raised a Hebrew offer on it. Measured against 370,000 English
+  // words, the score let 1,804 of them through; the list lets 14. Russian
+  // and Arabic were given a list in 4.21 and added one false positive
+  // between them, and Hebrew should have had the same treatment then.
+  //
+  // My own test for this was tautological: every word in EN_LEXICON, which
+  // is the list unmistakablyEnglish checks, so by construction none of them
+  // could fire. The words that fire are the ones no dictionary here knows.
+  return isCommonHebrewWord(mapped.join(''));
 }
 
 function wordCouldBeHebrew(word) {
@@ -3149,7 +3168,14 @@ function analyzeText(rawText, scanAll = false) {
     // 안녕 (2) still needs a neighbour. 안녕하세요 (5) still speaks for itself.
     // wordCouldBeKorean has already required a complete syllable decomposition
     // and rejected anything English-looking before a token reaches here.
-    const koSoloRun = w => convertToKorean(w).length >= 3;
+    const koSoloRun = w => {
+      const ko = convertToKorean(w);
+      // Four syllables is evidence on its own. Three is only evidence when
+      // the word list knows the word: an arbitrary English token that
+      // happens to decompose into three clean syllables is common enough
+      // that it let 48 extra English words through on its own.
+      return ko.length >= 4 || (ko.length >= 3 && COMMON_KO_WORDS.has(ko));
+    };
     const allKoRuns = collectRuns(koCandWords, wordCouldBeKorean, scriptBridge(EN_TO_KO));
 
     const koRunEntry = [...allKoRuns].reverse().find(r => isRealRun(r) &&
@@ -4088,12 +4114,32 @@ function showToast(element, detection, forceShow = false) {
     removeToast(false);
     if (ok) {
       const kb = IS_MAC ? '⌘+Space' : 'Alt+Shift';
-      const undoFn = undoSnapshot ? () => {
-        element.value = undoSnapshot.val;
-        element.selectionStart = element.selectionEnd = undoSnapshot.sel;
-        element.dispatchEvent(new Event('input',  { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      } : null;
+      // Undo in a contenteditable too, which is where it was missing and
+      // where most people type: Gmail, Slack, Notion, Base44. The snapshot
+      // route only ever worked on an input, so the button simply never
+      // appeared in the editors that matter, and the advice in the old
+      // comment — "contenteditable uses browser Ctrl+Z" — is not true of a
+      // framework editor that rebuilds its own DOM.
+      //
+      // The inverse is the same call with the two strings swapped, so it
+      // reuses every bit of applyConversion's editor handling rather than
+      // inventing a second, worse path.
+      const undoFn = () => {
+        const back = undoSnapshot
+          ? (element.value = undoSnapshot.val,
+             element.selectionStart = element.selectionEnd = undoSnapshot.sel,
+             element.dispatchEvent(new Event('input',  { bubbles: true })),
+             element.dispatchEvent(new Event('change', { bubbles: true })),
+             true)
+          : applyConversion(element, { ...detection,
+              original: detection.converted, converted: detection.original });
+        // Putting the mistake back must not instantly offer to fix it again.
+        if (back) {
+          fixCooldownUntil   = Date.now() + 4000;
+          dismissedSignature = detection.words.join('|');
+          dismissedWordSet   = new Set(detection.words);
+        }
+      };
       showConfirm(`✓ Fixed! Switch keyboard: ${kb}`, undoFn);
       setTimeout(maybeShowReviewToast, REVIEW_DELAY_MS);
       // Re-scan after a short delay to catch any remaining mismatched words
@@ -4169,7 +4215,7 @@ function showConfirm(message, undoFn = null) {
   }
   applyPos(el);
   (document.body || document.documentElement).appendChild(el);
-  setTimeout(() => el.remove(), undoFn ? 5000 : 2800);
+  setTimeout(() => el.remove(), undoFn ? 8000 : 2800);
 }
 
 function removeToast(showRecall = true) {
@@ -4192,9 +4238,12 @@ const KIKO_ITEM_ID      = 'alibejcaklfjcbjmncgbhpdichpblnkl';
 const REVIEW_SNOOZE_MS  = 30 * 24 * 60 * 60 * 1000;  // "maybe later" — a reply
 const REVIEW_QUIET_MS   =  3 * 24 * 60 * 60 * 1000;  // timed out — not a reply
 const REVIEW_MAX_MISSES = 4;
-// Long enough after the confirm's own five seconds that the two are never on
-// screen together, and never in the same place.
-const REVIEW_DELAY_MS   = 6000;
+// Long enough after the confirm that the two are never on screen together,
+// and never in the same place. The confirm runs eight seconds when it is
+// carrying an Undo button, so this follows it rather than landing on top:
+// test-review asserts the ordering, and caught this when the confirm was
+// lengthened from five seconds without moving the nudge with it.
+const REVIEW_DELAY_MS   = 9000;
 const REVIEW_VISIBLE_MS = 15000;
 
 function showReviewToast(nudge) {

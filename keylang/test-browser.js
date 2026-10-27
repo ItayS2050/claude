@@ -304,7 +304,16 @@ const noToast = `!document.getElementById('kld-toast')`;
     };
     const noticeAfterLoad = async () => {
       await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/?n=` + Math.random() });
-      // The notice is raised five seconds after the content script settles.
+      // The notice is a one-shot timer five seconds after the content script
+      // settles, and it is skipped outright if document.hasFocus() is false
+      // at that instant — so a page that was not in front at t=5s never
+      // shows one, however long you wait afterwards. Under a suite that
+      // navigates this quickly the tab can still be catching up, which is
+      // why these six assertions failed together twice and then passed on
+      // byte-identical code. Bringing the page to the front first makes the
+      // condition true before the timer runs, rather than hoping.
+      await s.send('Page.bringToFront');
+      await s.eval('window.focus();document.body && document.body.click;"ok"');
       return await B.until(s, OFFER, { timeout: 14000, step: 700 });
     };
 
@@ -368,6 +377,49 @@ const noToast = `!document.getElementById('kld-toast')`;
                   + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
       const field = await s.eval('document.getElementById("f").value');
       ok('the field really did shrink', field.length < 32, JSON.stringify(field));
+    }
+
+    // ── Undo, in the editors people actually type in ──────────
+    //
+    // Undo existed, and only for an input: the snapshot it needed was built
+    // from element.value, so in a contenteditable undoFn was null and the
+    // button never rendered. Gmail, Slack, Notion and every framework editor
+    // are contenteditable, so in practice the feature was missing exactly
+    // where it was wanted — asked for directly, by someone who had been
+    // using Kiko daily and had never seen it.
+    {
+      await ageTo(1, { d30: true });
+      await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/editor` });
+      await B.sleep(1200);
+      await s.eval('document.getElementById("f").focus();"ok"');
+      await type(s, 'akuo nvhs ekhu');
+      await B.until(s, OFFER, { timeout: 10000, step: 600 });
+      await s.eval("document.querySelector('#kld-toast .kld-primary').click();\"ok\"");
+      const fixed = await B.until(s,
+        `(function(){var f=document.getElementById('f');var t=f.innerText||f.textContent||'';`
+        + `return /שלום/.test(t)?t:null})()`, { timeout: 8000, step: 400 });
+      ok('the fix lands in a contenteditable', !!fixed, String(fixed));
+
+      // The confirmation has to carry an Undo button here, not just on inputs.
+      const hasUndo = await s.eval(
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return false;`
+        + `return [].some.call(t.querySelectorAll('button'),function(b){return /Undo/.test(b.innerText)})})()`);
+      ok('and the confirmation offers Undo', hasUndo === true);
+
+      await s.eval("(function(){var t=document.getElementById('kld-toast');"
+                 + "var b=[].filter.call(t.querySelectorAll('button'),function(x){return /Undo/.test(x.innerText)})[0];"
+                 + "if(b)b.click();return 'ok'})()");
+      const undone = await B.until(s,
+        `(function(){var f=document.getElementById('f');var t=f.innerText||f.textContent||'';`
+        + `return /akuo nvhs ekhu/.test(t)?t:null})()`, { timeout: 8000, step: 400 });
+      ok('and Undo puts the Latin back', !!undone, String(undone));
+
+      // Undoing says "I meant that" — it must not re-offer the same fix at once.
+      await B.sleep(2500);
+      const reoffered = await s.eval(OFFER);
+      ok('and does not immediately offer the same fix again',
+         !reoffered || !/שלום מהיד קליו/.test(reoffered),
+         String(reoffered).replace(/\n/g, ' | '));
     }
 
     // ── The freeze ────────────────────────────────────────────

@@ -1081,6 +1081,47 @@ console.log('Everyday Russian and Arabic, converted by the keyboard table');
   }
 }
 
+// ── Pasting English must stay silent ──────────────────────────
+// Reported from the wild: pasting a long English paragraph raised a Hebrew
+// offer on the word "bans", which maps to נשמד — a real Hebrew word that
+// scores a flat 1.00 on bigrams. The solo rule used that score, so any
+// four-letter English word outside EN_LEXICON that mapped to plausible
+// Hebrew fired.
+//
+// My own test for the solo rule was tautological: every word in EN_LEXICON,
+// which is exactly the list unmistakablyEnglish consults, so by construction
+// none of them could fire. Measured against 370,000 English words instead,
+// the bigram gate let 1,804 through and a word list lets 14 — the same
+// treatment Russian and Arabic got in 4.21, which cost one between them.
+console.log('Ordinary English words do not raise a foreign offer on their own');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  // The exact line from the report.
+  const pasted = 'sed in outbound", which bans every anonymized result';
+  const d = kiko.analyzeText(pasted);
+  if (!d) { pass++; }
+  else { fail++; console.log(`  FAIL  a pasted English line offered ${JSON.stringify(d.original)} -> ${d.converted}`); }
+
+  // The individual words that mapped to real Hebrew and fired on their own.
+  // Each one is an ordinary English word no dictionary in this file knows.
+  for (const w of ['bans', 'aback', 'abacus', 'sed', 'outbound', 'anonymized',
+                   'banc', 'bant', 'nabs']) {
+    const got = kiko.analyzeText(w);
+    if (!got) { pass++; }
+    else { fail++; console.log(`  FAIL  "${w}" alone offered ${got.converted}`); }
+  }
+
+  // And the real ones still speak, which is the whole point of the solo rule.
+  for (const [typed, want] of [['akuo', 'שלום'], [',usv', 'תודה'], ['cxsr', 'בסדר']]) {
+    const got = kiko.analyzeText(typed);
+    if (got && got.converted === want) { pass++; }
+    else { fail++; console.log(`  FAIL  ${want} no longer fires alone: ${JSON.stringify(got && got.converted)}`); }
+  }
+}
+
 console.log('An expired trial notices every mistake, not one a day');
 {
   const due = kiko.expiredNudgeDue;
