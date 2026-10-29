@@ -74,5 +74,34 @@ const okWords = !words.includes('call') && !words.includes('the') && words.inclu
 if (!okWords) { failed++; console.log(`FAIL  wordsToLearn -> ${JSON.stringify(words)}`); }
 else console.log(`ok    wordsToLearn skips filler -> ${JSON.stringify(words)}`);
 
+// --- marketing work, which the lists used to miss entirely ---
+// "finish campaigns for stream" was the example this feature was built from,
+// and "campaign" was never actually in the work list.
+is('finish campaigns for stream', 'work');
+is('For Stream- i need to run the new personlized campaign from or', 'work');
+is('For wing- i need to vuild new lists with AI and digital titles', 'work');
+is('check the roas on the retargeting ads', 'work');
+is('write the newsletter copy', 'work');
+is('build the lead list', 'work');
+
+// --- verbs that are not personal just because of a weekend sense ---
+// run, walk and present were filed personal outright, so "run the campaign"
+// and "walk me through the deck" came out as personal.
+is('run the campaign for acme', 'work');
+is('walk me through the deck', 'work');
+is('present the forecast to the board', 'work');
+
+// The personal senses still read as personal, through phrases.
+is('go for a run', 'personal');
+is('morning run with the dog', 'personal');
+is('walk the dog', 'personal');
+is('school run at 3', 'personal');
+is('buy a birthday present for mom', 'personal');
+
+// "list" is as often a shopping list as a lead list, so it only counts qualified.
+is('shopping list', 'personal');
+is('guest list for the wedding', 'personal');
+is('add milk to the shopping list', 'personal');
+
 console.log(failed ? `\n${failed} failing` : '\nall passing');
 process.exit(failed ? 1 : 0);

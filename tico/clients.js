@@ -86,7 +86,13 @@ export function extractCandidate(text, isCommonWord = () => false) {
     let j = i + 1;
     if (['the', 'ה'].includes(words[j]?.toLowerCase())) j++;
 
-    const word = (words[j] || '').replace(/[^\p{L}\p{N}_'&.-]/gu, '');
+    // Inner punctuation is part of some names — Coca-Cola, O'Neill, 3M.co —
+    // but a hyphen or full stop on either end is just how the sentence was
+    // written. "For Stream- i need to…" was producing the client "Stream-",
+    // which is a different client from "Stream" and silently splits the group.
+    const word = (words[j] || '')
+      .replace(/[^\p{L}\p{N}_'&.-]/gu, '')
+      .replace(/^[-.'&]+|[-.'&]+$/g, '');
     if (!word || word.length < 2 || word.length > 24) continue;
     const lower = word.toLowerCase();
     if (NEVER.has(lower) || isCommonWord(lower)) continue;
@@ -97,18 +103,37 @@ export function extractCandidate(text, isCommonWord = () => false) {
   return null;
 }
 
-/** A name already known, spotted anywhere in the text regardless of wording. */
+/** Where a name appears as a whole word, or -1. */
+function wordIndex(lower, key) {
+  const edge = (ch) => ch === undefined || !/[\p{L}\p{N}]/u.test(ch);
+  for (let from = 0; ; ) {
+    const at = lower.indexOf(key, from);
+    if (at < 0) return -1;
+    if (edge(lower[at - 1]) && edge(lower[at + key.length])) return at;
+    from = at + 1;
+  }
+}
+
+/**
+ * A name already known, spotted anywhere in the text regardless of wording.
+ *
+ * When two known names are both in the sentence, the one mentioned first wins.
+ * Sorting by length instead — which is what this did — meant "For Stream, run
+ * the campaign" was filed under campaign purely because the word is two letters
+ * longer. Length is still the tie-break, but only between names starting at the
+ * same place, which is the case it was there for: "acme corp" beating "acme".
+ */
 export function matchKnown(text, clients = {}) {
-  const known = Object.keys(clients);
-  if (!known.length) return null;
-  const tokens = new Set(tokenize(text));
-  // Longest first, so "acme corp" wins over "acme" when both are known.
-  for (const key of known.sort((a, b) => b.length - a.length)) {
-    if (key.includes(' ') ? ` ${String(text).toLowerCase()} `.includes(` ${key} `) : tokens.has(key)) {
-      return clients[key].name;
+  const lower = String(text || '').toLowerCase();
+  let best = null;
+  for (const key of Object.keys(clients)) {
+    const at = wordIndex(lower, key);
+    if (at < 0) continue;
+    if (!best || at < best.at || (at === best.at && key.length > best.key.length)) {
+      best = { at, key };
     }
   }
-  return null;
+  return best ? clients[best.key].name : null;
 }
 
 /**
@@ -116,10 +141,18 @@ export function matchKnown(text, clients = {}) {
  * @returns {{client: string|null, isNew: boolean}}
  */
 export function detectClient(text, clients = {}, isCommonWord = () => false) {
+  // The sentence saying who it is for outranks a name that merely appears in
+  // it. "For Stream, run the new campaign" is about Stream even when campaign
+  // is also a client — asking the registry first got that exactly backwards.
+  const named = extractCandidate(text, isCommonWord);
+  if (named) {
+    // Spelled differently from how it is stored? Keep the stored spelling, so
+    // "Stream" and "stream" stay one client rather than two.
+    const existing = clients[keyOf(named)];
+    return { client: existing ? existing.name : named, isNew: !existing };
+  }
   const known = matchKnown(text, clients);
-  if (known) return { client: known, isNew: false };
-  const found = extractCandidate(text, isCommonWord);
-  return found ? { client: found, isNew: true } : { client: null, isNew: false };
+  return known ? { client: known, isNew: false } : { client: null, isNew: false };
 }
 
 /**

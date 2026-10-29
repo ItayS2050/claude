@@ -115,8 +115,14 @@ const campaign = store.taskFromInput('finish campaigns for stream tomorrow');
 check('the client comes out of the sentence', campaign.client, 'stream');
 check('the date still comes out too', campaign.due !== null, true);
 check('the title keeps the client, loses the date', campaign.text, 'Finish campaigns for stream');
-check('a client makes it work even with no work words', campaign.lane, 'work');
-check('and says so', campaign.laneBecause, 'for stream');
+check('a work word in it is reason enough', campaign.lane, 'work');
+check('and the word is the reason given', campaign.laneBecause, '\u201ccampaigns\u201d');
+
+// Having a client is itself enough, for a sentence carrying no work words at
+// all — that is the rule this pair is here to pin down.
+const bareClient = store.taskFromInput('finish the edits for stream tomorrow');
+check('a client makes it work even with no work words', bareClient.lane, 'work');
+check('and says so', bareClient.laneBecause, 'for stream');
 
 await store.addTask(campaign);
 check('adding records the client', (await store.loadSettings()).clients.stream.count, 1);

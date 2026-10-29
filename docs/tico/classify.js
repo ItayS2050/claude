@@ -11,12 +11,18 @@
 const WORK_PHRASES = [
   'pull request', 'code review', 'follow up', 'catch up', 'stand up', 'one on one',
   'design doc', 'status update', 'quarterly review', 'performance review',
+  'mailing list', 'email list', 'lead list', 'leads list', 'contact list',
+  'prospect list', 'build lists', 'new lists', 'target list',
   'הצעת מחיר', 'הצעת מחירי', 'יום עבודה', 'סטטוס פרויקט', 'ישיבת צוות',
 ];
 
 const PERSONAL_PHRASES = [
   'walk the dog', 'pick up the kids', 'pick up kids', 'school run', 'dry cleaning',
   'grocery shopping', 'date night', 'car service', 'parents evening',
+  'go for a run', 'going for a run', 'went for a run', 'go for a walk',
+  'going for a walk', 'walk the kids', 'walk to school', 'morning run',
+  'shopping list', 'guest list', 'reading list', 'packing list',
+  'evening run', 'long run', 'birthday present', 'wedding present',
   'יום הולדת', 'בית ספר', 'חדר כושר', 'בית מרקחת', 'רופא שיניים', 'שכר דירה',
 ];
 
@@ -26,6 +32,11 @@ invoice invoices quote quotes proposal proposals contract contracts deck decks
 slides presentation deadline sprint ticket tickets jira linear asana trello
 pr prs deploy deployment release releases bug bugs backlog roadmap spec specs
 report reports budget forecast revenue pipeline kpi kpis okr okrs
+campaign campaigns ad ads adwords creative creatives copywriting landing
+funnel funnels lead leads outreach prospect prospects newsletter seo sem
+audience audiences impressions clicks ctr roas conversion conversions
+branding rebrand collateral assets banner banners influencer affiliate
+segment segments mailshot blast drip nurture retargeting digital
 hire hiring interview interviews candidate candidates onboarding offboarding
 payroll vendor vendors supplier procurement demo demos pitch investor investors
 board stakeholder stakeholders retro retrospective kickoff workshop
@@ -42,17 +53,17 @@ const PERSONAL_WORDS = `
 mom mum mother dad father wife husband girlfriend boyfriend partner
 kid kids son daughter baby grandma grandpa granny family cousin sister brother
 doctor dentist gp clinic pharmacy prescription optician therapist vet
-gym workout run running yoga swim pilates haircut barber hairdresser nails
+gym workout running jog jogging yoga swim pilates haircut barber hairdresser nails
 groceries grocery supermarket milk bread eggs coffee dinner breakfast recipe
-birthday anniversary wedding gift gifts present flowers party
+birthday anniversary wedding gift gifts flowers party
 rent mortgage bills bill electricity gas water insurance council tax
 car mot tyres tires petrol garage parking bike laundry dishes vacuum
 bins trash recycling plumber electrician landlord cleaner
 school kindergarten daycare nursery playdate pickup homework
 holiday vacation flight flights hotel airbnb passport visa packing
-bank atm savings pension dog cat pet walk shopping mall pharmacy
+bank atm savings pension dog cat pet shopping mall pharmacy
 אמא אבא אישה בעל ילדים ילד ילדה תינוק סבתא סבא משפחה אחות אח
-רופא רופאה מרפאה שיניים מרשם וטרינר כושר תספורת ספר מספרה
+רופא רופאה מרפאה שיניים מרשם וטרינר כושר ריצה הליכה תספורת ספר מספרה
 קניות סופר מכולת חלב לחם ביצים ארוחה מתנה מתנות חתונה מסיבה
 ארנונה חשמל מים ביטוח רכב טסט דלק חניה כביסה ניקיון נקיון גינה
 גן גננת חופש חופשה טיסה מלון דרכון מזוודה בנק חיסכון כלב חתול
