@@ -2212,6 +2212,19 @@ function couldBeHebrewExactly(word) {
   // Hebrew reading. See HE_BIGRAMS.
   const mapped = [...lower].map(c => EN_TO_HE[c]);
   if (!mapped.every(c => c !== undefined && HEBREW_RE.test(c))) return false;
+  // Two Hebrew letters is not two letters of evidence.
+  //
+  // "a." is one English letter and a full stop, and because , . and ; are
+  // letters on this layout it reads as שץ — long enough to pass a length
+  // check and clear every score, since a two-character token has one bigram.
+  // That is how "a. engine_version bumps automatically on every" became a
+  // Hebrew offer: "a." and "bumps" were two candidates, which is a run, and
+  // the span then swallowed the identifier sitting between them.
+  //
+  // A two-letter reading has to be a word somebody actually writes. That
+  // keeps את, מה, לא and זה, which are among the commonest words in the
+  // language, and drops שץ, ןץ and קץ, which are not words at all.
+  if (mapped.length <= 2 && !isCommonHebrewWord(mapped.join(''))) return false;
   // Final-form letters (ך ם ן ף ץ) only appear at word-end in valid Hebrew.
   // Finding one in a non-final position is an unambiguous wrong-keyboard signal.
   for (let i = 0; i < mapped.length - 1; i++) {

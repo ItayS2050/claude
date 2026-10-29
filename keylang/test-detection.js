@@ -1122,6 +1122,46 @@ console.log('Ordinary English words do not raise a foreign offer on their own');
   }
 }
 
+// ── A letter and a full stop is not a word ────────────────────
+// Second report of English prose raising a Hebrew offer, this time on
+// "a. engine_version bumps automatically on every". extractWords drops
+// engine_version entirely, so the run was "a." and "bumps" — two
+// candidates, which is a run — and findRunSpan then stretched the span
+// across the identifier sitting between them.
+//
+// "a." is one English letter and a full stop, and because , . and ; are
+// letters on the Hebrew layout it reads as שץ: long enough to pass a length
+// check, and a two-character token has exactly one bigram, so every score
+// waves it through. A two-letter reading now has to be a word somebody
+// writes.
+console.log('A one-letter token with punctuation is not a Hebrew candidate');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const silent = (label, text) => {
+    const d = kiko.analyzeText(text);
+    if (!d) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: offered ${JSON.stringify(d.original)} -> ${d.converted}`);
+  };
+  silent('the reported line', 'a. engine_version bumps automatically on every');
+  silent('a sentence ending in an initial', 'I spoke to J. about the plan');
+  silent('an ordinary abbreviation', 'see fig. 4 and the notes');
+  silent('two of them together', 'a. b. the list continues');
+
+  // The two-letter Hebrew words that are genuinely words still count. These
+  // are among the commonest in the language and dropping them would cost
+  // far more than the false positives above.
+  const fires = (label, text, want) => {
+    const d = kiko.analyzeText(text);
+    if (d && d.converted === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: got ${JSON.stringify(d && d.converted)}, wanted ${JSON.stringify(want)}`);
+  };
+  fires('מה still counts in a run',  'nv eurv gfahu', 'מה קורה עכשיו');
+  fires('את still counts in a run',  't, vhuo yuc',   'את היום טוב');
+}
+
 console.log('An expired trial notices every mistake, not one a day');
 {
   const due = kiko.expiredNudgeDue;
@@ -1738,6 +1778,20 @@ console.log('The language that explains the sentence wins, not the one asked fir
   //              evidence and never reaches the tie-break. Back to 19.
   //   cost       one Ukrainian sentence that used to fire nothing now fires
   //              as Russian, which is the twelfth of its kind here.
+  //
+  // 4.25.0 costs one more, and it is worth writing down why rather than
+  // just moving the number. "Я на зустрічі, передзвоню пізніше" only ever
+  // fired because the Hebrew pass wrongly claimed "yf" (на) as a two-letter
+  // Hebrew candidate; that bogus candidate was enough to stop
+  // bestOfLanguages returning early, and Ukrainian then won the comparison.
+  // With "a." and friends no longer counting as Hebrew, the bogus candidate
+  // is gone and the sentence falls through.
+  //
+  // The real fault is one line in bestOfLanguages: `const first =
+  // analyzeText(text); if (!first) return null;`. When the combined pass is
+  // silent it never tries each language on its own, so a sentence only one
+  // language can see is lost. That is the thing to fix, and it is not being
+  // fixed in passing underneath a false-positive change.
   //
   // Bought with: everyday Hebrew phrases going from 30% to 85% — measured on
   // phrases converted by Kiko's own tables, not written for the test — single
