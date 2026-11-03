@@ -147,7 +147,9 @@ function check(label, input, wantType, opts = {}) {
 console.log('\nEnglish typed on a foreign layout');
 check('hebrew',    'akuo nvhs ekhu',  'english_as_hebrew');
 check('russian',   'ghbdtn rfr',      'english_as_russian',   { converted: 'привет как' });
-check('ukrainian', 'ghbdsn ghbdsn',   'english_as_ukrainian', { converted: 'привіт' });
+// Both words, not one. This read `converted: 'привіт'` until 4.27.0, which
+// was the repeated-word span bug written down as the expected answer.
+check('ukrainian', 'ghbdsn ghbdsn',   'english_as_ukrainian', { converted: 'привіт привіт' });
 check('korean',    'dkssud gksrnr',   'english_as_korean',    { converted: '안녕 한국' });
 check('greek',     'geia soy',        'english_as_greek',     { converted: 'γεια σου' });
 
@@ -954,6 +956,52 @@ console.log('A span covers the whole run, not a substring of its first word');
      span('ab cd ab ef', 'ab', 'cd'), 'ab cd');
   is('and a word that is simply absent gives nothing',
      span('hello there', 'hello', 'nope'), null);
+}
+
+// ── A run that repeats a word ─────────────────────────────────
+// Screenshotted from a live ChatGPT box: "wait wait" typed on the Hebrew
+// layout, ‫'שןא 'שןא‬, and the toast offered a single "wait". The search for
+// the run's last word started at the first word's own position, so with two
+// identical words it found the first one again and the span stopped there.
+// Every repeated word did it — "hello hello", "ok ok", "wait please wait" —
+// and two of those went silent altogether, because a one-word span does not
+// clear the bar a two-word run was measured against.
+console.log('A repeated word does not cut the span in half');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+
+  const whole = (english) => {
+    const typed = kiko.up.he(english);
+    const d = kiko.analyzeText(typed);
+    const got = d && d.converted.trim();
+    if (got === english) { pass++; return; }
+    fail++;
+    console.log(`  FAIL  ${JSON.stringify(english)} typed as ${JSON.stringify(typed)}` +
+                `\n        expected ${JSON.stringify(english)}\n        actual   ${JSON.stringify(got)}`);
+  };
+  whole('wait wait');           // the reported one, exactly
+  whole('wait wait wait');
+  whole('hello hello');
+  whole('wait please wait');
+  whole('thanks thanks');
+
+  // And the span function on the same shape, without the detection around it.
+  const span = kiko.findRunSpan;
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}\n        expected ${JSON.stringify(want)}\n        actual   ${JSON.stringify(got)}`);
+  };
+  is('two of the same word span both',
+     span('ab ab', ['ab', 'ab']), 'ab ab');
+  is('the run ends at its own last word, not a later copy',
+     span('ab cd ab', ['ab', 'cd']), 'ab cd');
+  is('a word in the middle repeating the first is stepped past',
+     span('ab cd ab ef', ['ab', 'cd', 'ab', 'ef']), 'ab cd ab ef');
+  is('a single-word run is still one word however often it repeats',
+     span('ab ab ab', ['ab']), 'ab');
 }
 
 // ── Korean, as it is actually typed ───────────────────────────

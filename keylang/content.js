@@ -2470,28 +2470,56 @@ function scriptGrower(map) {
 // had stopped following the sentence; it had, but the span was the reason.
 //
 // A match counts only when whitespace or an edge sits on both sides of it.
-function findRunSpan(text, firstWord, lastWord) {
+//
+// Looking only at the first and last word is not enough either, because a run
+// can repeat a word. Someone typed "wait wait" on the Hebrew layout — ‫'שןא
+// 'שןא‬ — and the search for the last word started at the first word's own
+// position and found the first word again, so a two-word run produced a
+// one-word span and the toast offered to fix half of what they had typed.
+// Any repeated word does this: "hello hello", "ok ok", "wait please wait".
+//
+// So the run is walked in order instead, each word located at or after the
+// end of the one before it. A word that cannot be placed is stepped over
+// rather than failing the span, which keeps the old behaviour for tokens the
+// tokeniser has rewritten (stripped brackets, split punctuation) and still
+// anchors the end on the last word that was found.
+function findRunSpan(text, words, lastWord) {
+  // Legacy two-word form, which the tests and older call sites use: the same
+  // word twice means a run of one.
+  if (!Array.isArray(words))
+    words = (lastWord === undefined || words === lastWord) ? [words] : [words, lastWord];
+  if (!words.length) return null;
+
   const lt = text.toLowerCase();
   const whole = (i, len) =>
     i !== -1 &&
     (i === 0 || /\s/.test(text[i - 1])) &&
     (i + len === text.length || /\s/.test(text[i + len]));
-  const findWhole = (needle, from) => {
-    for (let i = lt.indexOf(needle, from); i !== -1; i = lt.indexOf(needle, i + 1))
-      if (whole(i, needle.length)) return i;
-    return -1;
-  };
-  const fw = firstWord.toLowerCase(), lw = lastWord.toLowerCase();
   // Fall back to the loose match rather than giving up: a token carrying
   // punctuation the tokeniser kept but the text spaces differently still has
   // to produce a span, and a loose one is better than none.
-  let fi = findWhole(fw, 0);
-  if (fi === -1) fi = lt.indexOf(fw);
+  const find = (needle, from) => {
+    for (let i = lt.indexOf(needle, from); i !== -1; i = lt.indexOf(needle, i + 1))
+      if (whole(i, needle.length)) return i;
+    return lt.indexOf(needle, from);
+  };
+
+  const fw = words[0].toLowerCase();
+  const fi = find(fw, 0);
   if (fi === -1) return null;
-  let li = findWhole(lw, fi);
-  if (li === -1) li = lt.indexOf(lw, fi);
-  if (li === -1) return null;
-  return text.slice(fi, li + lastWord.length);
+
+  let end = fi + fw.length;
+  let found = words.length === 1;
+  for (let n = 1; n < words.length; n++) {
+    const w = words[n].toLowerCase();
+    const i = find(w, end);
+    if (i === -1) continue;          // not placeable here — step over it
+    end = i + w.length;
+    if (n === words.length - 1) found = true;
+  }
+  // The last word has to be somewhere, or this is not the run it claims to be.
+  if (!found) return null;
+  return text.slice(fi, end);
 }
 
 // Does this map cleanly onto Hebrew letters, ignoring every learned
@@ -2616,7 +2644,7 @@ function analyzeText(rawText, scanAll = false) {
       const hebrewInRun = run1.filter(w => HEBREW_RE.test(w));
       let original;
       if (hebrewInRun.length >= 1) {
-        const spanText = findRunSpan(text, hebrewInRun[0], hebrewInRun[hebrewInRun.length - 1]);
+        const spanText = findRunSpan(text, hebrewInRun);
         if (spanText) {
           // Extend backward over adjacent HE_TO_EN chars (e.g. leading apostrophe = 'w' key)
           // so "' + Hebrew" captures the full word like "what" not just "hat".
@@ -3144,7 +3172,7 @@ function analyzeText(rawText, scanAll = false) {
   if (enabledLangs.he && enoughRun) {
     // Use the actual text span from first→last run word so intermediate single-char
     // words (e.g. 'w' → Hebrew apostrophe/geresh) are preserved in original/converted.
-    const spanText = findRunSpan(text, run[0], run[run.length - 1]) || run.join(' ');
+    const spanText = findRunSpan(text, run) || run.join(' ');
     const lastWord = run[run.length - 1];
     const escaped  = lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const punct    = (text.match(new RegExp(escaped + '([?!]+)', 'i')) || [])[1] || '';
@@ -3217,7 +3245,7 @@ function analyzeText(rawText, scanAll = false) {
        (r.words.length === 1 && koSoloRun(r.words[0]))));
     if (koRunEntry) {
       const runKo2 = growRun(koCandWords, koRunEntry, scriptGrower(EN_TO_KO));
-      const spanKo2 = findRunSpan(text, runKo2[0], runKo2[runKo2.length - 1]) || runKo2.join(' ');
+      const spanKo2 = findRunSpan(text, runKo2) || runKo2.join(' ');
       const convertedKo2 = convertToKorean(spanKo2);
       if (HANGUL_RE.test(convertedKo2)) {
         return {
@@ -3258,7 +3286,7 @@ function analyzeText(rawText, scanAll = false) {
        (r.words.length === 1 && ruSoloRun(r.words[0]))));
     if (ruRunEntry) {
       const runRu2 = growRun(ruCandWords, ruRunEntry, scriptGrower(EN_TO_RU));
-      const spanRu2 = findRunSpan(text, runRu2[0], runRu2[runRu2.length - 1]) || runRu2.join(' ');
+      const spanRu2 = findRunSpan(text, runRu2) || runRu2.join(' ');
       const convertedRu2 = convertToRussian(spanRu2.toLowerCase());
       if (RUSSIAN_RE.test(convertedRu2)) {
         return {
@@ -3283,7 +3311,7 @@ function analyzeText(rawText, scanAll = false) {
     const ukRunEntry = [...allUkRuns].reverse().find(r => isRealRun(r) && r.words.length >= ukMinRun);
     if (ukRunEntry) {
       const runUk2 = growRun(ukCandWords, ukRunEntry, scriptGrower(EN_TO_UK));
-      const spanUk2 = findRunSpan(text, runUk2[0], runUk2[runUk2.length - 1]) || runUk2.join(' ');
+      const spanUk2 = findRunSpan(text, runUk2) || runUk2.join(' ');
       const convertedUk2 = convertToUkrainian(spanUk2.toLowerCase());
       if (CYRILLIC_RE.test(convertedUk2)) {
         return {
@@ -3314,7 +3342,7 @@ function analyzeText(rawText, scanAll = false) {
        (r.words.length === 1 && arSoloRun(r.words[0]))));
     if (arRunEntry2) {
       const runAr2 = growRun(arCandWords, arRunEntry2, scriptGrower(EN_TO_AR));
-      const spanAr2 = findRunSpan(text, runAr2[0], runAr2[runAr2.length - 1]) || runAr2.join(' ');
+      const spanAr2 = findRunSpan(text, runAr2) || runAr2.join(' ');
       const convertedAr2 = convertToArabic(spanAr2.toLowerCase());
       if (ARABIC_RE.test(convertedAr2)) {
         return {
@@ -3339,7 +3367,7 @@ function analyzeText(rawText, scanAll = false) {
     const elRunEntry = [...allElRuns].reverse().find(r => isRealRun(r) && r.words.length >= elMinRun);
     if (elRunEntry) {
       const runEl2 = growRun(elCandWords, elRunEntry, scriptGrower(EN_TO_EL));
-      const spanEl2 = findRunSpan(text, runEl2[0], runEl2[runEl2.length - 1]) || runEl2.join(' ');
+      const spanEl2 = findRunSpan(text, runEl2) || runEl2.join(' ');
       const convertedEl2 = convertToGreek(spanEl2.toLowerCase());
       if (GREEK_RE.test(convertedEl2)) {
         return {
