@@ -1122,6 +1122,51 @@ console.log('Ordinary English words do not raise a foreign offer on their own');
   }
 }
 
+// ── Three-letter English words ────────────────────────────────
+// Third report of English prose offered as Hebrew, this one on "This was
+// the best run so far, but it's still not very". The cause is structural:
+// EN_LEXICON was built from words of four letters and up, and
+// unmistakablyEnglish returns false outright below four, so every
+// three-letter English word was invisible to every English guard here.
+// "run" maps to רומ and "far," to כשרת, neither was in any list, and two
+// candidates side by side is a run.
+console.log('Three-letter English words are known to be English');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const silent = (label, text) => {
+    const d = kiko.analyzeText(text);
+    if (!d) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: offered ${JSON.stringify(d.original)} -> ${d.converted}`);
+  };
+  silent('the reported line', "This was the best run so far, but it's still not very");
+  // Ordinary English built out of the words that were invisible.
+  silent('run and far',      'the run so far was not bad');
+  silent('got and few',      'we got a few more to go');
+  silent('top and job',      'the top job for now');
+  silent('big and win',      'a big win for the day');
+  silent('old and new',      'the old way and the new way');
+  silent('map and web',      'add the map to the web page');
+
+  // The eleven that are words in both languages are deliberately not in the
+  // list: calling them English would veto some of the commonest words in
+  // Hebrew. They keep the bridge rule, so a run that encloses one stays whole.
+  const fires = (label, text, want) => {
+    const d = kiko.analyzeText(text);
+    if (d && d.converted === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}: got ${JSON.stringify(d && d.converted)}`);
+  };
+  fires('cut stays inside a Hebrew run',
+        'tueh cut brtv nv eurv gfahu', 'אוקי בוא נראה מה קורה עכשיו');
+  // Which of the eleven must stay un-English is already pinned by the
+  // notEnglish block further down, which is the canonical list. Asserting it
+  // again here was wrong twice over: שרק and יקר read as "are" and "her",
+  // and EN_WORDS has held both since long before EN_SHORT existed, so the
+  // assertion failed on behaviour this change never touched.
+}
+
 // ── A letter and a full stop is not a word ────────────────────
 // Second report of English prose raising a Hebrew offer, this time on
 // "a. engine_version bumps automatically on every". extractWords drops

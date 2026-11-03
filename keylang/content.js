@@ -2251,6 +2251,23 @@ function couldBeHebrewExactly(word) {
 // exists to pick up the ragged edges of a burst — short words, words with no
 // vowels — and tightening it all the way would make the pass pointless. What
 // it must never do is swallow a word from the common English list.
+// ── Three-letter English ──────────────────────────────────────
+// EN_LEXICON was built from words of four letters and up, and
+// unmistakablyEnglish refuses to score anything shorter, so every
+// three-letter English word was invisible to every English guard in this
+// file. "run" maps to רומ and "far," to כשרת, neither is in any list, and
+// two of them beside each other is a run — which is how "This was the best
+// run so far, but it's still not very" was offered as Hebrew.
+//
+// Eleven of the 672 are left out, because the list cannot settle them:
+// are=שרק, cut=בוא, her=יקר, act=שבא, ago=שעם, two=א'ם, chi=בין and a few
+// names are ordinary words in both languages at once. Calling those English
+// would veto some of the commonest words in Hebrew, so they keep the
+// treatment they already had — the bridge rule, which lets a word enclosed
+// by wrong-layout text stay inside the run, and is what keeps
+// "tueh cut brtv nv eurv gfahu" whole.
+const EN_SHORT = new Set('the and for you not all new was can has but our one may out use any see his who web now get how its top had day buy add jan she sex set map way off did car dvd own end him per big law art usa old non why low man job too men box gay air yes hot say dec san tax got let red key few age oct pay war nov fax yet sun rss run net put try god log faq fun feb sep lot ask due mar pro url aug apr via bad far jul jun oil bit bay bar dog eur pdf usr mon com gas six pre sat zip bid fri wed inn ltd los inc win bed tue ass thu sea tel kit boy est son mac iii gmt max xml bin van ads pop int hit eye usb php etc msn fee las min aid fat saw pst xxx tom sub led fan ten cat die pet guy dev cup vol lee bob fit met www cum ice llc sec bus bag ibm nor bug mid jim del joe cds lab cvs des lcd ave pic tag mix vhs fix ray dry spa con ups var won doc mom row usd eat aim les ann tip ski dan fly hey bbc tea avg sky rom toy src hip dot hiv pda dsl zum dna tim sql don gps acc cap ink pin raw gnu ben aol hat lib utc der cam wet ram fox arm pub hop gun sam pdt ref kid pan psp und nfl iso sum oak vat sir kim spy res sit wow que fig tab css qty bio pcs von sci edt sin ing ftp med leg abc jay gap biz rob era gcc asp jet par mad ken exp pen joy cpu ran jon ill lbs lay lol mph bet def nba epa ron org dad pat reg nsw ear pci tie ian mod bmw cst ceo rep mit sri toe api urw lan sms nec den aud lie crm amp usc amd eve pad rod hrs sad cal pot img rpm pee tvs egg mhz lat sur rev nyc jam rio arc mrs app roy ion tit fed ban zus ent odd ext amy phd cry zoo aka tee cad tcp dir val ghz hub eng ace sue gbp rfc seo isp ins jpg ssl opt flu mlb rap tin oem rat dos plc msg cod gen nhl gel aaa std vid bbw fda thy tri pal mat ted gym kde tan alt pie cbs bow hon atm cox cms vic pos nav cab ist dam cnn lil das sys icq dns pty sox tub ash ali tft jvc cgi por mem tap vii bee cfr pmc mba pit mag gsm ddr rec ton gif gpl irc bra phi mls cow cet ppc div ons ide rpg tgp leo diy geo doe ati wal abs sim rna rid rip buf sol eco bat lip sap ict sku pts rrp ooo nhs aye ste col une tex cia dod neo dig nat dpi gis loc gui ver rim zen dis kay ser fwd aus hwy nam gdp pig lit una ada yrs foo gba sig duo fog str vip yea fur tar soc rug dem wav ham fbi tba sie eva rca gst bon mas len kai dom obj jar cos pac erp vpn fcc eds wax nut irs bye cdt ana eau mil lap sao gmc asn ppm ant apt inf eos vcr uri gem psi pct qld pas gig sas liz ccd llp boc tmp ate fin mud uni ala dip nbc mpg cas cio upc dui yen lid pvc enb til hay isa pix mic ata nil pam cop dim mai abu mtv leu lou pgp sip dee mae mel sic seq wma cir acm ips dsc mia wan gtk ira sen dts pod dat soa cho wit bbs ind qui mug ids'.split(' '));
+
 function unmistakablyEnglish(lower) {
   // Trailing , . and ; are letters on the Hebrew layout — ת ץ ף — so every
   // lookup below misses on a word that carries one, and the word sails
@@ -2267,6 +2284,10 @@ function unmistakablyEnglish(lower) {
   const bare = lower.replace(/[,.;]+$/, '');
   if (bare !== lower && bare.length >= 2 && unmistakablyEnglish(bare)) return true;
   if (EN_WORDS.has(lower)) return true;
+  // Three letters, from the same frequency list as EN_LEXICON. The score
+  // below still means nothing at this length — this is the list doing the
+  // work, not the arithmetic.
+  if (lower.length === 3 && EN_SHORT.has(lower)) return true;
   // englishScore divides by length - 1, so a short token has almost no
   // denominator: two letters with one common bigram score a flat 1.00, three
   // letters score 0.50. That is how "jcr" — חבר — came to be treated as
