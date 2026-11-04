@@ -2632,6 +2632,46 @@ function analyzeText(rawText, scanAll = false) {
       }
     }
 
+    // Real Hebrew written after the mistake is not part of the mistake.
+    //
+    // The run is collected backwards from the end of the line and takes every
+    // Hebrew word it meets, so Hebrew the person wrote on purpose, sitting
+    // after a wrong-layout run, is pulled in with it. Measured: after "create
+    // a code for me to unlock the launch" typed on the Hebrew layout, adding
+    // שלום offered "... launch akuo", תודה רבה offered "... ,usv rcv", and
+    // תחילת הרווחים offered "... ,jhk, vruujho". Pressing Fix would have
+    // replaced the person's own Hebrew with gibberish, which is the worst
+    // thing this extension can do.
+    //
+    // looksLikeRealHebrew does not catch it: it needs two recognised Hebrew
+    // words, or a third of the run, and a word or two of real Hebrew at the
+    // end of a nine-word English run is neither. It is also the wrong shape of
+    // answer — the run is not entirely Hebrew, it just does not end where it
+    // thought. So the tail is trimmed instead of the whole thing vetoed, and
+    // what is left converts as it always did.
+    //
+    // A word is trimmed only when all three hold: it is long enough to mean
+    // something, its English reading is not English, and its Hebrew reading is
+    // Hebrew the language actually uses. The first word that fails any of
+    // those stops the trim — the run is contiguous, so one real word is where
+    // the mistake ends.
+    // Once one real word has been trimmed, a short Hebrew word in front of it
+    // is almost certainly part of the same phrase, so the length bar drops to
+    // whatever the Hebrew dictionary will vouch for. Without this, "מה שלומך"
+    // lost שלומך and kept מה, and the fix still ate a word of real Hebrew.
+    const runUntrimmed = run1.slice();
+    let trimmed = 0;
+    while (run1.length > 1) {
+      const w  = run1[run1.length - 1];
+      const he = w.replace(/[^֐-׿]/g, '');
+      if (he.length < HE_EVIDENCE_MIN && !(trimmed && isCommonHebrewWord(he))) break;
+      const en = convertToEnglish(w).replace(/[^a-z]/gi, '').toLowerCase();
+      if (unmistakablyEnglish(en) || realEnglishWord(en) || englishEnough(en)) break;
+      if (!(isCommonHebrewWord(he) || hebrewScore(he) >= HE_SURE)) break;
+      run1.pop();
+      trimmed++;
+    }
+
     const badCount = run1.filter(w => {
       const hc = [...w].filter(c => HEBREW_RE.test(c));
       return hc.length >= 2 && hc.slice(0, -1).some(c => FINAL_FORMS.has(c));
@@ -2679,7 +2719,12 @@ function analyzeText(rawText, scanAll = false) {
         // Asking the opposite question is far more reliable, and it has to come
         // first: offering to destroy someone's writing is the worst thing this
         // extension can do.
-        if (looksLikeRealHebrew(run1)) return null;
+        // On the run as it was collected, not as it was trimmed. Trimming
+        // takes away exactly the words this veto counts as evidence, so
+        // judging the trimmed run let three real Hebrew sentences through:
+        // the tail was removed and what was left no longer had two
+        // recognisable words in it.
+        if (looksLikeRealHebrew(runUntrimmed)) return null;
 
         // Suppress if user already manually retyped the English right after the Hebrew mis-type
         const origIdx = text.indexOf(original);
@@ -4953,13 +4998,16 @@ function debounce(fn, ms, maxWait = 0) {
   };
 }
 
-function fieldLength(el) {
+function fieldTextOf(el) {
   try {
-    const text = el.isContentEditable
+    return el.isContentEditable
       ? (el.innerText || el.textContent || '')
       : (el.value || '');
-    return text.length;
-  } catch { return 0; }
+  } catch { return ''; }
+}
+
+function fieldLength(el) {
+  return fieldTextOf(el).length;
 }
 
 function attachTo(el) {
@@ -4983,6 +5031,15 @@ function attachTo(el) {
     const detection = analyzeFullField(el, midBurst) || analyze(el, midBurst);
     if (detection) {
       showToast(el, detection);
+    } else if (activeToast && shownDetection && lastElement === el &&
+               shownDetection.original &&
+               !fieldTextOf(el).includes(shownDetection.original)) {
+      // Nothing to offer any more, and the text the toast is about is no
+      // longer in the field. Until now this branch did not exist: a silent
+      // pass simply returned, so the toast stayed where it was, still
+      // offering a fix for a sentence that had been edited away. Pressing it
+      // then replaced something the person could no longer see.
+      removeToast(false);
     } else if (lastElement === el && dismissedSignature) {
       // Field was cleared/corrected after a dismiss — reset so next paste shows full toast
       const fieldText = el.isContentEditable

@@ -966,6 +966,79 @@ console.log('A span covers the whole run, not a substring of its first word');
 // Every repeated word did it — "hello hello", "ok ok", "wait please wait" —
 // and two of those went silent altogether, because a one-word span does not
 // clear the bar a two-word run was measured against.
+// ── Hebrew written after the mistake is not part of the mistake ──
+// From a screenshot: a Base44 editor whose inline autocomplete puts a Hebrew
+// suggestion in the same box as the typing. The run is collected backwards
+// from the end of the line and takes every Hebrew word it meets, so that
+// suggestion — real Hebrew — was pulled into a wrong-layout run and offered
+// for conversion. "תחילת הרווחים" came back as ",jhk, vruujho". Pressing Fix
+// would have replaced the person's own words with nothing.
+//
+// It is not specific to that editor. Anyone who mistypes a line and then
+// writes Hebrew after it hits the same thing: שלום became "akuo", תודה רבה
+// became ",usv rcv".
+console.log('Real Hebrew after a wrong-layout run is left alone');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+
+  const EN    = 'create a code for me to unlock the launch';
+  const typed = kiko.up.he(EN);
+
+  const keeps = (hebrew) => {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(typed + ' ' + hebrew);
+    const got = d ? d.converted.trim() : '(silent)';
+    // Either the mistake alone, or nothing. Never the Hebrew mangled.
+    if (got === EN || got === '(silent)') { pass++; return; }
+    fail++;
+    console.log(`  FAIL  with ${JSON.stringify(hebrew)} after it` +
+                `\n        expected ${JSON.stringify(EN)}\n        actual   ${JSON.stringify(got)}`);
+  };
+  keeps('שלום');
+  keeps('תודה רבה');
+  keeps('תחילת הרווחים');
+  keeps('מה שלומך');
+  keeps('הרווחים');
+
+  // And the mistake on its own still converts whole, so the trim is taking
+  // the Hebrew and nothing else.
+  const d = kiko.analyzeText(typed);
+  if (d && d.converted.trim() === EN) { pass++; }
+  else { fail++; console.log('  FAIL  the run alone: ' + JSON.stringify(d && d.converted)); }
+
+  // The veto has to be judged on the run as collected. Trimming removes
+  // exactly the words it counts as evidence, so judging the trimmed run let
+  // real Hebrew sentences through — three of them, in the corpus.
+  const src = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  if (/looksLikeRealHebrew\(runUntrimmed\)/.test(src) &&
+      !/looksLikeRealHebrew\(run1\)/.test(src)) { pass++; }
+  else { fail++; console.log('  FAIL  the real-Hebrew veto is judging the trimmed run'); }
+}
+
+// ── A toast whose sentence has been deleted ───────────────────
+// When a pass finds nothing there was no branch at all: it returned, and any
+// toast already on screen stayed there, still offering a fix for text that
+// had been edited away. Pressing it replaced something no longer visible.
+console.log('A toast goes when the text it is about does');
+{
+  const src = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  const attach = src.slice(src.indexOf('function attachTo('),
+                           src.indexOf('\n}', src.indexOf('el.addEventListener(\'compositionend\'')));
+  const okk = (cond, label) => {
+    if (cond) { pass++; return; }
+    fail++; console.log('  FAIL  ' + label);
+  };
+  okk(/activeToast && shownDetection && lastElement === el/.test(attach),
+      'the silent branch asks whether a toast is actually on screen');
+  okk(/!fieldTextOf\(el\)\.includes\(shownDetection\.original\)/.test(attach),
+      'and removes it only once its text has left the field');
+  okk(/removeToast\(false\)/.test(attach),
+      'and takes it down without offering the recall hint');
+}
+
 console.log('A repeated word does not cut the span in half');
 {
   kiko.setLangs({ ...ALL });
