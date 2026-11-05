@@ -2077,7 +2077,13 @@ function spanContext(line, span, pad = 24) {
   return { before, after };
 }
 
-function truncatePreview(text, maxWords = 30) {
+// How much of a run the toast will show, and so how long a run can be before
+// the toast is the wrong shape for it and the hint takes over. One number for
+// both: when they disagreed, every run between the two was shown as a hint
+// bubble although the preview could have displayed it whole.
+const PREVIEW_MAX_WORDS = 30;
+
+function truncatePreview(text, maxWords = PREVIEW_MAX_WORDS) {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
   return words.slice(0, maxWords).join(' ') + ' …';
@@ -4084,12 +4090,35 @@ function showToast(element, detection, forceShow = false) {
     }
   }
 
-  // Very long runs (≥10 words) just pulse the hint bubble — don't cover the screen.
+  // Very long runs just pulse the hint bubble — don't cover the screen.
   // forceShow = true bypasses this so hint-click always opens the full toast.
-  if (!forceShow && detection.words.length >= 10) {
+  //
+  // The bar was ten words, and the preview has shown thirty since 4.6. So
+  // every run between the two — which is most of a chat message — was
+  // demoted to a hint although the toast could have shown all of it. The
+  // sentence in the report is twelve words, fourteen tokens once the geresh
+  // in "want" and "sweep" splits them, and it never had a toast of its own
+  // at all. Both numbers are now the same number.
+  //
+  // This is the freeze, and it is the one that was reported again and again
+  // as "it stops after a few words". Screenshotted in a ChatGPT box: a toast
+  // reading "ok if i" sitting over a field that said "ok if i want to run the
+  // sweep campaign where do i begin?". The engine was never wrong — every
+  // build back to 4.14 converts that sentence whole — but it never got to
+  // say so. The run passed ten words, this branch took over, and it returned
+  // without touching the toast already on screen. So the offer stayed pinned
+  // at the last thing under ten words, which for a sentence that starts with
+  // three one and two-letter words is three words, and every keystroke after
+  // that only pulsed the hint.
+  //
+  // Whatever is on screen has to go when this branch takes over: the hint is
+  // the whole point of it, and a stale offer underneath that hint is worse
+  // than no offer, because pressing it converts a fragment.
+  if (!forceShow && detection.words.length > PREVIEW_MAX_WORDS) {
     const prevSig = lastDetection ? lastDetection.words.join('|') : '';
     lastDetection = detection;
     lastElement   = element;
+    if (activeToast) { activeToast.remove(); activeToast = null; shownDetection = null; }
     if (sig !== prevSig) { hideHint(); showHint(); }
     else if (!hintEl)    showHint();
     return;

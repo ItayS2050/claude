@@ -379,6 +379,39 @@ const noToast = `!document.getElementById('kld-toast')`;
       ok('the field really did shrink', field.length < 32, JSON.stringify(field));
     }
 
+    // ── The freeze that was reported as "it stops after a few words" ──
+    //
+    // Screenshotted in a ChatGPT box: a toast reading "ok if i" sitting over
+    // a field that said "ok if i want to run the sweep campaign where do i
+    // begin?". The engine was never wrong about that sentence — every build
+    // back to 4.14 converts it whole, which is why none of the detection
+    // tests ever caught this and why it was reported four times.
+    //
+    // showToast demoted any run of ten words or more to the hint bubble and
+    // returned without touching the toast already on screen. So the offer
+    // stayed pinned at the last detection under ten words — for a sentence
+    // opening with three one and two-letter words, that is three words — and
+    // every keystroke after it only pulsed the hint.
+    //
+    // This needs a real field: the bug is entirely in what is on the page.
+    {
+      await ageTo(1, { d30: true });
+      await freshPage(s, port);
+      await type(s, "םל ןכ ן 'שמא אם רומ איק ד'קקפ בשצפשןעמ 'יקרק גם ן נקעןמ?");
+      const whole = await B.until(s,
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return null;`
+        + `return /where do i begin/.test(t.innerText)?t.innerText:null})()`,
+        { timeout: 14000, step: 600 });
+      ok('a twelve-word sentence gets the whole offer, not its first three words',
+         !!whole, 'the toast is stuck at: '
+                  + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+      // A sentence this length belongs in the toast, so the hint bubble —
+      // the thing that used to take over at ten words and leave the stale
+      // offer sitting under it — should not be on screen at all.
+      const hint = await s.eval(`!!document.getElementById('kld-hint')`);
+      ok('and the hint bubble has not taken it over', hint === false);
+    }
+
     // ── Undo, in the editors people actually type in ──────────
     //
     // Undo existed, and only for an input: the snapshot it needed was built

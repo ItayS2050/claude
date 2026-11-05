@@ -2779,7 +2779,24 @@ function okk(cond, label) {
 
   // The two branches that were the cause still do what they exist to do.
   okk(/dismissedWordSet\.size >= 2/.test(showToast), 'a dismissal is still respected');
-  okk(/detection\.words\.length >= 10/.test(showToast), 'a very long run still only pulses the hint');
+  okk(/detection\.words\.length > PREVIEW_MAX_WORDS/.test(showToast),
+      'a very long run still only pulses the hint');
+  // The two numbers have to be one number. While they were not, every run
+  // between ten words and thirty was demoted to a hint although the preview
+  // could have shown it whole — which is most of a chat message, and the
+  // twelve-word sentence in the report.
+  okk(/const PREVIEW_MAX_WORDS = 30;/.test(src) &&
+      /function truncatePreview\(text, maxWords = PREVIEW_MAX_WORDS\)/.test(src),
+      'and the bar for it is the same number the preview shows');
+  // Whatever is on screen goes when that branch takes over. It used to
+  // return without touching the toast, so an offer computed back when the
+  // run was short stayed pinned there — "ok if i" over a field reading "ok
+  // if i want to run the sweep campaign where do i begin?" — and pressing it
+  // converted the fragment.
+  const longRun = showToast.slice(showToast.indexOf('words.length > PREVIEW_MAX_WORDS'));
+  okk(/activeToast\.remove\(\); activeToast = null; shownDetection = null;/
+        .test(longRun.slice(0, longRun.indexOf('return;'))),
+      'and it clears the toast instead of leaving a stale offer under the hint');
 
   // And the sentences from the reports convert whole, so the engine was never
   // the thing at fault here.
