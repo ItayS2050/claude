@@ -4572,7 +4572,8 @@ function showExpiredToast() {
     title:  t('trialEndedTitle', null, 'Your free trial has ended'),
     body:   t('trialEndedBody', null,
               'Kiko has stopped correcting layout mistakes. Your learned words are '
-              + 'safe — subscribing switches detection straight back on.'),
+              + 'safe — subscribing switches detection straight back on. '
+              + '$5/month, or $40 for the year.'),
     cta:    t('trialEndedCta', null, 'Keep Kiko'),
     accent: '#f87171',
   });
@@ -4678,10 +4679,17 @@ async function maybeNudgeExpired(detection) {
     const n = detection.words.length;
     const shown = showTrialToast({
       title:  t('expiredCaughtTitle', null, 'Kiko just caught a layout mistake'),
+      // The price belongs here. The notices *before* the trial ends have
+      // carried it since 4.6 — "$5/month, or $40 for the year" — and the two
+      // that fire *after* it ends did not, although this is the moment of
+      // highest intent there is: they have just made a mistake Kiko will not
+      // fix. "Keep Kiko" opened a checkout and the first number they saw was
+      // on the payment page. Anyone deciding in two seconds was deciding
+      // without the one fact that settles it.
       body:   t('expiredCaughtBody', [String(n)],
                 `${n} words you just typed are in the wrong keyboard layout. `
                 + `Kiko can put them right in one keystroke — your free trial has `
-                + `ended, so it is holding back.`),
+                + `ended. $5/month, or $40 for the year.`),
       cta:    t('trialEndedCta', null, 'Keep Kiko'),
       accent: '#f87171',
     });

@@ -271,5 +271,40 @@ console.log('No page states a version number of its own');
   else bad(`manifest version ${manifest.version} is not three dotted numbers`);
 }
 
+// ── Asking for money says what it costs ──────────────────────
+// The notices before the trial ends have carried the price since 4.6. The two
+// that fire after it ends did not: they said "Keep Kiko" and opened a
+// checkout, so the first number anyone saw was on the payment page. That is
+// the moment of highest intent in the whole product — they have just made a
+// mistake Kiko will not fix — and it was the one moment the price was absent.
+//
+// $$ is how a literal dollar is written in a Chrome message; the catalogue
+// stores "$$5" and Chrome renders "$5".
+console.log('Every message that asks for money names the price');
+{
+  const en = JSON.parse(fs.readFileSync(path.join(HERE, '_locales/en/messages.json'), 'utf8'));
+  // Every body shown to somebody who is being asked to pay, whichever side of
+  // the expiry they are on.
+  const ASKS = ['trialBody', 'trialEndedBody', 'expiredCaughtBody'];
+  for (const key of ASKS) {
+    const msg = (en[key] || {}).message || '';
+    if (/\$\$5\b/.test(msg) && /\$\$40\b/.test(msg)) ok();
+    else bad(`${key} asks for money without naming the price: ${JSON.stringify(msg)}`);
+  }
+
+  // The catalogue and the fallback in the code have to agree, or whoever the
+  // catalogue misses reads a different offer from everyone else. Compare the
+  // digits, not the wording: the fallback is assembled across string
+  // literals, and "$40 ' + 'for the year" is one phrase in two of them — an
+  // assertion that matched the phrase failed on the code that was right.
+  const content = fs.readFileSync(path.join(HERE, 'content.js'), 'utf8');
+  for (const key of ASKS) {
+    const call = content.slice(content.indexOf(`t('${key}'`));
+    const upto = call.slice(0, call.indexOf('),'));
+    if (/\$5\b/.test(upto) && /\$40\b/.test(upto)) ok();
+    else bad(`the fallback for ${key} does not carry the price the catalogue does`);
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -81,7 +81,7 @@
     "message": "Your free trial has ended"
   },
   "trialEndedBody": {
-    "message": "Kiko has stopped correcting layout mistakes. Your learned words are safe — subscribing switches detection straight back on."
+    "message": "Kiko has stopped correcting layout mistakes. Your learned words are safe — subscribing switches detection straight back on. $$5/month, or $$40 for the year."
   },
   "trialEndedCta": {
     "message": "Keep Kiko"
@@ -104,7 +104,7 @@
     "message": "Kiko just caught a layout mistake"
   },
   "expiredCaughtBody": {
-    "message": "$COUNT$ words you just typed are in the wrong keyboard layout. Kiko can put them right in one keystroke — your free trial has ended, so it is holding back.",
+    "message": "$COUNT$ words you just typed are in the wrong keyboard layout. Kiko can put them right in one keystroke — your free trial has ended. $$5/month, or $$40 for the year.",
     "placeholders": {
       "count": {
         "content": "$1"

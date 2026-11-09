@@ -127,10 +127,10 @@ M = {
  "Пробный период закончился",
  "무료 체험이 끝났습니다"),
 "trialEndedBody": (
- "Kiko has stopped correcting layout mistakes. Your learned words are safe — subscribing switches detection straight back on.",
- "Kiko הפסיק לתקן טעויות מקלדת. המילים שלמד נשמרו — מנוי מחזיר את הזיהוי מיד.",
- "Kiko перестал исправлять раскладку. Выученные слова сохранены — подписка сразу включит распознавание обратно.",
- "Kiko가 자판 오타 교정을 멈췄습니다. 배운 단어는 그대로 있고, 구독하면 바로 다시 켜집니다."),
+ "Kiko has stopped correcting layout mistakes. Your learned words are safe — subscribing switches detection straight back on. $$5/month, or $$40 for the year.",
+ "Kiko הפסיק לתקן טעויות מקלדת. המילים שלמד נשמרו — מנוי מחזיר את הזיהוי מיד. $$5 לחודש, או $$40 לשנה.",
+ "Kiko перестал исправлять раскладку. Выученные слова сохранены — подписка сразу включит распознавание обратно. $$5 в месяц или $$40 в год.",
+ "Kiko가 자판 오타 교정을 멈췄습니다. 배운 단어는 그대로 있고, 구독하면 바로 다시 켜집니다. 월 $$5 또는 연 $$40."),
 "trialEndedCta": ("Keep Kiko", "להשאיר את Kiko", "Оставить Kiko", "Kiko 계속 쓰기"),
 "trialLeftTitle": (
  "$DAYS$ days left of your free trial",
@@ -153,10 +153,10 @@ M = {
  "Kiko только что заметил ошибку раскладки",
  "Kiko가 방금 자판 오타를 발견했습니다"),
 "expiredCaughtBody": (
- "$COUNT$ words you just typed are in the wrong keyboard layout. Kiko can put them right in one keystroke \u2014 your free trial has ended, so it is holding back.",
- "\u05d4\u05e7\u05dc\u05d3\u05ea \u05e2\u05db\u05e9\u05d9\u05d5 $COUNT$ \u05de\u05d9\u05dc\u05d9\u05dd \u05d1\u05e4\u05e8\u05d9\u05e1\u05ea \u05de\u05e7\u05dc\u05d3\u05ea \u05e9\u05d2\u05d5\u05d9\u05d4. Kiko \u05d9\u05db\u05d5\u05dc \u05dc\u05ea\u05e7\u05df \u05d0\u05d5\u05ea\u05df \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u2014 \u05ea\u05e7\u05d5\u05e4\u05ea \u05d4\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4, \u05d0\u05d6 \u05d4\u05d5\u05d0 \u05de\u05ea\u05d0\u05e4\u05e7.",
- "\u0412\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u0447\u0442\u043e \u043d\u0430\u0431\u0440\u0430\u043b\u0438 $COUNT$ \u0441\u043b\u043e\u0432 \u0432 \u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0439 \u0440\u0430\u0441\u043a\u043b\u0430\u0434\u043a\u0435. Kiko \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442 \u0438\u0445 \u043e\u0434\u043d\u0438\u043c \u043d\u0430\u0436\u0430\u0442\u0438\u0435\u043c \u2014 \u043d\u043e \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u043f\u0435\u0440\u0438\u043e\u0434 \u0437\u0430\u043a\u043e\u043d\u0447\u0438\u043b\u0441\u044f.",
- "\ubc29\uae08 \uc785\ub825\ud55c $COUNT$\uac1c \ub2e8\uc5b4\uac00 \uc798\ubabb\ub41c \uc790\ud310\uc73c\ub85c \uc4f0\uc600\uc2b5\ub2c8\ub2e4. Kiko\ub294 \ud55c \ubc88\uc5d0 \uace0\uce60 \uc218 \uc788\uc9c0\ub9cc \ubb34\ub8cc \uccb4\ud5d8\uc774 \ub05d\ub098 \uba48\ucdb0 \uc788\uc2b5\ub2c8\ub2e4."),
+ "$COUNT$ words you just typed are in the wrong keyboard layout. Kiko can put them right in one keystroke \u2014 your free trial has ended. $$5/month, or $$40 for the year.",
+ "\u05d4\u05e7\u05dc\u05d3\u05ea \u05e2\u05db\u05e9\u05d9\u05d5 $COUNT$ \u05de\u05d9\u05dc\u05d9\u05dd \u05d1\u05e4\u05e8\u05d9\u05e1\u05ea \u05de\u05e7\u05dc\u05d3\u05ea \u05e9\u05d2\u05d5\u05d9\u05d4. Kiko \u05d9\u05db\u05d5\u05dc \u05dc\u05ea\u05e7\u05df \u05d0\u05d5\u05ea\u05df \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u2014 \u05ea\u05e7\u05d5\u05e4\u05ea \u05d4\u05e0\u05d9\u05e1\u05d9\u05d5\u05df \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4, \u05d0\u05d6 \u05d4\u05d5\u05d0 \u05de\u05ea\u05d0\u05e4\u05e7. $$5 \u05dc\u05d7\u05d5\u05d3\u05e9, \u05d0\u05d5 $$40 \u05dc\u05e9\u05e0\u05d4.",
+ "\u0412\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u0447\u0442\u043e \u043d\u0430\u0431\u0440\u0430\u043b\u0438 $COUNT$ \u0441\u043b\u043e\u0432 \u0432 \u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0439 \u0440\u0430\u0441\u043a\u043b\u0430\u0434\u043a\u0435. Kiko \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442 \u0438\u0445 \u043e\u0434\u043d\u0438\u043c \u043d\u0430\u0436\u0430\u0442\u0438\u0435\u043c \u2014 \u043d\u043e \u043f\u0440\u043e\u0431\u043d\u044b\u0439 \u043f\u0435\u0440\u0438\u043e\u0434 \u0437\u0430\u043a\u043e\u043d\u0447\u0438\u043b\u0441\u044f. $$5 \u0432 \u043c\u0435\u0441\u044f\u0446 \u0438\u043b\u0438 $$40 \u0432 \u0433\u043e\u0434.",
+ "\ubc29\uae08 \uc785\ub825\ud55c $COUNT$\uac1c \ub2e8\uc5b4\uac00 \uc798\ubabb\ub41c \uc790\ud310\uc73c\ub85c \uc4f0\uc600\uc2b5\ub2c8\ub2e4. Kiko\ub294 \ud55c \ubc88\uc5d0 \uace0\uce60 \uc218 \uc788\uc9c0\ub9cc \ubb34\ub8cc \uccb4\ud5d8\uc774 \ub05d\ub098 \uba48\ucdb0 \uc788\uc2b5\ub2c8\ub2e4. \uc6d4 $$5 \ub610\ub294 \uc5f0 $$40."),
 "trialCta":  ("See the plans", "לראות את המסלולים", "Посмотреть тарифы", "요금제 보기"),
 "notNow":    ("Not now",       "לא עכשיו",          "Не сейчас",         "나중에"),
 
