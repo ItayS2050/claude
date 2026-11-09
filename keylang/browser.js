@@ -23,8 +23,14 @@ const CHROME = (() => {
   for (const root of roots) {
     if (!fs.existsSync(root)) continue;
     for (const dir of fs.readdirSync(root)) {
-      const p = path.join(root, dir, 'chrome-linux', 'chrome');
-      if (fs.existsSync(p)) return p;
+      // Both spellings. The folder is chrome-linux in some Playwright builds
+      // and chrome-linux64 in others, and when only the first was checked the
+      // suite found nothing, printed SKIPPED and exited 0 — which reads like a
+      // pass in a log and is how an untested build gets shipped.
+      for (const leaf of ['chrome-linux', 'chrome-linux64']) {
+        const p = path.join(root, dir, leaf, 'chrome');
+        if (fs.existsSync(p)) return p;
+      }
     }
   }
   return process.env.CHROME || null;

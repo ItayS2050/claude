@@ -514,6 +514,14 @@ const noToast = `!document.getElementById('kld-toast')`;
          !!caught && !caught.includes('שלום'), String(caught).replace(/\n/g, ' | '));
       ok('and does not touch the text',
          await s.eval('document.getElementById("f").value') === 'akuo nvhs ekhu');
+      // And it says what it costs. The notices before the trial ends have
+      // carried the price since 4.6; the ones after it ends said "Keep Kiko"
+      // and opened a checkout, so at the moment of highest intent — a mistake
+      // just caught and deliberately not fixed — the first number anyone saw
+      // was on the payment page. Asserted on the rendered toast rather than
+      // the catalogue, because this is the text a person actually reads.
+      ok('and names the price, where the decision is being made',
+         !!caught && /\$5/.test(caught), String(caught).replace(/\n/g, ' | '));
 
       // Every mistake, not one a day. This was capped at once per 24 hours,
       // and the cap is what two uninstall notes were describing: Kiko caught
