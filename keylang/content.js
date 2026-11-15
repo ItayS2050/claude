@@ -389,7 +389,7 @@ let entitled        = true; // overridden by loadLearned; permissive default avo
 async function loadLearned() {
   try {
     const d = await chrome.storage.local.get(
-      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedGreek','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites','entitlement']
+      ['learnedHebrew','learnedEnglish','learnedRussian','learnedUkrainian','learnedKorean','learnedGreek','learnedArabic','stats','detectionEnabled','soundEnabled','toastPos','enabledLangs','disabledSites','entitlement','relaunch']
     );
     learnedHebrew   = new Set(d.learnedHebrew  || []);
     learnedEnglish  = new Set(d.learnedEnglish || []);
@@ -407,6 +407,7 @@ async function loadLearned() {
     // with fewer languages silently gets the new ones running while the popup
     // (which defaults its toggles to off) shows them as disabled.
     if (d.entitlement) entitled = d.entitlement.entitled !== false;
+    relaunch = d.relaunch || null;
     if (d.enabledLangs) {
       enabledLangs = { he: false, ru: false, uk: false, ko: false, el: false, ar: false, ...d.enabledLangs };
     }
@@ -424,6 +425,7 @@ try {
     }
     if ('soundEnabled' in changes) soundEnabled = changes.soundEnabled.newValue !== false;
     if ('toastPos' in changes) toastPos = changes.toastPos.newValue;
+    if ('relaunch' in changes) relaunch = changes.relaunch.newValue || null;
     if ('entitlement' in changes) {
       entitled = !changes.entitlement.newValue || changes.entitlement.newValue.entitled !== false;
       if (!entitled) { removeToast(false); hideHint(); }
@@ -4277,7 +4279,13 @@ function showToast(element, detection, forceShow = false) {
         }
       };
       showConfirm(`✓ Fixed! Switch keyboard: ${kb}`, undoFn);
-      setTimeout(maybeShowReviewToast, REVIEW_DELAY_MS);
+      // One slot, two things that might want it, and an order that matters.
+      // A grant announcement follows a fix that has just visibly worked; a
+      // review ask must never follow the grant in the same breath.
+      setTimeout(async () => {
+        if (await maybeAnnounceRelaunch()) return;
+        maybeShowReviewToast();
+      }, REVIEW_DELAY_MS);
       // Re-scan after a short delay to catch any remaining mismatched words
       // (e.g. a sentence with both Hebrew text and Latin-on-Hebrew-keyboard words)
       setTimeout(() => {
@@ -4509,7 +4517,12 @@ function spendTrialMilestones(due, seen = {}) {
   return next;
 }
 
-function showTrialToast({ title, body, cta, accent, onClose }) {
+// `go` is what the primary button does. It defaults to the checkout, because
+// every one of these toasts but one is asking for money. The exception is the
+// grant: sending somebody to a payment page in the same breath as telling them
+// they have two free weeks is the opposite of what the grant is for, so that
+// one passes a `go` that simply closes.
+function showTrialToast({ title, body, cta, accent, onClose, go, hideLater }) {
   if (activeToast) return false;
   injectStyles();
   const toast = document.createElement('div');
@@ -4525,7 +4538,7 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
     <div style="font-size:12px;color:#94a3b8;line-height:1.5">${escapeHtml(body)}</div>
     <div class="kld-actions">
       <button class="kld-btn kld-primary" id="kld-tr-go" style="background:${accent}">${escapeHtml(cta)}</button>
-      <button class="kld-btn kld-reject" id="kld-tr-later">${escapeHtml(t('notNow', null, 'Not now'))}</button>
+      ${hideLater ? '' : `<button class="kld-btn kld-reject" id="kld-tr-later">${escapeHtml(t('notNow', null, 'Not now'))}</button>`}
     </div>
   `;
   toast.querySelectorAll('button').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
@@ -4537,10 +4550,11 @@ function showTrialToast({ title, body, cta, accent, onClose }) {
   };
   toast.querySelector('#kld-tr-go').addEventListener('click', () => {
     close();
-    window.open(KIKO_CHECKOUT, '_blank');
+    if (go) go(); else window.open(KIKO_CHECKOUT, '_blank');
   });
   toast.querySelector('#kld-tr-x').addEventListener('click', close);
-  toast.querySelector('#kld-tr-later').addEventListener('click', close);
+  const later = toast.querySelector('#kld-tr-later');
+  if (later) later.addEventListener('click', close);
 
   applyPos(toast);
   makeDraggable(toast);
@@ -4649,6 +4663,66 @@ const EXPIRED_NUDGE_REPEAT_MS = 2 * 60 * 1000;
 // What was last announced, so a growing sentence is one mistake and not six.
 // Deliberately in memory and not storage: a new page is a new chance to tell
 // someone their product has stopped working.
+// The second trial, as content.js sees it. background.js decides who gets one
+// and for how long; this file's only job is to say so, once, at the right
+// moment. null until loadLearned has run.
+let relaunch = null;
+
+// Forty-eight hours. Someone who has not taken a fix in two days of using
+// Kiko is not going to be told by the fix, so the detection tells them
+// instead — a worse moment, because it costs them that one toast, and still
+// far better than a grant nobody hears about.
+const RELAUNCH_FALLBACK_MS = 48 * 60 * 60 * 1000;
+
+function relaunchAnnounceDue(r, now = Date.now()) {
+  if (!r || !r.until || r.toldAt) return false;   // none, or already said
+  if (now >= r.until) return false;               // too late to be good news
+  return true;
+}
+
+// The fallback is due only once the grant has been sitting unspoken for two
+// days of actual use. seenAt is stamped the first time a detection happens,
+// not when the grant is written, because an extension that updates while the
+// laptop is shut has not been used at all.
+function relaunchFallbackDue(r, now = Date.now()) {
+  return relaunchAnnounceDue(r, now) && !!r.seenAt && now - r.seenAt >= RELAUNCH_FALLBACK_MS;
+}
+
+async function markRelaunchSeen() {
+  try {
+    if (!relaunchAnnounceDue(relaunch) || relaunch.seenAt) return;
+    relaunch = { ...relaunch, seenAt: Date.now() };
+    await chrome.storage.local.set({ relaunch });
+  } catch {}
+}
+
+// Proof first, then the offer. This is called after a fix has been accepted
+// and the sentence has visibly gone in whole — which is the thing that did not
+// work for five months — so the message lands on something just demonstrated
+// rather than on a claim. Returns whether it spoke, because the review nudge
+// shares this slot and must not follow it: nobody who has just been told
+// their trial reopened should be asked for a star rating in the same breath.
+async function maybeAnnounceRelaunch() {
+  try {
+    if (!relaunchAnnounceDue(relaunch)) return false;
+    const days = Math.max(1, Math.ceil((relaunch.until - Date.now()) / 86400000));
+    const shown = showTrialToast({
+      title:  t('relaunchTitle', [String(days)], `${days} days on us`),
+      body:   t('relaunchBody', null,
+                'We have just shipped a batch of fixes. Here are two weeks to try '
+                + 'them out, on us — nothing charged.'),
+      cta:    t('relaunchCta', null, 'Start using Kiko'),
+      accent: '#34d399',
+      go:     () => {},      // nowhere to send them: they already have it
+      hideLater: true,       // and nothing to decline
+    });
+    if (!shown) return false;
+    relaunch = { ...relaunch, toldAt: Date.now() };
+    await chrome.storage.local.set({ relaunch });
+    return true;
+  } catch { return false; }
+}
+
 let lastExpiredSig = null;
 let lastExpiredAt  = 0;
 
@@ -5067,6 +5141,12 @@ function attachTo(el) {
     }
     const detection = analyzeFullField(el, midBurst) || analyze(el, midBurst);
     if (detection) {
+      // Two days of detections and still no fix taken: tell them about the
+      // grant here instead, and give this detection up. showTrialToast refuses
+      // while a toast is up, so this can only land on an empty screen, and the
+      // next keystroke brings the fix offer back.
+      if (relaunchFallbackDue(relaunch) && !activeToast) { maybeAnnounceRelaunch(); return; }
+      markRelaunchSeen();
       showToast(el, detection);
     } else if (activeToast && shownDetection && lastElement === el &&
                shownDetection.original &&

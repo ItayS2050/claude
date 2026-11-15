@@ -379,6 +379,97 @@ const noToast = `!document.getElementById('kld-toast')`;
       ok('the field really did shrink', field.length < 32, JSON.stringify(field));
     }
 
+
+    // ── The second trial, end to end ──────────────────────────
+    //
+    // Every person who has so far reached Kiko's paywall did so after thirty
+    // days on a build where the toast froze on any sentence past ten words.
+    // That was live from 4 June to 5 November and did not ship until now, so
+    // whoever was already expired when this build arrived gets another
+    // fortnight. Three things have to be true and none of them can be seen
+    // from the entitlement object alone: the fix comes back, they are told,
+    // and being told does not send them to a payment page.
+    {
+      await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
+      await B.sleep(900);
+      // Both grants cleared, so the question is asked fresh rather than
+      // answered by a record an earlier case in this file left behind.
+      await s.eval('chrome.storage.local.remove(["makeup","relaunch"])'
+                 + '.then(function(){return "ok"})');
+      const back = await ageTo(90, { d7: true, d1: true, expiredShown: 3, expiredAt: Date.now() });
+      ok('somebody whose trial ended is given another fortnight',
+         back.state === 'trial' && back.daysLeft === 14, JSON.stringify(back));
+
+      // The fix itself is the point of the grant, so it has to be back.
+      await freshPage(s, port);
+      await type(s, 'akuo nvhs ekhu');
+      const offer = await B.until(s, OFFER, { timeout: 10000, step: 600 });
+      ok('and the correction is offered rather than withheld',
+         !!offer && /שלום/.test(offer), String(offer).replace(/\n/g, ' | '));
+
+      await s.eval("document.querySelector('#kld-toast .kld-primary').click();\"ok\"");
+
+      // Proof first, then the offer: the announcement follows a fix that has
+      // visibly put the whole sentence in. REVIEW_DELAY_MS is nine seconds,
+      // and this shares that slot.
+      const told = await B.until(s,
+        `(function(){var t=document.getElementById('kld-toast');if(!t)return null;`
+        + `return /days on us/.test(t.innerText)?t.innerText:null})()`,
+        { timeout: 20000, step: 700 });
+      ok('and is told about it, after the fix has visibly worked',
+         !!told, 'no grant toast: ' + String(await s.eval(OFFER)).replace(/\n/g, ' | '));
+      ok('the announcement says what it is worth',
+         !!told && /14 days/.test(told), String(told).replace(/\n/g, ' | '));
+
+      // stats.converted is 5 here, which is over the review threshold, so the
+      // review ask was eligible and must have been stood down. Nobody told
+      // their trial has reopened should be asked for a star in the same breath.
+      ok('and the review ask does not follow it',
+         !!told && !/Rate Kiko|Enjoying Kiko/i.test(told), String(told).replace(/\n/g, ' | '));
+
+      // Nothing may be opened when they press the button on it. Every other
+      // trial toast in this file leads to a checkout; this one must not.
+      //
+      // Asked of the browser, not of the page. Stubbing window.open in the
+      // page proves nothing — content.js runs in an isolated world with its
+      // own globals, so the stub never sees the call, and the first version
+      // of this assertion passed just as happily against a build that did
+      // open the checkout. Counting the browser's own tabs cannot be fooled
+      // that way.
+      const tabsBefore = (await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`))
+        .filter(t => t.type === 'page').length;
+      await s.eval("(function(){var t=document.getElementById('kld-toast');"
+                 + "if(t){var b=t.querySelector('.kld-primary');if(b)b.click();}return 'ok'})()");
+      await B.sleep(1500);
+      const tabsAfter = (await B.fetchJson(`http://127.0.0.1:${browser.port}/json/list`))
+        .filter(t => t.type === 'page');
+      ok('and pressing it opens nothing — they already have the fortnight',
+         tabsAfter.length === tabsBefore,
+         `${tabsBefore} tabs before, ${tabsAfter.length} after: `
+         + tabsAfter.map(t => t.url).join(' , '));
+
+      // Said once. A grant announced on every fix is a nag.
+      await freshPage(s, port);
+      await type(s, 'ghbdtn rfr ltkf');
+      await B.sleep(1200);
+      await s.eval("document.querySelector('#kld-toast .kld-primary') && "
+                 + "document.querySelector('#kld-toast .kld-primary').click();\"ok\"");
+      await B.sleep(12000);
+      const again = await s.eval(
+        `(function(){var t=document.getElementById('kld-toast');`
+        + `return t ? /days on us/.test(t.innerText) : false})()`);
+      ok('and never a second time', again === false);
+
+      // Put the world back. Every case after this one arrives expecting an
+      // expired or counting-down user, and a fourteen-day grant left in
+      // storage makes all of them entitled — which is how this one assertion
+      // took eight others down with it the first time it ran.
+      await s.send('Page.navigate', { url: `chrome-extension://${extId}/welcome.html` });
+      await B.sleep(900);
+      await s.eval('chrome.storage.local.set({relaunch:{until:0,why:"not owed",toldAt:0,seenAt:0}})'
+                 + '.then(function(){return "ok"})');
+    }
+
     // ── The freeze that was reported as "it stops after a few words" ──
     //
     // Screenshotted in a ChatGPT box: a toast reading "ok if i" sitting over
@@ -604,10 +695,17 @@ const noToast = `!document.getElementById('kld-toast')`;
           'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'));
       };
 
-      const owed = await put({ firstInstall: stamp, paywallStart: stamp });
+      // relaunch pinned to not-owed so this measures the three-day makeup on
+      // its own. Someone expired on a cleared profile is owed both grants, and
+      // the longer one answers — which is correct, and is asserted below, but
+      // it is not what these three assertions are about.
+      const NOT_GRANTED = { until: 0, why: 'not owed', toldAt: 0, seenAt: 0 };
+      const owed = await put({ firstInstall: stamp, paywallStart: stamp,
+                               relaunch: NOT_GRANTED });
       ok('somebody expired and never told is given three days',
          owed.entitled === true && owed.state === 'trial' && owed.daysLeft === 3,
          JSON.stringify(owed));
+
 
       // Asked once per install. A second wake must not top it up again.
       await s.eval('chrome.runtime.sendMessage({type:"kiko-refresh-entitlement",force:true})'
@@ -617,14 +715,24 @@ const noToast = `!document.getElementById('kld-toast')`;
         'chrome.storage.local.get("entitlement").then(function(d){return JSON.stringify(d.entitlement)})'));
       ok('and not given them a second time', again.daysLeft === 3, JSON.stringify(again));
 
+      // Owed both grants, they get the fortnight rather than the three days.
+      // Checked in sequence the makeup would answer first and cut the longer
+      // one short. This runs after the check above because it deliberately
+      // leaves a fourteen-day state behind.
+      const bothOwed = await put({ firstInstall: stamp, paywallStart: stamp });
+      ok('somebody owed both grants gets the longer one',
+         bothOwed.state === 'trial' && bothOwed.daysLeft === 14, JSON.stringify(bothOwed));
+
       const told = await put({ firstInstall: stamp, paywallStart: stamp,
+                               relaunch: NOT_GRANTED,
                                trialNotices: { d7: true, d1: true, expiredShown: 3 } });
       ok('somebody who was properly warned stays expired',
          told.state === 'expired' && told.entitled === false, JSON.stringify(told));
 
       // And the notice they were owed actually reaches them now. Put the owed
       // state back first — the case above deliberately left an expired one.
-      const regranted = await put({ firstInstall: stamp, paywallStart: stamp });
+      const regranted = await put({ firstInstall: stamp, paywallStart: stamp,
+                                    relaunch: NOT_GRANTED });
       ok('the owed state is restored for the next check', regranted.daysLeft === 3,
          JSON.stringify(regranted));
       await s.send('Page.navigate', { url: `http://127.0.0.1:${port}/?owed=1` });

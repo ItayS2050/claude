@@ -111,6 +111,20 @@
       }
     }
   },
+  "relaunchTitle": {
+    "message": "$DAYS$ days on us",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "relaunchBody": {
+    "message": "We have just shipped a batch of fixes. Here are two weeks to try them out, on us — nothing charged."
+  },
+  "relaunchCta": {
+    "message": "Start using Kiko"
+  },
   "trialCta": {
     "message": "See the plans"
   },

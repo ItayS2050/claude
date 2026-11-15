@@ -124,6 +124,22 @@ const DAY_MS       = 86400000;
 const RECHECK_MS   = DAY_MS;       // don't hit the API more than once a day
 const GRACE_MS     = 7 * DAY_MS;   // keep a valid licence working while offline
 const MAKEUP_DAYS  = 3;            // owed to anyone the trial notices never reached
+
+// A second trial, for the people whose first one ran on a build that froze.
+//
+// showToast demoted any run of ten words or more to a hint bubble and returned
+// without clearing the toast already on screen, so the offer stayed pinned to
+// whatever was last under ten words while the sentence carried on. That was
+// live from 4 June (v3.3.18) to 5 November (4.29.0) — five months — and 4.29
+// did not reach anybody until this build. Every person who has so far decided
+// whether to pay for Kiko was deciding about a product that stopped
+// mid-sentence.
+//
+// Fourteen days, not thirty: they already know what Kiko is for, and what they
+// are missing is a fortnight of it working. Granted once, to whoever is past
+// their trial on the day this build first runs, and never again — a trial that
+// began after this is a trial on a build that works, and gets no second one.
+const RELAUNCH_DAYS = 14;
 // ── Licence provider ──────────────────────────────────────────
 // Everything specific to whoever sells Kiko lives in this one object, because
 // it has already had to change once and will likely change again.
@@ -222,7 +238,7 @@ const LICENCE_HTTP_ERRORS = {
 };
 
 function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStart = null,
-                            makeup = null) {
+                            makeup = null, relaunch = null) {
   // Paywall off: everyone is entitled, and the popup shows no countdown and
   // no price. 'licensed' rather than a fake trial, because a trial implies a
   // deadline we cannot currently honour either way.
@@ -246,11 +262,18 @@ function computeEntitlement(firstInstall, licence, now = Date.now(), paywallStar
   // It reads as an ordinary trial from here on, because that is what it is: the
   // countdown shows, the notices fire, and at the end of it they have had the
   // warning they were promised the first time.
-  if (makeup && now < makeup.until) {
+  //
+  // Two grants can be outstanding, and whichever runs longer is the one that
+  // counts. Checking them in sequence would let the shorter one answer first
+  // and cut the longer one off, which is a bug waiting for the day somebody
+  // holds both.
+  const grantedUntil = Math.max((makeup   && makeup.until)   || 0,
+                                (relaunch && relaunch.until) || 0);
+  if (grantedUntil && now < grantedUntil) {
     return {
       entitled: true,
       state: 'trial',
-      daysLeft: Math.max(1, Math.ceil((makeup.until - now) / DAY_MS)),
+      daysLeft: Math.max(1, Math.ceil((grantedUntil - now) / DAY_MS)),
     };
   }
 
@@ -356,6 +379,46 @@ async function refreshEntitlement({ force = false } = {}) {
     try { await chrome.storage.local.set({ makeup }); } catch {}
   }
 
+  // The second trial, for whoever was already past their first one when this
+  // build arrived. Asked exactly once, the same way makeup is: the record is
+  // written even when the answer is no, because the question has to be settled
+  // at the moment this build first runs. Leaving it open would hand the grant
+  // to somebody whose trial ends next week — and their trial ran on a build
+  // that works, which is the whole point of the grant.
+  //
+  // Somebody inside a makeup window counts as owed. Their first trial ended
+  // too; the three days they are holding are what they got instead of a
+  // notice, and it was the same frozen build either way.
+  let relaunch;
+  try { ({ relaunch } = await chrome.storage.local.get('relaunch')); } catch {}
+  if (PAYWALL_ENABLED && !relaunch) {
+    const now   = Date.now();
+    const stand = computeEntitlement(firstInstall, licence, now, paywallStart);
+    const owed  = stand.state === 'expired' || (makeup && makeup.until > now);
+    relaunch = owed
+      ? { until: now + RELAUNCH_DAYS * DAY_MS, why: 'their trial ran on the frozen build',
+          toldAt: 0, seenAt: 0 }
+      : { until: 0, why: 'not owed', toldAt: 0, seenAt: 0 };
+    try { await chrome.storage.local.set({ relaunch }); } catch {}
+
+    // Spend the milestones a fourteen-day grant would otherwise fire on its
+    // own first day. Being told "14 days left" in the same minute as "14 days
+    // on us" reads like a countdown that started without asking. Seven and one
+    // still land, and so does the notice at the end.
+    //
+    // The expiry notices are reset at the same time, or the three this person
+    // has already seen would be spent and the end of this trial would pass in
+    // silence — which is the failure the makeup grant exists to make up for.
+    if (owed) {
+      try {
+        const { trialNotices: seen } = await chrome.storage.local.get('trialNotices');
+        const kept = { ...(seen || {}), d30: true, d14: true };
+        delete kept.expired; delete kept.expiredShown; delete kept.expiredAt;
+        await chrome.storage.local.set({ trialNotices: kept });
+      } catch {}
+    }
+  }
+
   // Re-validate a stored key at most daily. A network failure leaves the
   // previous result untouched so the grace window in computeEntitlement can
   // carry a paying user through an outage.
@@ -395,7 +458,7 @@ async function refreshEntitlement({ force = false } = {}) {
   // someone they have a subscription they never bought and hides the trial and
   // the price from them entirely.
   const entitlement = {
-    ...computeEntitlement(firstInstall, licence, Date.now(), paywallStart, makeup),
+    ...computeEntitlement(firstInstall, licence, Date.now(), paywallStart, makeup, relaunch),
     v: chrome.runtime.getManifest().version,
   };
   try { await chrome.storage.local.set({ entitlement }); } catch {}

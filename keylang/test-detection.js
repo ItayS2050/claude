@@ -70,6 +70,7 @@ function loadContentScript() {
     '         isAcceptShortcut, toastAcceptsKeyboard, ACCEPT_KEYS, IS_MAC,' +
     '         expiryNoticeDue, spendExpiryNotice, EXPIRY_NOTICES, EXPIRY_GAP_MS,' +
     '         expiredNudgeDue, EXPIRED_NUDGE_REPEAT_MS, analyzeIgnoringPaywall, findRunSpan,' +
+    '         relaunchAnnounceDue, relaunchFallbackDue, RELAUNCH_FALLBACK_MS,' +
     '         wordCouldBeRussian,' +
     '         STRICT_MS, toHebrewKeys: convertToHebrew,' +
     '         unmistakablyEnglish, fromHebrewKeys: convertToEnglish,' +
@@ -119,11 +120,11 @@ function loadComputeEntitlement(paywallOn) {
   // one the rules exist for.
   block = block.replace(/const PAYWALL_ENABLED = \w+;/, `const PAYWALL_ENABLED = ${paywallOn};`);
   const ctx = vm.createContext({});
-  return vm.runInContext(block + ';({ computeEntitlement, wasNeverTold, MAKEUP_DAYS })', ctx);
+  return vm.runInContext(block + ';({ computeEntitlement, wasNeverTold, MAKEUP_DAYS, RELAUNCH_DAYS })', ctx);
 }
 
 const kiko = loadContentScript();
-const { computeEntitlement, wasNeverTold, MAKEUP_DAYS } = loadComputeEntitlement(true);
+const { computeEntitlement, wasNeverTold, MAKEUP_DAYS, RELAUNCH_DAYS } = loadComputeEntitlement(true);
 const entitlementPaywallOff = loadComputeEntitlement(false).computeEntitlement;
 const ALL = { he: true, ru: true, uk: true, ko: true, el: true, ar: true };
 const NONE = { he: false, ru: false, uk: false, ko: false, el: false, ar: false };
@@ -2930,6 +2931,92 @@ function okk(cond, label) {
   // Three, not two and not zero. The granting itself runs in the background and
   // is tested in a real browser; this pins the promise.
   okk(MAKEUP_DAYS === 3, `three days are owed, the constant says ${MAKEUP_DAYS}`);
+}
+
+// ── The second trial ──────────────────────────────────────────
+// Every person who has so far decided whether to pay for Kiko was deciding
+// about a build where the toast froze on any sentence past ten words — live
+// from 4 June to 5 November, and not shipped until now. So whoever was
+// already past their trial when this build arrived gets another fourteen
+// days. The rules that matter are who gets one and who does not: a grant that
+// leaks to somebody whose trial ends next week gives away a month of revenue
+// for a bug they never met.
+console.log('A second trial goes to the people whose first one was broken');
+{
+  const DAY = 86400000;
+  const now = Date.UTC(2026, 10, 20, 12);
+  const ago = (days) => ({ at: now - days * DAY, version: '4.13.0' });
+  const ent = (first, lic, makeup, relaunch) =>
+    computeEntitlement(first, lic, now, { at: now - 200 * DAY }, makeup, relaunch);
+
+  const is = (label, got, want) => {
+    if (got === want) { pass++; return; }
+    fail++; console.log(`  FAIL  ${label}\n        expected ${JSON.stringify(want)}\n        actual   ${JSON.stringify(got)}`);
+  };
+
+  is('fourteen days is what the grant is worth', RELAUNCH_DAYS, 14);
+
+  const granted = { until: now + 14 * DAY, why: 'their trial ran on the frozen build' };
+  const none    = { until: 0, why: 'not owed' };
+
+  // Somebody long expired, holding a grant.
+  const back = ent(ago(90), null, null, granted);
+  is('an expired user is entitled again', back.entitled, true);
+  is('and reads as a trial, not a licence', back.state, 'trial');
+  is('with the fourteen days showing',     back.daysLeft, 14);
+
+  // The same person without one stays where they were.
+  is('and without a grant, still expired', ent(ago(90), null, null, none).state, 'expired');
+
+  // Somebody mid-trial is untouched either way: their trial is running on a
+  // build that works, and it is neither shortened nor extended by this.
+  is('somebody mid-trial keeps their own countdown',
+     ent(ago(20), null, null, none).daysLeft, 10);
+
+  // A paying customer is never moved onto a trial by a grant.
+  const paid = ent(ago(90), { valid: true, checkedAt: now }, null, granted);
+  is('a licence still wins over any grant', paid.state, 'licensed');
+
+  // Both grants at once: the longer one has to answer. Checked in sequence the
+  // three-day makeup would reply first and cut the fortnight short.
+  const bothWays = ent(ago(90), null, { until: now + 2 * DAY }, granted);
+  is('holding both grants, the longer one counts', bothWays.daysLeft, 14);
+  const otherWay = ent(ago(90), null, { until: now + 20 * DAY }, granted);
+  is('and that holds whichever of them is longer', otherWay.daysLeft, 20);
+
+  // A grant that has run out is not a grant.
+  is('a grant that has run out does not entitle',
+     ent(ago(90), null, null, { until: now - DAY }).state, 'expired');
+}
+
+// ── Saying so, once, at the right moment ──────────────────────
+// A grant nobody hears about buys nothing. It is announced after a fix has
+// been accepted — proof first, then the offer — and if no fix is taken within
+// two days of use, on a detection instead.
+console.log('The grant is announced once, and only while it is worth having');
+{
+  const due  = kiko.relaunchAnnounceDue;
+  const fall = kiko.relaunchFallbackDue;
+  const HOUR = 3600000;
+  const now  = 1700000000000;
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  okk(due({ until: now + 5 * 86400000, toldAt: 0 }, now), 'a live grant not yet mentioned is due');
+  okk(!due({ until: now + 5 * 86400000, toldAt: now - 1000 }, now), 'and never twice');
+  okk(!due({ until: 0, why: 'not owed', toldAt: 0 }, now), 'somebody not granted one hears nothing');
+  okk(!due(null, now), 'nor does somebody whose record has not loaded yet');
+  // Fourteen days later the news is not news. Announcing then would promise
+  // time that has already gone.
+  okk(!due({ until: now - 1000, toldAt: 0 }, now), 'and not once it has run out');
+
+  // The fallback waits on use, not on the clock: an extension that updated
+  // while the laptop was shut has not been used at all.
+  const live = (seenAt) => ({ until: now + 5 * 86400000, toldAt: 0, seenAt });
+  okk(!fall(live(0), now), 'the fallback does not start before the first detection');
+  okk(!fall(live(now - 47 * HOUR), now), 'and holds while a fix might still be taken');
+  okk(fall(live(now - 49 * HOUR), now), 'and speaks after two days of use without one');
+  okk(!fall({ until: now + 5 * 86400000, toldAt: now, seenAt: now - 99 * HOUR }, now),
+      'and never once the grant has been announced');
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
