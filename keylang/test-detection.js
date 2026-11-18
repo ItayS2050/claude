@@ -93,7 +93,8 @@ function loadContentScript() {
     '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew, isRealRun,' +
     '         englishEnough, realEnglishWord, EN_LEXICON, COMMON_EN_WORDS, looksLikeRealHebrew,' +
     '         greekScore, stripTonos, looksLikeAcronym, extractWords, wordCouldBeGreek,' +
-    '         AR_BIGRAMS, AR_SURE, arabicScore, EN_LEXICON, EN_WORDS, wordCouldBeHebrew,' +
+    '         AR_BIGRAMS, AR_SURE, arabicScore, EN_LEXICON, EN_WORDS, wordCouldBeHebrew, allTitleCase,' +
+    '         koreanScore, COMMON_KO_WORDS, convertToKorean, KO_STEMS, KO_ENDINGS,' +
     '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -3113,6 +3114,111 @@ console.log('A word the English dictionary knows is never a candidate');
 // whose first word repeats, and cost Russian, Greek and Arabic a corpus
 // conversion each. The run's length is known, so that is what the span is
 // checked against.
+// ── Capitals ──────────────────────────────────────────────────
+// From a screenshot of a Smartlead lead list: "Dagan Schattert" offered as
+// גשעשמ דבישאאקרא. Neither word is in the English dictionary, both map
+// cleanly onto Hebrew keys, and two candidates side by side is a run.
+//
+// Nothing in this file looked at the capitals, and the capitals settle it.
+// None of the six languages has them, and Shift on those layouts reaches a
+// different character altogether, so somebody typing Hebrew on an English
+// keyboard produces lowercase. A run whose every word is Title Case is a
+// proper noun.
+//
+// Two words, not one: a sentence legitimately starts with a capital and a
+// phone supplies one whether or not it was wanted, so a single capitalised
+// word is left alone. Measured on 20,000 random Title-Case pairs from a
+// 370,000-word dictionary: 160 fired before, 26 after, and all 26 are
+// single-word detections where this rule does not apply.
+// ── Korean needed a dictionary like everybody else ────────────
+// koSoloRun admitted any token that fell out as four clean syllables. Length
+// was the entire test — no word list, no score, nothing. Measured against a
+// 370,105-word English dictionary: 470 ordinary English words fired as Korean
+// on their own, which was 97% of every single-word false positive this
+// extension had. "abditory" is 뮤야새교. "absorbancy" is 뮤내규무쵸.
+//
+// Korean is agglutinative, so whole words cannot carry it — 보냈습니다 and
+// 보내 are the same verb. Stems matched against the front, plus the polite
+// endings matched against the back, cover what a word list never would.
+//
+// 470 to 2, and recall went up rather than down: the list admits three and
+// four-syllable words the old length test refused.
+console.log('A Korean word needs to be a Korean word');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  // Ordinary English words that decompose into four clean syllables. Every
+  // one of these fired as Korean before the stems went in.
+  for (const w of ['abditory', 'abricock', 'abshenry', 'absorbancy',
+                   'absorbency', 'alabaman', 'entitlement']) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(w);
+    okk(!d, `${JSON.stringify(w)} is an English word, not Korean: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // And Korean still speaks on its own, which is what the length rule was
+  // there for. These are the words the 4.20 work was measured on.
+  for (const phrase of ['뭐해요', '고마워', '아니요', '했어요', '알겠습니다',
+                        '가능합니다', '반갑습니다', '기다리겠습니다']) {
+    const typed = kiko.down.ko(phrase);
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(typed);
+    okk(!!d && (d.lang || 'he') === 'ko',
+        `${phrase} (${typed}) went silent: ${d ? d.converted : '(nothing)'}`);
+  }
+
+  // Two syllables is still not enough from anybody, word list or not. Moving
+  // the COMMON_KO_WORDS check above the length floor let 안녕 speak alone and
+  // broke two separate assertions elsewhere in this file.
+  kiko.forgetLearned(); kiko.longAfterAFix();
+  okk(!kiko.analyzeText('dkssud'), '안녕 alone is two syllables and stays quiet');
+
+  // The stems are real and big enough to matter.
+  okk(kiko.KO_STEMS && kiko.KO_STEMS.size >= 5000,
+      `KO_STEMS holds ${kiko.KO_STEMS ? kiko.KO_STEMS.size : 0} stems`);
+}
+
+console.log('A line of capitalised words is a name, not a mistake');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  // The reported one, and four more the 20,000-pair sweep turned up.
+  for (const name of ['Dagan Schattert', 'Gauffer Hakam', 'Zygal Straths',
+                      'Unnegro Gharry', 'Mushaa Teacups',
+                      'Dagan Schattert Data & CRM Manager Save']) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(name);
+    okk(!d, `${JSON.stringify(name)} is a name: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // And a real mistake is still a real mistake, capital or not. A phone
+  // capitalises the first word of everything, so this is the common case and
+  // not an edge one.
+  for (const [typed, want] of [['akuo nvhs ekhu', 'שלום מהיד קליו'],
+                               ['Akuo nvhs ekhu', 'שלום מהיד קליו'],
+                               ['Ghbdtn rfr ltkf', 'привет как дела']]) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(typed);
+    okk(!!d && d.converted.trim() === want,
+        `${JSON.stringify(typed)} still converts: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // The rule itself, since the cases above can pass for other reasons.
+  const tc = kiko.allTitleCase;
+  okk(tc(['Dagan', 'Schattert']), 'two capitalised words are a name');
+  okk(!tc(['Akuo', 'nvhs', 'ekhu']), 'one capital at the start of a sentence is not');
+  okk(!tc(['Dagan']), 'and neither is a single capitalised word on its own');
+  okk(tc(["O'Brien", 'Smith-Jones']), 'apostrophes and hyphens are part of a name');
+}
+
 console.log('A paste is never swallowed whole');
 {
   kiko.setLangs({ ...ALL });
