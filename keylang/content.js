@@ -2639,7 +2639,29 @@ function findRunSpan(text, words, lastWord) {
   }
   // The last word has to be somewhere, or this is not the run it claims to be.
   if (!found) return null;
-  return text.slice(fi, end);
+  const span = text.slice(fi, end);
+
+  // A span may not be bigger than the run it describes.
+  //
+  // This is anchored on the first occurrence of the run's first word, which
+  // is almost always right and is catastrophic when it is not. A run is a
+  // handful of adjacent words, but its first word is an ordinary one that
+  // also appears early in any long text — so on a pasted document the span
+  // started near the top, ran to the real run near the bottom, and the offer
+  // was four thousand characters of somebody's English rewritten as Hebrew.
+  // Measured on an 80-line paste: the whole document, every time. Pressing
+  // Fix would have destroyed it.
+  //
+  // Picking the shortest span instead was tried and is worse: it truncates
+  // real sentences whose first word repeats, and cost Russian, Greek and
+  // Arabic a corpus conversion each. The run is contiguous and its length is
+  // known, so the honest check is against that length. Anything wider is not
+  // this run, and the caller falls back to joining the run's own words.
+  //
+  // Four tokens of slack for the bridge material a run legitimately spans —
+  // a lone geresh, a short enclosed English word.
+  if (span.split(/\s+/).filter(Boolean).length > words.length + 4) return null;
+  return span;
 }
 
 // Does this map cleanly onto Hebrew letters, ignoring every learned

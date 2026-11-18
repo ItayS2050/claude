@@ -3095,6 +3095,117 @@ console.log('A word the English dictionary knows is never a candidate');
   }
 }
 
+// ── A paste is not a sentence ─────────────────────────────────
+//
+// Reported as "almost everything i copy and paste large text, it finds a few
+// false words". It was doing far more than that.
+//
+// findRunSpan anchors on the first occurrence of the run's first word. That
+// is almost always right, and on a long paste it is catastrophic: a run is a
+// handful of adjacent words, but its first word is an ordinary one that also
+// appears early in any long text. So the span started near the top of the
+// paste, ran to the real run near the bottom, and the offer was the whole
+// document rewritten as Hebrew. Measured on an 80-line paste of this
+// repository's own English: four thousand characters, every time. Pressing
+// Fix would have destroyed it.
+//
+// Picking the shortest span instead is worse — it truncates real sentences
+// whose first word repeats, and cost Russian, Greek and Arabic a corpus
+// conversion each. The run's length is known, so that is what the span is
+// checked against.
+console.log('A paste is never swallowed whole');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  // A long English document, and one genuine mistake dropped into it. The
+  // mistake must be found; everything around it must be left alone.
+  const FILLER = [
+    'The review nudge and the trial notice reuse the same markup and both put a',
+    'button in the same place, so only a toast that marked itself as offering a',
+    'fix answers to the accept shortcut at all.',
+    'An unfocused window must stay quiet. Two windows on the same site each run',
+    'this script, and only one of them has the caret.',
+    'While a toast is on screen, a detection with the same words is the same',
+    'detection, and it used to compare the signature alone without asking',
+    'whether the toast was still there.',
+  ];
+  const long = [];
+  for (let i = 0; i < 12; i++) long.push(...FILLER);
+
+  for (const [label, joiner] of [['with its line breaks', '\n'], ['as one long line', ' ']]) {
+    for (const mistake of ['akuo nvhs ekhu', 'ghbdtn rfr ltkf']) {
+      kiko.forgetLearned(); kiko.longAfterAFix();
+      const pasted = long.concat([mistake]).join(joiner);
+      const d = kiko.analyzeText(pasted, true);
+      okk(!!d, `the mistake at the end of a paste ${label} is still found`);
+      if (!d) continue;
+      const span = d.original.trim().split(/\s+/).length;
+      okk(span <= 8,
+          `the offer on a paste ${label} covers ${span} words, not the ${mistake.split(' ').length} that are wrong`
+          + `\n        ${JSON.stringify(d.original.slice(0, 120))}…`);
+      // And the English around it is not inside the offer.
+      okk(!/review nudge|unfocused window/.test(d.original),
+          `the offer on a paste ${label} has swallowed the English around the mistake`);
+    }
+  }
+
+  // The synthetic cases above cannot reproduce the bug on their own, and the
+  // first version of this block passed against the broken build because of
+  // it: "akuo" occurs once, so the first occurrence of the run's first word
+  // is the right one and nothing stretches. The bug needs the run's first
+  // word to appear earlier in the text as well, which is the normal state of
+  // affairs in a real document and impossible to arrange by accident.
+  //
+  // So the real corpus, chunked the way a paste arrives. These are this
+  // repository's own English, and the pair that seeds the run in them —
+  // "reuse … markup," — is exactly the shape: an ordinary word that occurs
+  // many times before the run it belongs to.
+  {
+    // All of it. Two files are not enough: the run that stretches has to find
+    // its first word earlier in the same chunk, and with a narrow corpus it
+    // never does — the first version of this assertion passed against the
+    // broken build for exactly that reason.
+    const lines = [];
+    for (const f of ['content.js', 'background.js', 'popup.js', 'browser.js',
+                     'test-detection.js', 'test-browser.js']) {
+      for (const line of fs.readFileSync(path.join(__dirname, f), 'utf8').split('\n')) {
+        const m = line.match(/^\s*\/\/ ?(.*)$/);
+        if (!m) continue;
+        const t = m[1].trim();
+        if (t.length < 25 || !/^[\x20-\x7e]+$/.test(t) || /[{}<>]|=>|\(\)/.test(t)) continue;
+        lines.push(t);
+      }
+    }
+    for (const f of fs.readdirSync(__dirname).filter(n => n.endsWith('.md'))) {
+      for (const line of fs.readFileSync(path.join(__dirname, f), 'utf8').split('\n')) {
+        const t = line.replace(/^[#>*\-|`\s]+/, '').trim();
+        if (t.length < 25 || !/^[\x20-\x7e]+$/.test(t) || /[{}<>]|=>|\(\)/.test(t)) continue;
+        lines.push(t);
+      }
+    }
+    okk(lines.length >= 1500, `only ${lines.length} prose lines — the paste corpus has gone`);
+
+    let worst = 0, worstText = '';
+    for (let i = 0; i + 80 <= lines.length; i += 80) {
+      for (const joiner of ['\n', ' ']) {
+        kiko.forgetLearned(); kiko.longAfterAFix();
+        const d = kiko.analyzeText(lines.slice(i, i + 80).join(joiner), true);
+        if (!d) continue;
+        const n = d.original.trim().split(/\s+/).length;
+        if (n > worst) { worst = n; worstText = d.original; }
+      }
+    }
+    // Was 600+ words — the entire chunk. A run is a handful of words and the
+    // offer has to look like one.
+    okk(worst <= 12,
+        `an 80-line paste offers ${worst} words at worst\n        ${JSON.stringify(worstText.slice(0, 140))}…`);
+  }
+}
+
 console.log('Long English prose stays quiet while it is being typed');
 {
   kiko.setEntitled(true);
