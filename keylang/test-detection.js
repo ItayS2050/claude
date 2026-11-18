@@ -95,6 +95,7 @@ function loadContentScript() {
     '         greekScore, stripTonos, looksLikeAcronym, extractWords, wordCouldBeGreek,' +
     '         AR_BIGRAMS, AR_SURE, arabicScore, EN_LEXICON, EN_WORDS, wordCouldBeHebrew, allTitleCase,' +
     '         koreanScore, COMMON_KO_WORDS, convertToKorean, KO_STEMS, KO_ENDINGS,' +
+    '         hebrewScore, isCommonHebrewWord, HE_SURE, soloInMixedFor: w => undefined,' +
     '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -3143,6 +3144,59 @@ console.log('A word the English dictionary knows is never a candidate');
 //
 // 470 to 2, and recall went up rather than down: the list admits three and
 // four-syllable words the old length test refused.
+// ── One English word inside a Hebrew sentence ─────────────────
+// From a Gmail thread: "לגבי qbe axa וכו' - מה דעתך?" — qbe and axa are
+// insurers — with axa offered as שסש.
+//
+// minRun drops to 1 the moment the text contains any Hebrew, which is right:
+// somebody writing Hebrew who fumbles one word should get it back. What it
+// meant was that any English token at all inside a Hebrew sentence was a
+// detection, and brand names, product names and acronyms live in Hebrew
+// sentences constantly.
+//
+// A lone word now has to read as Hebrew somebody would write. Measured
+// against 61 real company and insurer names in a Hebrew sentence and against
+// single mistyped words inside the Hebrew corpus, the bar is 0.40: nothing is
+// bought above it and four real catches are paid for.
+console.log('A brand name inside a Hebrew sentence is not a mistake');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  for (const line of ["לגבי qbe axa וכו' - מה דעתך?",
+                      "לגבי axa וכו' - מה דעתך?",
+                      'שלחתי לך את הקובץ ב slack',
+                      'אני עובד עם aws ו gcp',
+                      'הפגישה עם ibm מחר',
+                      'תראה את ה dashboard החדש']) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(line);
+    okk(!d, `${JSON.stringify(line)} is Hebrew with an English name in it: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // And one genuinely mistyped word inside a Hebrew sentence is still caught,
+  // which is the whole reason minRun drops to 1. These are the words the
+  // corpus is built from.
+  let caught = 0, n = 0;
+  const CORPUS = require('./corpus.js');
+  for (const sentence of CORPUS.silent.he.slice(0, 30)) {
+    const words = sentence.split(/\s+/);
+    for (let i = 0; i < words.length; i++) {
+      const w = [...words];
+      w[i] = kiko.down.he(words[i]);
+      if (w[i] === words[i]) continue;
+      n++;
+      kiko.forgetLearned(); kiko.longAfterAFix();
+      if (kiko.analyzeText(w.join(' '))) caught++;
+    }
+  }
+  // 96 of 165 before this rule, 93 after. A floor, not a target.
+  okk(caught >= 90, `one mistyped word inside a Hebrew sentence: ${caught} of ${n} caught, floor is 90`);
+}
+
 console.log('A Korean word needs to be a Korean word');
 {
   kiko.setLangs({ ...ALL });

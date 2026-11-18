@@ -3366,16 +3366,60 @@ function analyzeText(rawText, scanAll = false) {
   }
   if (curRun.length > 0) allRuns.push({ words: curRun, startIdx: curStartIdx });
 
+  // One English word inside a Hebrew sentence still has to read as Hebrew.
+  //
+  // minRun drops to 1 as soon as the text contains any Hebrew, which is right
+  // — somebody writing Hebrew who fumbles a single word should get it back —
+  // and it meant any English token at all sitting in a Hebrew sentence was
+  // offered for conversion. From a Gmail thread: "לגבי qbe axa וכו' - מה
+  // דעתך?", where axa is the insurer, offered as שסש. Brand names, product
+  // names and acronyms live in Hebrew sentences constantly.
+  //
+  // The lone word has to produce Hebrew somebody would write: a word the
+  // dictionary knows, or a reading whose bigrams are Hebrew's own. מה and
+  // שלום clear it; שסש does not, and neither does any other three letters
+  // that merely happen to map.
+  // 0.40, which is where the curve flattens. Measured against 61 real company
+  // and insurer names dropped into a Hebrew sentence, against single mistyped
+  // words inside the Hebrew corpus:
+  //
+  //     bar 0.60   5 of 61 brands fire   89 of 165 real words caught
+  //     bar 0.50   5                     93
+  //     bar 0.40   5                     93
+  //     bar 0.33   6                     95
+  //
+  // Nothing is bought between 0.40 and 0.60 and four real catches are paid
+  // for, so HE_SURE is the wrong number here. Below 0.40 the brand count
+  // starts moving. Picking 0.25 would have restored every catch and sits
+  // 0.05 above the highest brand score in the sample, which is fitting the
+  // threshold to the examples rather than measuring it.
+  //
+  // The five that still fire — kpmg, chubb, esurance, cna, renre — read as
+  // plausible Hebrew by bigram and nothing short of a brand list separates
+  // them. That is the residue, and it is named rather than hidden.
+  const HE_SOLO_IN_MIXED = 0.40;
+  const soloInMixed = (w) => {
+    const he = convertToHebrew(w.toLowerCase()).replace(/[^\u0590-\u05FF]/g, '');
+    if (!he) return false;
+    return isCommonHebrewWord(he) || hebrewScore(he) >= HE_SOLO_IN_MIXED;
+  };
+
   // Use the last (most recent) run that meets the minimum threshold
-  const runEntry = [...allRuns].reverse().find(r =>
-    isRealRun(r) && (r.words.filter(w => wordCouldBeHebrew(w)).length >= minRun ||
-                     (r.words.length === 1 && soloHebrewWord(r.words[0]))));
+  const runEntry = [...allRuns].reverse().find(r => {
+    if (!isRealRun(r)) return false;
+    const heWords = r.words.filter(w => wordCouldBeHebrew(w));
+    if (r.words.length === 1 && soloHebrewWord(r.words[0])) return true;
+    if (heWords.length < minRun) return false;
+    if (heWords.length === 1 && !soloInMixed(heWords[0])) return false;
+    return true;
+  });
   let run = runEntry ? [...runEntry.words] : [];
   const hebrewCount = run.filter(w => wordCouldBeHebrew(w)).length;
   // One word, clearing the much higher solo bar, counts as a run on its own.
   const soloOk = !!runEntry && runEntry.words.length === 1 &&
                  soloHebrewWord(runEntry.words[0]);
-  const enoughRun = hebrewCount >= minRun || soloOk;
+  const enoughRun = soloOk ||
+    (hebrewCount >= minRun && (hebrewCount > 1 || soloInMixed(run.find(wordCouldBeHebrew))));
 
   // Context extension: scan backwards AND forwards from the confirmed run.
   // In pure-English text (textHasHebrew=false) use mapsToHebrew (strict: valid Hebrew mapping
