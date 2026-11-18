@@ -93,7 +93,7 @@ function loadContentScript() {
     '         couldBeHebrewExactly, mapsToHebrew, physicallyMapsToHebrew, isRealRun,' +
     '         englishEnough, realEnglishWord, EN_LEXICON, COMMON_EN_WORDS, looksLikeRealHebrew,' +
     '         greekScore, stripTonos, looksLikeAcronym, extractWords, wordCouldBeGreek,' +
-    '         AR_BIGRAMS, AR_SURE, arabicScore,' +
+    '         AR_BIGRAMS, AR_SURE, arabicScore, EN_LEXICON, EN_WORDS, wordCouldBeHebrew,' +
     '         wordCouldBeGreek, wordCouldBeRussian, wordCouldBeArabic, wordCouldBeUkrainian, wordCouldBeKorean,' +
     '         setEntitled: v => { entitled = v; } };\n})()',
     sandbox);
@@ -235,8 +235,11 @@ console.log('Single words and pairs of them, across the whole English lexicon');
     const d = kiko.analyzeText(a + ' ' + b);
     if (d) { fired++; if ((d.lang || 'he') === 'he') firedHe++; }
   }
-  if (fired <= 71) pass++;
-  else { fail++; console.log(`  FAIL  ${fired} of 20000 English word pairs fire, ceiling is 71`); }
+  // Was 71 until the English dictionary was wired into all six languages
+  // rather than Hebrew alone. Zero now, and the ceiling follows the
+  // measurement down — left at 71 this could return in full without failing.
+  if (fired <= 0) pass++;
+  else { fail++; console.log(`  FAIL  ${fired} of 20000 English word pairs fire, ceiling is 0`); }
   // Broken down by language the sample is byte-identical before and after the
   // bigram model — ar 31, he 12, uk 6, el 8, ru 11, ko 3 — so Hebrew adds
   // none of its own and takes none from anybody else. That is the whole claim
@@ -3017,6 +3020,160 @@ console.log('The grant is announced once, and only while it is worth having');
   okk(fall(live(now - 49 * HOUR), now), 'and speaks after two days of use without one');
   okk(!fall({ until: now + 5 * 86400000, toldAt: now, seenAt: now - 99 * HOUR }, now),
       'and never once the grant has been announced');
+}
+
+// ── Long English prose, typed a word at a time ────────────────
+//
+// Reported from the wild and nothing in this file could see it: "a lot of
+// false calls in long english text". Every false-positive measurement here
+// was a single word or a short sentence, and a paragraph is neither. It is
+// hundreds of chances rather than one, because the product re-analyses on
+// every keystroke, and a chance pair of adjacent words is all a run needs.
+//
+// Measured when this was written: with all six languages on, 22 of 735
+// paragraphs fired, one wrong offer every 43 words. The cause was structural.
+// couldBeHebrewExactly asked the English dictionary only when a bigram score
+// had already found the word suspicious — and a trailing comma is enough to
+// duck that, since englishScore divides by length - 1 and "s," is not a common
+// English pair. So "accepts," scored below a bar that "accepts" clears, and
+// two of those in a row is a run.
+//
+// Worse, the other five languages never consulted EN_LEXICON at all. They
+// checked EN_WORDS, which holds a few hundred words. Korean returns true on
+// any token falling out as four clean syllables, so "entitlement" became
+// 두샤시드둣 on its own, six times, in a repository that discusses entitlement
+// constantly.
+//
+// The corpus is this repository's own English: comments, markdown, commit
+// messages. Real prose, nobody tuned anything against it, and it grows with
+// the project — which is the point. Ceilings, not targets.
+// The invariant underneath all of it, asserted directly, because the
+// paragraph counts above do not discriminate: the Hebrew half of this bug
+// swapped which two paragraphs fired without changing how many, so a ceiling
+// on the count passed against the broken build. A rate would have caught it
+// by a margin too thin to trust. This is the rule itself.
+console.log('A word the English dictionary knows is never a candidate');
+{
+  kiko.setLangs({ ...ALL });
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+  const okk = (cond, label) => { if (cond) { pass++; return; } fail++; console.log('  FAIL  ' + label); };
+
+  // englishScore divides by length - 1 and "s," is not a common English pair,
+  // so these score below a bar their bare forms clear. The dictionary has to
+  // be asked anyway.
+  for (const w of ['accepts,', 'rejects,', 'detections,', 'weight,', 'markup,']) {
+    const bare = w.slice(0, -1);
+    if (!kiko.EN_LEXICON.has(bare) && !kiko.EN_WORDS.has(bare)) continue;  // not in the list; nothing to assert
+    okk(!kiko.wordCouldBeHebrew(w), `${JSON.stringify(w)} is a dictionary word carrying a comma, not Hebrew`);
+  }
+
+  // And the sentence it came from. Ordinary English prose, nothing mistyped.
+  for (const line of ['detections, accepts, rejects, manual',
+                      'install, activation, languages enabled, detections, accepts, rejects']) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(line);
+    okk(!d, `${JSON.stringify(line)} is English: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // Korean returned true on any token falling out as four clean syllables,
+  // before any English check ran at all.
+  for (const line of ['There is no server, so entitlement can only be changed by shipping a build',
+                      'Licensed, or no entitlement computed yet: no badge at all']) {
+    kiko.forgetLearned(); kiko.longAfterAFix();
+    const d = kiko.analyzeText(line);
+    okk(!d, `${JSON.stringify(line.slice(0, 40))}… is English: ${d && JSON.stringify(d.converted)}`);
+  }
+
+  // The five words that are genuinely a word in both languages keep their
+  // own language. These are what ALSO_A_WORD exists for, and without it two
+  // Greek corpus sentences lose the Δεν they start with.
+  kiko.setLangs({ ...ALL });
+  for (const [typed, want] of [['den', 'δεν'], ['kai', 'και'], ['ston', 'στον']]) {
+    okk(kiko.up.el(typed) === want, `${typed} really is ${want}`);
+  }
+}
+
+console.log('Long English prose stays quiet while it is being typed');
+{
+  kiko.setEntitled(true);
+  kiko.forgetLearned();
+  kiko.longAfterAFix();
+
+  // Paragraphs that quote wrong-layout text on purpose. This repository is
+  // full of them and a detection there is correct, not a false positive.
+  const QUOTED = /akuo|ghbdtn|nvhs|dkssud|geia soy|ghbdsn|cxsr|akunl|ekhu|lvpfh|hglshu|rfr |ltkf|gksrnr|,usv|tueh|brtv|gucs|vhuo|bans|שןא|ךשומבי|בשצפשןעמ|ברקשאק/;
+  const paras = [];
+  const add = (text) => {
+    for (const p of text.split(/\n\s*\n/)) {
+      const c = p.replace(/\s+/g, ' ').trim();
+      if (c.length < 40) continue;              // a paragraph, not a line
+      if (!/^[\x20-\x7e]+$/.test(c)) continue;  // English only
+      if (/[{}<>]|=>|\(\)|;\s*$/.test(c)) continue;  // prose, not code
+      if (QUOTED.test(c)) continue;
+      paras.push(c);
+    }
+  };
+  for (const f of ['content.js', 'background.js', 'popup.js', 'browser.js',
+                   'test-detection.js', 'test-browser.js', 'test-quality.js']) {
+    const src = fs.readFileSync(path.join(__dirname, f), 'utf8');
+    let run = [];
+    for (const line of src.split('\n')) {
+      const m = line.match(/^\s*\/\/ ?(.*)$/);
+      if (m) { run.push(m[1]); continue; }
+      if (run.length) { add(run.join('\n')); run = []; }
+    }
+    if (run.length) add(run.join('\n'));
+  }
+  for (const f of fs.readdirSync(__dirname).filter(n => n.endsWith('.md'))) {
+    add(fs.readFileSync(path.join(__dirname, f), 'utf8').replace(/^[#>*\-|`].*$/gm, ''));
+  }
+
+  const sweep = (langs) => {
+    kiko.setLangs({ he: 0, ru: 0, uk: 0, ko: 0, el: 0, ar: 0, ...langs });
+    let hitParas = 0, offers = 0, prefixes = 0;
+    const samples = [];
+    for (const text of paras) {
+      const words = text.split(' ');
+      let fired = false;
+      for (let i = 1; i <= words.length; i++) {
+        prefixes++;
+        kiko.forgetLearned(); kiko.longAfterAFix();
+        const d = kiko.analyzeText(words.slice(0, i).join(' '));
+        if (!d) continue;
+        offers++;
+        if (!fired) {
+          fired = true;
+          if (samples.length < 6) samples.push(`${JSON.stringify(d.original)} -> ${JSON.stringify(d.converted)}`);
+        }
+      }
+      if (fired) hitParas++;
+    }
+    return { hitParas, offers, prefixes, samples };
+  };
+
+  // Enough paragraphs for the numbers below to mean anything. If this file is
+  // ever stripped of its comments the ceilings become trivially passable, and
+  // a test that cannot fail is worse than no test.
+  if (paras.length >= 400) { pass++; }
+  else { fail++; console.log(`  FAIL  only ${paras.length} English paragraphs found — the corpus has gone`); }
+
+  // Hebrew alone, which is what most users have on.
+  const he = sweep({ he: 1 });
+  if (he.hitParas <= 4) { pass++; }
+  else { fail++; console.log(`  FAIL  Hebrew fires in ${he.hitParas} of ${paras.length} English paragraphs, ceiling is 4\n        ${he.samples.join('\n        ')}`); }
+
+  // All six, which is the worst case and was one wrong offer every 43 words.
+  const all = sweep({ he: 1, ru: 1, uk: 1, ko: 1, el: 1, ar: 1 });
+  if (all.hitParas <= 8) { pass++; }
+  else { fail++; console.log(`  FAIL  ${all.hitParas} of ${paras.length} English paragraphs fire with every language on, ceiling is 8\n        ${all.samples.join('\n        ')}`); }
+
+  // The rate is the number a person feels. One offer in 43 words is a toast
+  // every couple of sentences; the ceiling here is a quarter of that.
+  const rate = all.offers / all.prefixes;
+  if (rate <= 0.01) { pass++; }
+  else { fail++; console.log(`  FAIL  one wrong offer every ${Math.round(all.prefixes / all.offers)} words typed, ceiling is one in 100`); }
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

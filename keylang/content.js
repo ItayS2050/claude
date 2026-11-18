@@ -1318,6 +1318,22 @@ function russianExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedRussian.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
+  // The English dictionary, before any of this language's own evidence.
+  //
+  // Every one of these checks consulted EN_WORDS, which holds a few hundred
+  // words, and none of them consulted EN_LEXICON, which holds 8,625. So
+  // "entitlement", "guilty", "rugby", "truck" and the rest of ordinary
+  // written English were invisible to every language but Hebrew, and Korean
+  // in particular returns true on any token that falls out as four clean
+  // syllables — "entitlement" became 두샤시드둣 on its own, in the middle of a
+  // sentence about entitlement.
+  //
+  // It goes above this language's own word list on purpose. A word the
+  // English dictionary knows and the foreign list also claims is a word the
+  // foreign list should not have: that is what the eleven exclusions inside
+  // unmistakablyEnglish are for, and they are the cases where the two
+  // genuinely collide.
+  if (!ALSO_A_WORD.ru.has(lower) && unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_RU[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const ruWord = mapped.join('');
@@ -1401,6 +1417,22 @@ function ukrainianExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedUkrainian.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
+  // The English dictionary, before any of this language's own evidence.
+  //
+  // Every one of these checks consulted EN_WORDS, which holds a few hundred
+  // words, and none of them consulted EN_LEXICON, which holds 8,625. So
+  // "entitlement", "guilty", "rugby", "truck" and the rest of ordinary
+  // written English were invisible to every language but Hebrew, and Korean
+  // in particular returns true on any token that falls out as four clean
+  // syllables — "entitlement" became 두샤시드둣 on its own, in the middle of a
+  // sentence about entitlement.
+  //
+  // It goes above this language's own word list on purpose. A word the
+  // English dictionary knows and the foreign list also claims is a word the
+  // foreign list should not have: that is what the eleven exclusions inside
+  // unmistakablyEnglish are for, and they are the cases where the two
+  // genuinely collide.
+  if (!ALSO_A_WORD.uk.has(lower) && unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_UK[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const ukWord = mapped.join('');
@@ -1722,6 +1754,22 @@ function arabicExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedArabic.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
+  // The English dictionary, before any of this language's own evidence.
+  //
+  // Every one of these checks consulted EN_WORDS, which holds a few hundred
+  // words, and none of them consulted EN_LEXICON, which holds 8,625. So
+  // "entitlement", "guilty", "rugby", "truck" and the rest of ordinary
+  // written English were invisible to every language but Hebrew, and Korean
+  // in particular returns true on any token that falls out as four clean
+  // syllables — "entitlement" became 두샤시드둣 on its own, in the middle of a
+  // sentence about entitlement.
+  //
+  // It goes above this language's own word list on purpose. A word the
+  // English dictionary knows and the foreign list also claims is a word the
+  // foreign list should not have: that is what the eleven exclusions inside
+  // unmistakablyEnglish are for, and they are the cases where the two
+  // genuinely collide.
+  if (!ALSO_A_WORD.ar.has(lower) && unmistakablyEnglish(lower)) return false;
   const mapped = [...lower].map(c => EN_TO_AR[c]);
   if (!mapped.every(c => c !== undefined)) return false;
   const arWord = mapped.join('');
@@ -1790,6 +1838,22 @@ function greekExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedGreek.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
+  // The English dictionary, before any of this language's own evidence.
+  //
+  // Every one of these checks consulted EN_WORDS, which holds a few hundred
+  // words, and none of them consulted EN_LEXICON, which holds 8,625. So
+  // "entitlement", "guilty", "rugby", "truck" and the rest of ordinary
+  // written English were invisible to every language but Hebrew, and Korean
+  // in particular returns true on any token that falls out as four clean
+  // syllables — "entitlement" became 두샤시드둣 on its own, in the middle of a
+  // sentence about entitlement.
+  //
+  // It goes above this language's own word list on purpose. A word the
+  // English dictionary knows and the foreign list also claims is a word the
+  // foreign list should not have: that is what the eleven exclusions inside
+  // unmistakablyEnglish are for, and they are the cases where the two
+  // genuinely collide.
+  if (!ALSO_A_WORD.el.has(lower) && unmistakablyEnglish(lower)) return false;
   if (![...lower].every(c => EN_TO_EL[c] !== undefined)) return false;
   const elWord = convertToGreek(lower);
   if (COMMON_EL_WORDS_PLAIN.has(stripTonos(elWord))) return true;
@@ -1917,6 +1981,22 @@ function koreanExactly(word) {
   if (learnedEnglish.has(lower)) return false;
   if (learnedKorean.has(lower)) return true;
   if (EN_WORDS.has(lower)) return false;
+  // The English dictionary, before any of this language's own evidence.
+  //
+  // Every one of these checks consulted EN_WORDS, which holds a few hundred
+  // words, and none of them consulted EN_LEXICON, which holds 8,625. So
+  // "entitlement", "guilty", "rugby", "truck" and the rest of ordinary
+  // written English were invisible to every language but Hebrew, and Korean
+  // in particular returns true on any token that falls out as four clean
+  // syllables — "entitlement" became 두샤시드둣 on its own, in the middle of a
+  // sentence about entitlement.
+  //
+  // It goes above this language's own word list on purpose. A word the
+  // English dictionary knows and the foreign list also claims is a word the
+  // foreign list should not have: that is what the eleven exclusions inside
+  // unmistakablyEnglish are for, and they are the cases where the two
+  // genuinely collide.
+  if (!ALSO_A_WORD.ko.has(lower) && unmistakablyEnglish(lower)) return false;
   // No wordCouldBeHebrew() guard here, unlike the Cyrillic checks: the Hebrew
   // pass already runs earlier and returns before this one, and the short
   // keystroke runs behind 안녕 / 사랑 / 한국 all look plausibly Hebrew — keeping
@@ -2238,12 +2318,44 @@ function couldBeHebrewExactly(word) {
   for (let i = 0; i < mapped.length - 1; i++) {
     if (FINAL_FORMS.has(mapped[i])) return false;
   }
-  if (englishScore(lower) >= 0.30) {
-    if (unmistakablyEnglish(lower)) return false;
-    if (hebrewScore(mapped.join('')) < HE_SURE) return false;
-  }
+  // The dictionary is asked about every word, not only the ones a bigram
+  // score has already found suspicious.
+  //
+  // It used to sit inside the score test, and a trailing comma is enough to
+  // get past that: englishScore divides by length - 1 and "s," is not a
+  // common English pair, so "accepts," scores below the bar that "accepts"
+  // clears, the dictionary is never consulted, and a word EN_LEXICON knows
+  // perfectly well becomes a Hebrew candidate. Two of them in a row is a run,
+  // which is how "detections, accepts, rejects, manual" was offered as
+  // שבבקפאדת רקחקבאדת — ordinary English prose, nothing mistyped in it.
+  //
+  // Measured over 735 paragraphs of real English, typed a word at a time, the
+  // way the product actually runs.
+  if (unmistakablyEnglish(lower)) return false;
+  if (englishScore(lower) >= 0.30 && hebrewScore(mapped.join('')) < HE_SURE) return false;
   return true;
 }
+
+// English words that are also ordinary words in one of the other five
+// languages, where the English dictionary must not have the final say.
+//
+// Hebrew has carried a list like this inside unmistakablyEnglish since 4.26 —
+// are=שרק, cut=בוא, her=יקר and eight more. The same collisions exist in every
+// language and nothing was holding them, because until now no language but
+// Hebrew consulted EN_LEXICON at all.
+//
+// Built from the corpus rather than from guesswork: every token of every
+// mistyped sentence, in all six languages, that the English dictionary claims.
+// That found eight, of which these five are genuine words in their own
+// language and three are not — "email" inside a Greek sentence really is the
+// English word, and belongs to English.
+const ALSO_A_WORD = {
+  el: new Set(['den', 'kai', 'ston']),    // δεν, και, στον
+  ru: new Set(['vs']),                    // мы
+  ar: new Set(['arm']),                   // شقة
+  uk: new Set(),
+  ko: new Set(),
+};
 
 // A word that is unmistakably English is never part of a wrong-layout burst,
 // however cleanly its letters happen to map onto Hebrew keys.
